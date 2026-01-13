@@ -8,7 +8,6 @@ export default function NotifSvg() {
       className={`
         transition-colors duration-200
         text-bat-yellow
-        hover:text-bat-gray
       `}
       fill="none"
     >

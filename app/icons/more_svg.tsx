@@ -9,7 +9,6 @@ export default function MoreSvg() {
       className="
         transition-colors duration-200
         text-bat-yellow
-        hover:text-bat-gray
       "
     >
       <path
