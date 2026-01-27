@@ -7,3 +7,9 @@
   --color-bat-gray: #C5C6C7;
   --color-bat-blue: #2F80ED;
 }
+
+@layer base {
+  body {
+    @apply bg-bat-black text-bat-gray;
+  }
+}

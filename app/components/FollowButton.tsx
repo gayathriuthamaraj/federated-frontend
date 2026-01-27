@@ -24,27 +24,10 @@ export default function FollowButton({
             onClick={follow}
             disabled={status === 'done'}
             className={`
-                mt-4 w-full h-9 rounded-md
-                text-sm tracking-wide
-                transition-all duration-200
-                border
-
+                px-6 py-2 rounded-full font-bold text-sm transition-colors duration-200
                 ${status === 'done'
-                    ? `
-                            cursor-default
-                            text-bat-gray
-                            border-bat-gray/30
-                            bg-bat-dark
-                        `
-                    : `
-                            cursor-pointer
-                            text-bat-blue
-                            border-bat-blue/30
-                            bg-transparent
-                            hover:text-white
-                            hover:bg-bat-blue/10
-                            shadow-[0_0_10px_rgba(47,128,237,0.15)]
-                        `
+                    ? 'bg-transparent border border-bat-dark text-bat-gray cursor-default opacity-60' // Following state: Subtle, disabled look
+                    : 'bg-bat-yellow text-bat-black hover:bg-[#E0B000] cursor-pointer shadow-md' // Follow state: High contrast, heavy, premium
                 }
             `}
         >

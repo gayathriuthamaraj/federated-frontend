@@ -2,65 +2,128 @@
 
 import FollowButton from './FollowButton'
 import { Profile } from '@/types/profile'
+import Link from 'next/link'
 
+// ProfileCard.tsx
 export default function ProfileCard({ profile }: { profile: Profile }) {
     return (
-        <div
-            className="
-        w-full max-w-2xl
-        bg-bat-black
-        border border-bat-dark
-        rounded-xl
-        overflow-hidden
-      "
-        >
-            {/* Header / Banner */}
-            <div className="h-32 bg-bat-dark" />
+        <div className="w-full bg-bat-black min-h-screen flex flex-col">
 
-            {/* Profile main */}
-            <div className="relative px-6 pb-6">
-                {/* Avatar */}
-                <div
-                    className="
-            absolute -top-12
-            h-24 w-24 rounded-full
-            bg-bat-black
-            border-4 border-bat-black
-            flex items-center justify-center
-            text-3xl font-semibold
-            text-bat-yellow
-            shadow-[0_0_15px_rgba(0,0,0,0.8)]
-          "
-                >
-                    {profile.display_name?.[0]?.toUpperCase() ?? 'U'}
+            {/* Banner */}
+            <div className="relative h-48 sm:h-64 w-full bg-bat-dark">
+                {profile.banner_url ? (
+                    <img
+                        src={profile.banner_url}
+                        alt="Profile banner"
+                        className="h-full w-full object-cover"
+                    />
+                ) : (
+                    <div className="h-full w-full bg-bat-dark" />
+                )}
+            </div>
+
+            {/* Top Section */}
+            <div className="px-4 pb-4">
+                <div className="relative flex justify-between items-start">
+                    {/* Avatar - Negative margin to pull it up */}
+                    <div className="-mt-[15%] sm:-mt-16 mb-3">
+                        <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-bat-black bg-bat-black overflow-hidden">
+                            {profile.avatar_url ? (
+                                <img
+                                    src={profile.avatar_url}
+                                    alt="Avatar"
+                                    className="h-full w-full object-cover"
+                                />
+                            ) : (
+                                <div className="h-full w-full flex items-center justify-center bg-bat-dark text-4xl font-bold text-bat-yellow">
+                                    {(profile.display_name || profile.user_id)[0]?.toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Follow Action */}
+                    <div className="pt-3">
+                        <FollowButton targetUser={profile.user_id} />
+                    </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex justify-end pt-4">
-                    <FollowButton targetUser={profile.user_id} />
-                </div>
-
-                {/* Identity */}
-                <div className="mt-10">
-                    <h2 className="text-xl font-semibold text-bat-yellow tracking-wide">
-                        {profile.display_name ?? profile.user_id}
-                    </h2>
-                    <p className="text-sm text-bat-gray tracking-wide">
+                {/* Identity Block */}
+                <div className="mt-2">
+                    <h1 className="text-xl sm:text-2xl font-bold text-bat-gray leading-tight">
+                        {profile.display_name}
+                    </h1>
+                    <p className="text-bat-gray/60 text-sm sm:text-base">
                         @{profile.user_id}
                     </p>
                 </div>
 
                 {/* Bio */}
                 {profile.bio && (
-                    <p className="mt-4 text-sm text-bat-gray leading-relaxed">
+                    <p className="mt-4 text-bat-gray text-[15px] leading-normal whitespace-pre-wrap">
                         {profile.bio}
                     </p>
                 )}
 
-                {/* Meta (placeholder for later: join date, followers, etc.) */}
-                <div className="mt-4 text-xs text-bat-gray/70">
-                    {/* intentionally empty for now */}
+                {/* Metadata Row */}
+                <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-bat-gray/60">
+                    {profile.location && (
+                        <span className="flex items-center gap-1">
+                            📍 {profile.location}
+                        </span>
+                    )}
+
+                    {profile.portfolio_url && (
+                        <a
+                            href={profile.portfolio_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-bat-blue hover:underline"
+                        >
+                            🔗 <span className="truncate max-w-[200px]">{profile.portfolio_url.replace(/^https?:\/\//, '')}</span>
+                        </a>
+                    )}
+
+                    <span className="flex items-center gap-1">
+                        🗓 Joined {new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                    </span>
                 </div>
+
+                {/* Stats Row */}
+                <div className="mt-4 flex gap-5 text-sm">
+                    <div className="hover:underline cursor-pointer">
+                        <span className="font-bold text-bat-gray mr-1">{profile.following_count ?? 0}</span>
+                        <span className="text-bat-gray/60">Following</span>
+                    </div>
+                    <div className="hover:underline cursor-pointer">
+                        <span className="font-bold text-bat-gray mr-1">{profile.followers_count ?? 0}</span>
+                        <span className="text-bat-gray/60">Followers</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tabs Navigation */}
+            <div className="mt-2 flex border-b border-bat-dark">
+                {['Posts', 'Replies', 'Highlights', 'Media', 'Likes'].map((tab, i) => (
+                    <div
+                        key={tab}
+                        className={`
+                            flex-1 py-4 text-center text-sm sm:text-base font-medium transition-colors cursor-pointer hover:bg-bat-dark/30
+                            ${i === 0
+                                ? 'text-bat-yellow border-b-[3px] border-bat-yellow'
+                                : 'text-bat-gray/60 hover:text-bat-gray'
+                            }
+                        `}
+                    >
+                        {tab}
+                    </div>
+                ))}
+            </div>
+
+            {/* Feed Placeholder */}
+            <div className="flex-1 p-8 text-center border-t border-bat-dark/50">
+                <div className="text-bat-gray/40 text-lg font-medium">Nothing to see here yet</div>
+                <div className="text-bat-gray/20 text-sm mt-1">When {profile.display_name} posts, it will show up here.</div>
             </div>
         </div>
     )
