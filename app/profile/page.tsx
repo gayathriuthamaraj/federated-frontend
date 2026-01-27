@@ -9,7 +9,11 @@ export default async function ProfilePage({
   const userId = params.user_id
 
   if (!userId) {
-    return <div>No user selected</div>
+    return (
+      <main className="p-6 text-bat-gray">
+        No user selected
+      </main>
+    )
   }
 
   const res = await fetch(
@@ -18,15 +22,26 @@ export default async function ProfilePage({
   )
 
   if (!res.ok) {
-    return <div>Profile unavailable</div>
+    return (
+      <main className="p-6 text-bat-gray">
+        Profile unavailable
+      </main>
+    )
   }
 
-  const identity = await res.json()
+  const data = await res.json()
+
+  if (!data.profile) {
+    return (
+      <main className="p-6 text-bat-gray">
+        No profile data found
+      </main>
+    )
+  }
 
   return (
-    <main className="p-6">
-      <ProfileCard identity={identity} />
+    <main className="p-6 flex justify-center">
+      <ProfileCard profile={data.profile} />
     </main>
   )
 }
-
