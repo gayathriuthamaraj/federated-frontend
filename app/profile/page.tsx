@@ -1,68 +1,89 @@
-import ProfileCard from '@/components/ProfileCard'
+'use client';
 
-export default async function ProfilePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ user_id?: string }>
-}) {
-  const params = await searchParams
-  const userId = params.user_id
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import ProfileCard from '../components/ProfileCard';
+import { useAuth } from '../context/AuthContext';
+import { Profile } from '../types/profile';
 
-  if (!userId) {
+export default function ProfilePage() {
+  const searchParams = useSearchParams();
+  const { identity, isLoading: authLoading } = useAuth();
+
+  // Determine the effective user ID: query param OR local identity
+  const paramUserId = searchParams.get('user_id');
+  const effectiveUserId = paramUserId || identity?.user_id;
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!identity?.home_server || !identity?.user_id) {
+      setLoading(false);
+      return;
+    }
+
+    const userId = paramUserId ?? identity.user_id;
+
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const url =
+          userId === identity.user_id
+            ? `${identity.home_server}/user/me`
+            : `${identity.home_server}/user/search?user_id=${encodeURIComponent(userId)}`;
+
+        const res = await fetch(url);
+
+        if (!res.ok) {
+          if (res.status === 404) {
+            setProfile(null);
+            return;
+          }
+          throw new Error("Failed to fetch profile");
+        }
+
+        const data = await res.json();
+        setProfile(data.profile ?? data.user ?? null);
+
+      } catch (err: any) {
+        console.error("Profile fetch error:", err);
+        setError(err.message ?? "Unexpected error");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, [authLoading, identity, paramUserId]);
+
+
+  if (error) {
     return (
-      <main className="min-h-screen bg-bat-black flex justify-center">
-        <div className="w-full max-w-[600px] border-x border-bat-dark p-6 text-bat-gray">
-          <h2 className="text-xl font-bold text-bat-white mb-2">Select a user</h2>
-          <p>Choose a user from the search bar to view their profile.</p>
+      <div className="flex items-center justify-center min-h-screen bg-bat-black text-bat-gray">
+        <div className="text-center p-8 border border-bat-gray/20 rounded-lg bg-bat-dark">
+          <h2 className="text-2xl font-bold text-bat-yellow mb-2">Error</h2>
+          <p>{error}</p>
         </div>
-      </main>
-    )
+      </div>
+    );
   }
 
-  const res = await fetch(
-    `http://localhost:3000/api/search?user_id=${encodeURIComponent(userId)}`,
-    { cache: 'no-store' }
-  )
-
-  if (!res.ok) {
+  if (!profile) {
     return (
-      <main className="min-h-screen bg-bat-black flex justify-center">
-        <div className="w-full max-w-[600px] border-x border-bat-dark p-6 text-bat-gray">
-          <h2 className="text-xl font-bold text-bat-white mb-2">Profile unavailable</h2>
-          <p>The requested profile could not be found.</p>
-        </div>
-      </main>
-    )
-  }
-
-  const data = await res.json()
-
-  if (!data.profile) {
-    return (
-      <main className="min-h-screen bg-bat-black flex justify-center">
-        <div className="w-full max-w-[600px] border-x border-bat-dark p-6 text-bat-gray">
-          <h2 className="text-xl font-bold text-bat-white mb-2">Profile missing</h2>
-          <p>No profile data available for this user.</p>
-        </div>
-      </main>
-    )
+      <div className="flex items-center justify-center min-h-screen bg-bat-black text-bat-gray">
+        <div className="text-center">Profile not found.</div>
+      </div>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-bat-black flex justify-center">
-      <div className="w-full max-w-[600px] border-x border-bat-dark min-h-screen flex flex-col">
-        {/* Header (optional, but good for Twitter feel) */}
-        <div className="sticky top-0 z-10 bg-bat-black/80 backdrop-blur-md border-b border-bat-dark px-4 py-3 cursor-pointer">
-          <h2 className="text-lg font-bold text-bat-gray leading-none truncate">
-            {data.profile.display_name}
-          </h2>
-          <span className="text-xs text-bat-gray/50">
-            {(data.profile.posts_count || 0) + ' Posts'}
-          </span>
-        </div>
-
-        <ProfileCard profile={data.profile} />
-      </div>
+    <main className="min-h-screen bg-bat-black">
+      <ProfileCard profile={profile} />
     </main>
-  )
+  );
 }
