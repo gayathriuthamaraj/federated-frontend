@@ -31,13 +31,12 @@ export default function Sidebar() {
     return (
         <aside
             className={`
-        h-screen
+        h-full shrink-0
         ${expanded ? "w-64" : "w-20"}
         flex flex-col
         bg-bat-black
         border-r border-bat-yellow/10
         transition-all duration-300 ease-in-out
-        fixed left-0 top-0 z-50
         shadow-[2px_0_10px_rgba(0,0,0,0.5)]
       `}
         >
