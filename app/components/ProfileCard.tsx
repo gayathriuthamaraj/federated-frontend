@@ -1,11 +1,20 @@
 'use client'
 
 import FollowButton from './FollowButton'
+import PostCard from './PostCard'
 import { Profile } from '@/types/profile'
+import { Post } from '@/types/post'
 import Link from 'next/link'
 
+interface ProfileCardProps {
+    profile: Profile;
+    isOwnProfile?: boolean;
+    posts?: Post[];
+    loadingPosts?: boolean;
+}
+
 // ProfileCard.tsx
-export default function ProfileCard({ profile }: { profile: Profile }) {
+export default function ProfileCard({ profile, isOwnProfile = false, posts = [], loadingPosts = false }: ProfileCardProps) {
     return (
         <div className="w-full bg-bat-black min-h-screen flex flex-col">
 
@@ -42,9 +51,24 @@ export default function ProfileCard({ profile }: { profile: Profile }) {
                         </div>
                     </div>
 
-                    {/* Follow Action */}
+                    {/* Edit Profile or Follow Button */}
                     <div className="pt-3">
-                        <FollowButton targetUser={profile.user_id} />
+                        {isOwnProfile ? (
+                            <Link
+                                href="/profile/edit"
+                                className="
+                                    px-6 py-2 rounded-md font-bold
+                                    bg-bat-black text-bat-gray
+                                    border-2 border-bat-gray/30
+                                    hover:border-bat-yellow hover:text-bat-yellow
+                                    transition-all duration-200
+                                "
+                            >
+                                Edit Profile
+                            </Link>
+                        ) : (
+                            <FollowButton targetUser={profile.user_id} />
+                        )}
                     </div>
                 </div>
 
@@ -120,10 +144,24 @@ export default function ProfileCard({ profile }: { profile: Profile }) {
                 ))}
             </div>
 
-            {/* Feed Placeholder */}
-            <div className="flex-1 p-8 text-center border-t border-bat-dark/50">
-                <div className="text-bat-gray/40 text-lg font-medium">Nothing to see here yet</div>
-                <div className="text-bat-gray/20 text-sm mt-1">When {profile.display_name} posts, it will show up here.</div>
+            {/* Feed - Posts Display */}
+            <div className="flex-1">
+                {loadingPosts ? (
+                    <div className="text-center text-bat-gray py-8">Loading posts...</div>
+                ) : posts.length === 0 ? (
+                    <div className="p-8 text-center border-t border-bat-dark/50">
+                        <div className="text-bat-gray/40 text-lg font-medium">No posts yet</div>
+                        <div className="text-bat-gray/20 text-sm mt-1">
+                            {isOwnProfile ? "Start sharing your thoughts!" : `${profile.display_name} hasn't posted anything yet.`}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="border-t border-bat-dark/50">
+                        {posts.map((post) => (
+                            <PostCard key={post.id} post={post} />
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     )

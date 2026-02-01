@@ -33,7 +33,7 @@ export function NavItem({
         hover:bg-bat-yellow/10
       `;
 
-    const postStyle = `
+  const postStyle = `
     text-bat-blue
     hover:text-white
     bg-transparent
@@ -52,46 +52,26 @@ export function NavItem({
             ${variant === "post"
             ? "scale-110"
             : active
-                ? "scale-105"
-                : "group-hover:scale-105"}
+              ? "scale-105"
+              : "group-hover:scale-105"}
         `}
-        >
-  {children}
-</div>
+      >
+        {children}
+      </div>
 
       {/* Label */}
       <span
         className={`
           text-sm tracking-wide whitespace-nowrap
           transition-all duration-300
-          ${
-            expanded
-              ? "opacity-100 translate-x-0"
-              : "opacity-0 -translate-x-2 pointer-events-none"
+          ${expanded
+            ? "opacity-100 translate-x-0"
+            : "opacity-0 -translate-x-2 pointer-events-none"
           }
         `}
       >
         {label}
       </span>
-
-      {/* Tooltip (collapsed only) */}
-      {!expanded && (
-        <span
-          className="
-            absolute left-14 top-1/2 -translate-y-1/2
-            whitespace-nowrap rounded-md
-            bg-bat-dark border border-bat-yellow/30
-            px-2 py-1 text-[10px]
-            tracking-widest text-bat-yellow
-            opacity-0 group-hover:opacity-100
-            transition-all duration-150
-            pointer-events-none
-            shadow-[0_0_8px_rgba(245,197,24,0.15)]
-          "
-        >
-          {label}
-        </span>
-      )}
     </Link>
   );
 }

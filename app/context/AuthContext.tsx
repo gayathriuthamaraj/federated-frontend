@@ -40,16 +40,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (isLoading) return;
 
-        const publicRoutes = ["/login", "/register"];
-        const isPublicRoute = publicRoutes.includes(pathname);
+        const unauthenticatedOnlyRoutes = ["/login", "/register"];
+        const authenticatedRoutes = ["/profile/setup", "/profile/edit"];
+
+        const isUnauthenticatedOnly = unauthenticatedOnlyRoutes.includes(pathname);
+        const isAuthenticatedRoute = authenticatedRoutes.includes(pathname);
+        const isPublicRoute = isUnauthenticatedOnly || isAuthenticatedRoute;
 
         if (!identity && !isPublicRoute) {
+            // Not logged in and trying to access protected route -> go to login
             router.push("/login");
-        } else if (identity && isPublicRoute) {
-            // Optional: Redirect to home if already logged in and visiting login/register
+        } else if (identity && isUnauthenticatedOnly) {
+            // Logged in and visiting login/register -> go to profile
             router.push("/profile");
         }
     }, [identity, isLoading, pathname, router]);
+
 
     const login = (userId: string, homeServer: string) => {
         const newIdentity = { user_id: userId, home_server: homeServer };

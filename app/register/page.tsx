@@ -2,21 +2,64 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
+
 
 export default function RegisterPage() {
     const { login } = useAuth();
+    const router = useRouter();
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, we would validate and create account here.
-        // For this UI-only task, simulated login.
-        if (username && password === confirmPassword) {
-            login(username, "http://localhost:8080");
+        setError('');
+
+        if (password !== confirmPassword) {
+            setError('Passwords do not match');
+            return;
+        }
+
+        if (!username || !email) {
+            setError('Please fill in all required fields');
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            const response = await fetch('http://localhost:8080/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Registration failed');
+            }
+
+            const data = await response.json();
+
+            // Log the user in
+            login(data.user_id, data.home_server);
+
+            // Redirect to profile setup
+            router.push('/profile/setup');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Registration failed');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -29,7 +72,14 @@ export default function RegisterPage() {
                 </div>
 
                 <form className="space-y-4" onSubmit={handleSubmit}>
+                    {error && (
+                        <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-md">
+                            <p className="text-red-400 text-sm">{error}</p>
+                        </div>
+                    )}
+
                     <div>
+
                         <label
                             htmlFor="username"
                             className="block text-sm font-medium text-bat-gray mb-1"
@@ -131,16 +181,18 @@ export default function RegisterPage() {
 
                     <button
                         type="submit"
+                        disabled={isSubmitting}
                         className="
               w-full py-3 px-4 mt-2 rounded-md font-bold text-lg
               bg-bat-yellow text-bat-black
               hover:bg-yellow-400
+              disabled:opacity-50 disabled:cursor-not-allowed
               transform active:scale-[0.98]
               transition-all duration-200
               shadow-[0_0_15px_rgba(245,197,24,0.3)]
             "
                     >
-                        Create Account
+                        {isSubmitting ? 'Creating Account...' : 'Create Account'}
                     </button>
                 </form>
 

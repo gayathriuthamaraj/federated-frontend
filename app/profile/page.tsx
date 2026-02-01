@@ -3,8 +3,17 @@
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ProfileCard from '../components/ProfileCard';
+import PostCard from '../components/PostCard';
 import { useAuth } from '../context/AuthContext';
 import { Profile } from '../types/profile';
+
+interface Post {
+  id: string;
+  author: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function ProfilePage() {
   const searchParams = useSearchParams();
@@ -15,7 +24,9 @@ export default function ProfilePage() {
   const effectiveUserId = paramUserId || identity?.user_id;
 
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingPosts, setLoadingPosts] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,8 +45,9 @@ export default function ProfilePage() {
       try {
         const url =
           userId === identity.user_id
-            ? `${identity.home_server}/user/me`
+            ? `${identity.home_server}/user/me?user_id=${encodeURIComponent(userId)}`
             : `${identity.home_server}/user/search?user_id=${encodeURIComponent(userId)}`;
+
 
         const res = await fetch(url);
 
@@ -58,7 +70,23 @@ export default function ProfilePage() {
       }
     };
 
+    const fetchPosts = async () => {
+      setLoadingPosts(true);
+      try {
+        const res = await fetch(`${identity.home_server}/posts/user?user_id=${encodeURIComponent(userId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setPosts(data.posts || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch posts:", err);
+      } finally {
+        setLoadingPosts(false);
+      }
+    };
+
     fetchProfile();
+    fetchPosts();
   }, [authLoading, identity, paramUserId]);
 
 
@@ -81,9 +109,17 @@ export default function ProfilePage() {
     );
   }
 
+  // Determine if this is the user's own profile
+  const isOwnProfile = identity?.user_id === profile.user_id;
+
   return (
     <main className="min-h-screen bg-bat-black">
-      <ProfileCard profile={profile} />
+      <ProfileCard
+        profile={profile}
+        isOwnProfile={isOwnProfile}
+        posts={posts}
+        loadingPosts={loadingPosts}
+      />
     </main>
   );
 }
