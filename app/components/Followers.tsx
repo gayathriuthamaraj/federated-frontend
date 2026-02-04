@@ -57,7 +57,7 @@ export default function Followers({ followers }: FollowersProps) {
                                 {follower.display_name}
                             </div>
                             <div className="text-bat-gray/50 text-sm truncate">
-                                @{follower.user_id}
+                                {follower.user_id}
                             </div>
                         </div>
                     </Link>

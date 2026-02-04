@@ -5,8 +5,10 @@ import { useAuth } from '../context/AuthContext'
 
 export default function FollowButton({
     targetUser,
+    onSuccess
 }: {
     targetUser: string
+    onSuccess?: () => void
 }) {
     const { identity } = useAuth()
     const [status, setStatus] = useState<'idle' | 'done'>('idle')
@@ -37,13 +39,14 @@ export default function FollowButton({
 
             if (res.ok) {
                 setStatus('done')
+                if (onSuccess) onSuccess()
             } else {
                 const error = await res.text()
                 alert(`Failed to follow: ${error}`)
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Follow error:', err)
-            alert('Failed to follow user')
+            alert(`Failed to follow user: ${err.message || err}`)
         } finally {
             setIsLoading(false)
         }

@@ -150,7 +150,12 @@ export default function ComposePage() {
 
                     {/* Tips */}
                     <div className="pt-4 border-t border-bat-gray/10">
-                        <h3 className="text-sm font-semibold text-bat-gray mb-2">💡 Tips</h3>
+                        <h3 className="text-sm font-semibold text-bat-gray mb-2 flex items-center gap-2">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-current text-bat-yellow">
+                                <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm2.85 11.1l-.85.6V16h-4v-2.3l-.85-.6C7.93 12.37 7 11.24 7 9c0-2.76 2.24-5 5-5s5 2.24 5 5c0 2.24-.93 3.37-2.15 4.1z"></path>
+                            </svg>
+                            Tips
+                        </h3>
                         <ul className="text-xs text-gray-500 space-y-1">
                             <li>• Keep it concise and engaging</li>
                             <li>• Be respectful to others</li>

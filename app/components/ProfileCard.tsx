@@ -1,5 +1,7 @@
 'use client'
 
+// ProfileCard.tsx
+import { useState, useEffect } from 'react'
 import FollowButton from './FollowButton'
 import PostCard from './PostCard'
 import { Profile } from '@/types/profile'
@@ -13,10 +15,24 @@ interface ProfileCardProps {
     loadingPosts?: boolean;
 }
 
-// ProfileCard.tsx
-export default function ProfileCard({ profile, isOwnProfile = false, posts = [], loadingPosts = false }: ProfileCardProps) {
+export default function ProfileCard({ profile: initialProfile, isOwnProfile = false, posts = [], loadingPosts = false }: ProfileCardProps) {
+    const [profile, setProfile] = useState(initialProfile)
+
+    // Sync state if prop changes (e.g. navigation)
+    useEffect(() => {
+        setProfile(initialProfile)
+    }, [initialProfile])
+
+    const handleFollowSuccess = () => {
+        // Optimistically update follower count
+        setProfile(prev => ({
+            ...prev,
+            followers_count: (prev.followers_count || 0) + 1
+        }))
+    }
+
     return (
-        <div className="w-full bg-bat-black min-h-screen flex flex-col">
+        <div className="w-full bg-bat-black flex flex-col">
 
             {/* Banner */}
             <div className="relative h-48 sm:h-64 w-full bg-bat-dark">
@@ -67,7 +83,10 @@ export default function ProfileCard({ profile, isOwnProfile = false, posts = [],
                                 Edit Profile
                             </Link>
                         ) : (
-                            <FollowButton targetUser={profile.user_id} />
+                            <FollowButton
+                                targetUser={profile.user_id}
+                                onSuccess={handleFollowSuccess}
+                            />
                         )}
                     </div>
                 </div>
@@ -78,7 +97,7 @@ export default function ProfileCard({ profile, isOwnProfile = false, posts = [],
                         {profile.display_name}
                     </h1>
                     <p className="text-bat-gray/60 text-sm sm:text-base">
-                        @{profile.user_id}
+                        {profile.user_id}
                     </p>
                 </div>
 
@@ -92,8 +111,11 @@ export default function ProfileCard({ profile, isOwnProfile = false, posts = [],
                 {/* Metadata Row */}
                 <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-bat-gray/60">
                     {profile.location && (
-                        <span className="flex items-center gap-1">
-                            📍 {profile.location}
+                        <span className="flex items-center gap-1.5">
+                            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-current text-bat-gray/60">
+                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"></path>
+                            </svg>
+                            {profile.location}
                         </span>
                     )}
 
@@ -102,14 +124,20 @@ export default function ProfileCard({ profile, isOwnProfile = false, posts = [],
                             href={profile.portfolio_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-bat-blue hover:underline"
+                            className="flex items-center gap-1.5 text-bat-blue hover:underline"
                         >
-                            🔗 <span className="truncate max-w-[200px]">{profile.portfolio_url.replace(/^https?:\/\//, '')}</span>
+                            <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-current">
+                                <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path>
+                            </svg>
+                            <span className="truncate max-w-[200px]">{profile.portfolio_url.replace(/^https?:\/\//, '')}</span>
                         </a>
                     )}
 
-                    <span className="flex items-center gap-1">
-                        🗓 Joined {new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                    <span className="flex items-center gap-1.5">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-current text-bat-gray/60">
+                            <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2zm-7 5h5v5h-5z"></path>
+                        </svg>
+                        Joined {new Date(profile.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
                     </span>
                 </div>
 

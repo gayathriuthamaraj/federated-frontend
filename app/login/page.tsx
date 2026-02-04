@@ -15,7 +15,10 @@ export default function LoginPage() {
         // For this UI-only task, we simulate a successful login.
         // Defaulting home server to localhost:8080 as per requirements.
         if (username) {
-            login(username, "http://localhost:8080");
+            // Construct federated ID for login simulation
+            // Since we are simulating, we assume localhost.
+            const federatedId = username.includes("@") ? username : `${username}@localhost`;
+            login(federatedId, "http://localhost:8080");
         }
     };
 

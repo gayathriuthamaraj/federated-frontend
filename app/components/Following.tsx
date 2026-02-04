@@ -57,7 +57,7 @@ export default function Following({ following }: FollowingProps) {
                                 {followedUser.display_name}
                             </div>
                             <div className="text-bat-gray/50 text-sm truncate">
-                                @{followedUser.user_id}
+                                {followedUser.user_id}
                             </div>
                         </div>
                     </Link>
