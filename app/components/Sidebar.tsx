@@ -12,6 +12,10 @@ import Search_svg from "../icons/search_svg";
 import Message_svg from "../icons/message_svg";
 import Profile_svg from "../icons/profile_svg";
 import PostSvg from "../icons/post_svg";
+import NotifSvg from "../icons/notif_svg";
+import Follow_svg from "../icons/follow_svg";
+import Community_svg from "../icons/community_svg";
+import Bookmark_svg from "../icons/bookmark_svg";
 
 // Simple Bat Icon Component
 function BatLogo() {
@@ -82,26 +86,36 @@ export default function Sidebar() {
                     </span>
                 </button>
 
-                <NavItem label="Home" href="/" expanded={expanded} active={pathname === "/"}>
+                {/* Main Navigation */}
+                <NavItem label="Demo" href="/showcase" expanded={expanded} active={pathname.startsWith("/showcase")}>
                     <Home_svg />
                 </NavItem>
 
                 <NavItem
-                    label="Search"
-                    href="/search"
+                    label="Feed"
+                    href="/feed"
                     expanded={expanded}
-                    active={pathname.startsWith("/search")}
+                    active={pathname.startsWith("/feed")}
+                >
+                    <Bookmark_svg />
+                </NavItem>
+
+                <NavItem
+                    label="Explore"
+                    href="/explore"
+                    expanded={expanded}
+                    active={pathname.startsWith("/explore")}
                 >
                     <Search_svg />
                 </NavItem>
 
                 <NavItem
-                    label="Profile"
-                    href="/profile"
+                    label="Notifications"
+                    href="/notifications"
                     expanded={expanded}
-                    active={pathname.startsWith("/profile")}
+                    active={pathname.startsWith("/notifications")}
                 >
-                    <Profile_svg />
+                    <NotifSvg />
                 </NavItem>
 
                 <NavItem
@@ -113,7 +127,39 @@ export default function Sidebar() {
                     <Message_svg />
                 </NavItem>
 
-                <div className="my-4">
+                {/* Divider */}
+                <div className="h-px bg-bat-gray/20 my-2"></div>
+
+                {/* Social */}
+                <NavItem
+                    label="Profile"
+                    href="/profile"
+                    expanded={expanded}
+                    active={pathname.startsWith("/profile")}
+                >
+                    <Profile_svg />
+                </NavItem>
+
+                <NavItem
+                    label="Followers"
+                    href="/followers"
+                    expanded={expanded}
+                    active={pathname.startsWith("/followers")}
+                >
+                    <Community_svg />
+                </NavItem>
+
+                <NavItem
+                    label="Following"
+                    href="/following"
+                    expanded={expanded}
+                    active={pathname.startsWith("/following")}
+                >
+                    <Follow_svg />
+                </NavItem>
+
+                {/* Post Button */}
+                <div className="mt-auto mb-4">
                     <NavItem
                         label="Post"
                         href="/compose"

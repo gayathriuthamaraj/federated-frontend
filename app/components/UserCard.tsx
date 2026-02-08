@@ -1,0 +1,81 @@
+"use client";
+
+import { MockUser } from '../data/mockData';
+import FollowButton from './FollowButton';
+
+interface UserCardProps {
+    user: MockUser;
+    showFollowButton?: boolean;
+    onClick?: () => void;
+}
+
+export default function UserCard({ user, showFollowButton = true, onClick }: UserCardProps) {
+    return (
+        <article
+            onClick={onClick}
+            className={`
+                flex gap-3 px-4 py-3 border-b border-bat-dark 
+                hover:bg-bat-dark/20 transition-colors
+                ${onClick ? 'cursor-pointer' : 'cursor-default'}
+            `}
+        >
+            {/* Left: Avatar */}
+            <div className="flex-shrink-0">
+                <img
+                    src={user.avatarUrl}
+                    alt={user.displayName}
+                    className="h-12 w-12 rounded-full"
+                />
+            </div>
+
+            {/* Middle: User Info */}
+            <div className="flex-1 min-w-0">
+                {/* Name and Handle */}
+                <div className="flex items-baseline gap-1.5 text-[15px] leading-5">
+                    <span className="font-bold text-gray-200 truncate">
+                        {user.displayName}
+                    </span>
+                    <span className="text-bat-gray/60 truncate">
+                        @{user.username}
+                    </span>
+                </div>
+
+                {/* Bio */}
+                {user.bio && (
+                    <div className="mt-1 text-[15px] text-bat-gray leading-normal line-clamp-2">
+                        {user.bio}
+                    </div>
+                )}
+
+                {/* Stats - Only show on larger screens */}
+                <div className="mt-2 flex gap-4 text-sm">
+                    <div>
+                        <span className="font-bold text-bat-gray mr-1">
+                            {user.followersCount.toLocaleString()}
+                        </span>
+                        <span className="text-bat-gray/60">Followers</span>
+                    </div>
+                    <div>
+                        <span className="font-bold text-bat-gray mr-1">
+                            {user.followingCount.toLocaleString()}
+                        </span>
+                        <span className="text-bat-gray/60">Following</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Right: Follow Button */}
+            {showFollowButton && (
+                <div
+                    className="flex-shrink-0 flex items-start pt-1"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <FollowButton
+                        targetUser={user.username}
+                        onSuccess={() => console.log(`Followed ${user.username}`)}
+                    />
+                </div>
+            )}
+        </article>
+    );
+}

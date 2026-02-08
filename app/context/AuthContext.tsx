@@ -48,10 +48,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const unauthenticatedOnlyRoutes = ["/login", "/register"];
         const authenticatedRoutes = ["/profile/setup", "/profile/edit"];
+        const publicShowcaseRoutes = ["/demo", "/feed", "/followers", "/following", "/notifications", "/explore", "/messages", "/test"];
 
         const isUnauthenticatedOnly = unauthenticatedOnlyRoutes.includes(pathname);
         const isAuthenticatedRoute = authenticatedRoutes.includes(pathname);
-        const isPublicRoute = isUnauthenticatedOnly || isAuthenticatedRoute;
+        const isPublicShowcase = publicShowcaseRoutes.includes(pathname) || pathname.startsWith("/showcase");
+        const isPublicRoute = isUnauthenticatedOnly || isAuthenticatedRoute || isPublicShowcase;
 
         if (!identity && !isPublicRoute) {
             // Not logged in and trying to access protected route -> go to login
@@ -61,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             router.push("/profile");
         }
     }, [identity, isLoading, pathname, router]);
+
 
 
     const login = (userId: string, homeServer: string) => {
