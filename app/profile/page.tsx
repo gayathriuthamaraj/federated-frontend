@@ -24,6 +24,7 @@ export default function ProfilePage() {
   const effectiveUserId = paramUserId || identity?.user_id;
 
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [did, setDid] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
@@ -56,11 +57,19 @@ export default function ProfilePage() {
             setProfile(null);
             return;
           }
-          throw new Error("Failed to fetch profile");
+          // Get error details for debugging
+          const errorText = await res.text();
+          throw new Error(`Failed to fetch profile (${res.status}): ${errorText}`);
         }
 
         const data = await res.json();
         setProfile(data.profile ?? data.user ?? null);
+        if (data.identity?.did) {
+          setDid(data.identity.did);
+        } else if (data.data?.identity?.did) {
+          // Handle federated lookup format
+          setDid(data.data.identity.did);
+        }
 
       } catch (err: any) {
         console.error("Profile fetch error:", err);
@@ -119,6 +128,7 @@ export default function ProfilePage() {
         isOwnProfile={isOwnProfile}
         posts={posts}
         loadingPosts={loadingPosts}
+        did={did || undefined}
       />
     </main>
   );

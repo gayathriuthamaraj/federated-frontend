@@ -25,7 +25,8 @@ export default function SearchPage() {
         setSearchedProfile(null)
 
         try {
-            const res = await fetch(`http://localhost:8080/user/search?user_id=${encodeURIComponent(queryId)}`)
+            // Use Federation Server for Lookup
+            const res = await fetch(`http://localhost:8081/federation/lookup?id=${encodeURIComponent(queryId)}`)
 
             if (!res.ok) {
                 if (res.status === 404) {
@@ -34,14 +35,11 @@ export default function SearchPage() {
                 throw new Error('Failed to find user')
             }
 
-            const data = await res.json()
-            // data is UserDocument { Identity, Profile }
-            // ProfileCard expects a Profile object
+            const json = await res.json()
+            // Response format: { success: true, data: { identity: ..., profile: ... } }
 
-            // The backend returns { "identity": {...}, "profile": {...} }
-            // We need to extract data.profile (lowercase to match Go json structs)
-            if (data && data.profile) {
-                setSearchedProfile(data.profile)
+            if (json.success && json.data && json.data.profile) {
+                setSearchedProfile(json.data.profile)
             } else {
                 throw new Error('Invalid response format')
             }

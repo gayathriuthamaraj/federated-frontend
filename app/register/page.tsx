@@ -14,6 +14,7 @@ export default function RegisterPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
+    const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -33,7 +34,7 @@ export default function RegisterPage() {
         setIsSubmitting(true);
 
         try {
-            const response = await fetch('http://localhost:8080/register', {
+            const res = await fetch('http://localhost:8082/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -44,24 +45,63 @@ export default function RegisterPage() {
                 }),
             });
 
-            if (!response.ok) {
-                const errorText = await response.text();
+            if (!res.ok) {
+                const errorText = await res.text();
                 throw new Error(errorText || 'Registration failed');
             }
 
-            const data = await response.json();
+            const data = await res.json();
 
             // Log the user in
             login(data.user_id, data.home_server);
 
-            // Redirect to profile setup
-            router.push('/profile/setup');
+            // Set recovery key to show it
+            if (data.recovery_key) {
+                setRecoveryKey(data.recovery_key);
+            } else {
+                // Fallback if no key (should happen with new backend)
+                router.push('/profile/setup');
+            }
+
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Registration failed');
         } finally {
             setIsSubmitting(false);
         }
     };
+
+    if (recoveryKey) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
+                <div className="w-full max-w-md bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10 text-center">
+                    <h1 className="text-3xl font-bold text-bat-yellow mb-2">Account Created!</h1>
+                    <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50 mb-6"></div>
+
+                    <p className="text-bat-gray mb-4">
+                        Please save your Identity Recovery Key. You will need this to restore your account if you lose access or move servers.
+                    </p>
+
+                    <div className="bg-black/50 p-4 rounded border border-bat-yellow/30 font-mono text-sm text-bat-yellow break-all mb-6">
+                        {recoveryKey}
+                    </div>
+
+                    <button
+                        onClick={() => router.push('/profile/setup')}
+                        className="
+                            w-full py-3 px-4 rounded-md font-bold text-lg
+                            bg-bat-yellow text-bat-black
+                            hover:bg-yellow-400
+                            transform active:scale-[0.98]
+                            transition-all duration-200
+                            shadow-[0_0_15px_rgba(245,197,24,0.3)]
+                        "
+                    >
+                        I've Saved It, Continue
+                    </button>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">

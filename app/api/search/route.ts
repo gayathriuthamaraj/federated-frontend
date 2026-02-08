@@ -12,7 +12,7 @@ export async function GET(req: Request) {
     }
 
     const res = await fetch(
-        `http://localhost:8080/user/search?user_id=${encodeURIComponent(userId)}`
+        `http://localhost:8082/user/search?user_id=${encodeURIComponent(userId)}`
     )
 
     if (!res.ok) {

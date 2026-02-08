@@ -28,7 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const storedIdentity = localStorage.getItem("local_identity");
         if (storedIdentity) {
             try {
-                setIdentity(JSON.parse(storedIdentity));
+                const parsed = JSON.parse(storedIdentity);
+                // Auto-fix legacy port 8080
+                if (parsed.home_server && parsed.home_server.includes(":8080")) {
+                    parsed.home_server = parsed.home_server.replace(":8080", ":8082");
+                    localStorage.setItem("local_identity", JSON.stringify(parsed));
+                }
+                setIdentity(parsed);
             } catch (e) {
                 console.error("Failed to parse identity", e);
                 localStorage.removeItem("local_identity");
@@ -58,6 +64,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
     const login = (userId: string, homeServer: string) => {
+        // Auto-fix legacy port 8080 coming from backend
+        if (homeServer && homeServer.includes(":8080")) {
+            homeServer = homeServer.replace(":8080", ":8082");
+        }
         const newIdentity = { user_id: userId, home_server: homeServer };
         setIdentity(newIdentity);
         localStorage.setItem("local_identity", JSON.stringify(newIdentity));

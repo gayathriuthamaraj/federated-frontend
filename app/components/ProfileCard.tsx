@@ -13,9 +13,10 @@ interface ProfileCardProps {
     isOwnProfile?: boolean;
     posts?: Post[];
     loadingPosts?: boolean;
+    did?: string;
 }
 
-export default function ProfileCard({ profile: initialProfile, isOwnProfile = false, posts = [], loadingPosts = false }: ProfileCardProps) {
+export default function ProfileCard({ profile: initialProfile, isOwnProfile = false, posts = [], loadingPosts = false, did }: ProfileCardProps) {
     const [profile, setProfile] = useState(initialProfile)
 
     // Sync state if prop changes (e.g. navigation)
@@ -99,6 +100,11 @@ export default function ProfileCard({ profile: initialProfile, isOwnProfile = fa
                     <p className="text-bat-gray/60 text-sm sm:text-base">
                         {profile.user_id}
                     </p>
+                    {did && (
+                        <p className="text-bat-gray/40 text-xs font-mono mt-1 truncate max-w-md select-all">
+                            {did}
+                        </p>
+                    )}
                 </div>
 
                 {/* Bio */}

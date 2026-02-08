@@ -29,7 +29,7 @@ export default function ComposePage() {
         setError('');
 
         try {
-            const response = await fetch('http://localhost:8080/post/create', {
+            const response = await fetch('http://localhost:8082/post/create', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -8,17 +8,39 @@ export default function LoginPage() {
     const { login } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, we would validate credentials here.
-        // For this UI-only task, we simulate a successful login.
-        // Defaulting home server to localhost:8080 as per requirements.
-        if (username) {
-            // Construct federated ID for login simulation
-            // Since we are simulating, we assume localhost.
-            const federatedId = username.includes("@") ? username : `${username}@localhost`;
-            login(federatedId, "http://localhost:8080");
+        setError('');
+        setIsSubmitting(true);
+
+        try {
+            const res = await fetch('http://localhost:8082/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password,
+                }),
+            });
+
+            if (!res.ok) {
+                const errorText = await res.text();
+                throw new Error(errorText || 'Login failed');
+            }
+
+            const data = await res.json();
+
+            // Log the user in with backend-validated credentials
+            login(data.user_id, data.home_server);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Login failed');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -31,6 +53,12 @@ export default function LoginPage() {
                 </div>
 
                 <form className="space-y-6" onSubmit={handleSubmit}>
+                    {error && (
+                        <div className="p-3 rounded-md bg-red-900/20 border border-red-500/50 text-red-400 text-sm">
+                            {error}
+                        </div>
+                    )}
+
                     <div>
                         <label
                             htmlFor="username"
@@ -83,16 +111,18 @@ export default function LoginPage() {
 
                     <button
                         type="submit"
+                        disabled={isSubmitting}
                         className="
               w-full py-3 px-4 rounded-md font-bold text-lg
               bg-bat-yellow text-bat-black
               hover:bg-yellow-400
+              disabled:opacity-50 disabled:cursor-not-allowed
               transform active:scale-[0.98]
               transition-all duration-200
               shadow-[0_0_15px_rgba(245,197,24,0.3)]
             "
                     >
-                        Sign in
+                        {isSubmitting ? 'Signing in...' : 'Sign in'}
                     </button>
                 </form>
 

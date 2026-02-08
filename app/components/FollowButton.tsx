@@ -28,7 +28,7 @@ export default function FollowButton({
         setIsLoading(true)
 
         try {
-            const res = await fetch('http://localhost:8080/follow', {
+            const res = await fetch('http://localhost:8082/follow', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
