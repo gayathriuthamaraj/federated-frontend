@@ -1,18 +1,33 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from './context/AuthContext'
+
 export default function HomePage() {
+  const { identity, isLoading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!isLoading) {
+      if (identity) {
+        // Redirect to feed if logged in
+        router.push('/feed')
+      } else {
+        // Redirect to showcase if not logged in
+        router.push('/showcase')
+      }
+    }
+  }, [identity, isLoading, router])
+
+  // Show loading while checking auth
   return (
     <main className="flex items-center justify-center min-h-screen bg-bat-black">
       <div className="text-center">
-        <h1 className="text-6xl font-bold text-bat-yellow mb-4">
-          GOTHAM SOCIAL
-        </h1>
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-bat-yellow mb-4"></div>
         <p className="text-bat-gray text-xl">
-          Welcome to the federated social network
+          Loading...
         </p>
-        <div className="mt-8 text-bat-gray/60 text-sm">
-          Use the sidebar to navigate
-        </div>
       </div>
     </main>
   )
