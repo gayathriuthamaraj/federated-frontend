@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Message {
     id: string;
@@ -23,6 +23,7 @@ interface Conversation {
 export default function MessagesPage() {
     const { identity, isLoading: authLoading } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -36,6 +37,14 @@ export default function MessagesPage() {
             router.push('/login');
         }
     }, [identity, authLoading, router]);
+
+    // Check for user query parameter and auto-select
+    useEffect(() => {
+        const userParam = searchParams.get('user');
+        if (userParam) {
+            setSelectedUserId(userParam);
+        }
+    }, [searchParams]);
 
     // Fetch conversations
     useEffect(() => {
@@ -93,8 +102,8 @@ export default function MessagesPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    sender: identity.user_id,
-                    recipient: selectedUserId,
+                    from: identity.user_id,
+                    to: selectedUserId,
                     content: newMessage,
                 }),
             });
@@ -110,6 +119,10 @@ export default function MessagesPage() {
                 };
                 setMessages([...messages, newMsg]);
                 setNewMessage('');
+            } else {
+                const errorText = await res.text();
+                console.error('Failed to send message:', errorText);
+                alert(`Failed to send message: ${errorText}`);
             }
         } catch (err) {
             console.error('Failed to send message:', err);
@@ -189,8 +202,8 @@ export default function MessagesPage() {
                                         className={`flex ${msg.sender === identity?.user_id ? 'justify-end' : 'justify-start'}`}
                                     >
                                         <div className={`px-4 py-2 rounded-lg max-w-xs ${msg.sender === identity?.user_id
-                                                ? 'bg-bat-yellow text-bat-black'
-                                                : 'bg-bat-dark text-bat-gray'
+                                            ? 'bg-bat-yellow text-bat-black'
+                                            : 'bg-bat-dark text-bat-gray'
                                             }`}>
                                             {msg.content}
                                         </div>

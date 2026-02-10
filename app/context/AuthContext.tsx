@@ -12,6 +12,7 @@ interface AuthContextType {
     identity: LocalIdentity | null;
     isLoading: boolean;
     login: (userId: string, homeServer: string) => void;
+    loginWithoutRedirect: (userId: string, homeServer: string) => void;
     logout: () => void;
 }
 
@@ -55,11 +56,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const isPublicShowcase = publicShowcaseRoutes.includes(pathname) || pathname.startsWith("/showcase");
         const isPublicRoute = isUnauthenticatedOnly || isAuthenticatedRoute || isPublicShowcase;
 
+        // Check if we're showing recovery key (don't redirect)
+        const showingRecoveryKey = sessionStorage.getItem('showing_recovery_key') === 'true';
+
         if (!identity && !isPublicRoute) {
             // Not logged in and trying to access protected route -> go to login
             router.push("/login");
-        } else if (identity && isUnauthenticatedOnly) {
+        } else if (identity && isUnauthenticatedOnly && !showingRecoveryKey) {
             // Logged in and visiting login/register -> go to profile
+            // BUT: don't redirect if we're showing the recovery key
             router.push("/profile");
         }
     }, [identity, isLoading, pathname, router]);
@@ -77,6 +82,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.push("/profile");
     };
 
+    const loginWithoutRedirect = (userId: string, homeServer: string) => {
+        // Auto-fix legacy port 8080 coming from backend
+        if (homeServer && homeServer.includes(":8080")) {
+            homeServer = homeServer.replace(":8080", ":8082");
+        }
+        const newIdentity = { user_id: userId, home_server: homeServer };
+        setIdentity(newIdentity);
+        localStorage.setItem("local_identity", JSON.stringify(newIdentity));
+        // No redirect - used during registration to show recovery key
+    };
+
     const logout = () => {
         setIdentity(null);
         localStorage.removeItem("local_identity");
@@ -84,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ identity, isLoading, login, logout }}>
+        <AuthContext.Provider value={{ identity, isLoading, login, loginWithoutRedirect, logout }}>
             {!isLoading && children}
         </AuthContext.Provider>
     );

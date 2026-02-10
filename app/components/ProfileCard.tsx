@@ -68,8 +68,8 @@ export default function ProfileCard({ profile: initialProfile, isOwnProfile = fa
                         </div>
                     </div>
 
-                    {/* Edit Profile or Follow Button */}
-                    <div className="pt-3">
+                    {/* Edit Profile or Follow/Message Buttons */}
+                    <div className="pt-3 flex gap-2">
                         {isOwnProfile ? (
                             <Link
                                 href="/profile/edit"
@@ -84,10 +84,24 @@ export default function ProfileCard({ profile: initialProfile, isOwnProfile = fa
                                 Edit Profile
                             </Link>
                         ) : (
-                            <FollowButton
-                                targetUser={profile.user_id}
-                                onSuccess={handleFollowSuccess}
-                            />
+                            <>
+                                <FollowButton
+                                    targetUser={profile.user_id}
+                                    onSuccess={handleFollowSuccess}
+                                />
+                                <Link
+                                    href={`/messages?user=${encodeURIComponent(profile.user_id)}`}
+                                    className="
+                                        px-6 py-2 rounded-md font-bold
+                                        bg-bat-black text-bat-gray
+                                        border-2 border-bat-gray/30
+                                        hover:border-bat-yellow hover:text-bat-yellow
+                                        transition-all duration-200
+                                    "
+                                >
+                                    Message
+                                </Link>
+                            </>
                         )}
                     </div>
                 </div>

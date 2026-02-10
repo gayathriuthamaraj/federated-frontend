@@ -23,6 +23,7 @@ export default function FollowingPage() {
     const router = useRouter();
     const [following, setFollowing] = useState<UserDocument[]>([]);
     const [loading, setLoading] = useState(true);
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
         if (!authLoading && !identity) {
@@ -51,7 +52,30 @@ export default function FollowingPage() {
         }
 
         if (identity) fetchFollowing();
-    }, [identity]);
+    }, [identity, refreshKey]);
+
+    const handleUnfollow = async (userId: string) => {
+        if (!identity) return;
+
+        if (!confirm(`Unfollow ${userId}?`)) return;
+
+        try {
+            const res = await fetch(`${identity.home_server}/unfollow`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    follower: identity.user_id,
+                    followee: userId
+                })
+            });
+
+            if (res.ok) {
+                setRefreshKey(prev => prev + 1);
+            }
+        } catch (err) {
+            console.error('Failed to unfollow:', err);
+        }
+    };
 
     if (authLoading || loading) {
         return (
@@ -69,6 +93,7 @@ export default function FollowingPage() {
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-bat-gray mb-2">Following</h1>
                 <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
+                <p className="text-bat-gray/60 mt-2">{following.length} following</p>
             </div>
 
             {following.length === 0 ? (
@@ -78,17 +103,32 @@ export default function FollowingPage() {
             ) : (
                 <div className="space-y-3">
                     {following.map(user => (
-                        <UserCard
-                            key={user.identity.user_id}
-                            user={{
-                                userId: user.identity.user_id,
-                                username: user.identity.user_id.split('@')[0],
-                                displayName: user.profile.display_name,
-                                avatarUrl: user.profile.avatar_url || '',
-                                bio: user.profile.bio || '',
-                            }}
-                            showFollowButton={true}
-                        />
+                        <div key={user.identity.user_id} className="flex items-center gap-3">
+                            <div className="flex-1">
+                                <UserCard
+                                    user={{
+                                        userId: user.identity.user_id,
+                                        username: user.identity.user_id.split('@')[0],
+                                        displayName: user.profile.display_name,
+                                        avatarUrl: user.profile.avatar_url || '',
+                                        bio: user.profile.bio || '',
+                                    }}
+                                    showFollowButton={false}
+                                />
+                            </div>
+                            <button
+                                onClick={() => handleUnfollow(user.identity.user_id)}
+                                className="
+                                    px-4 py-2 rounded-md font-medium text-sm
+                                    bg-bat-black text-bat-gray
+                                    border border-bat-gray/30
+                                    hover:border-red-500 hover:text-red-500
+                                    transition-all duration-200
+                                "
+                            >
+                                Unfollow
+                            </button>
+                        </div>
                     ))}
                 </div>
             )}

@@ -1,6 +1,5 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ProfileCard from '../components/ProfileCard';
 import PostCard from '../components/PostCard';
@@ -16,12 +15,7 @@ interface Post {
 }
 
 export default function ProfilePage() {
-  const searchParams = useSearchParams();
   const { identity, isLoading: authLoading } = useAuth();
-
-  // Determine the effective user ID: query param OR local identity
-  const paramUserId = searchParams.get('user_id');
-  const effectiveUserId = paramUserId || identity?.user_id;
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [did, setDid] = useState<string | null>(null);
@@ -37,17 +31,13 @@ export default function ProfilePage() {
       return;
     }
 
-    const userId = paramUserId ?? identity.user_id;
-
     const fetchProfile = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const url =
-          userId === identity.user_id
-            ? `${identity.home_server}/user/me?user_id=${encodeURIComponent(userId)}`
-            : `${identity.home_server}/user/search?user_id=${encodeURIComponent(userId)}`;
+        // Only fetch the logged-in user's own profile
+        const url = `${identity.home_server}/user/me?user_id=${encodeURIComponent(identity.user_id)}`;
 
 
         const res = await fetch(url);
@@ -82,13 +72,13 @@ export default function ProfilePage() {
     const fetchPosts = async () => {
       setLoadingPosts(true);
       try {
-        const res = await fetch(`${identity.home_server}/posts/user?user_id=${encodeURIComponent(userId)}`);
+        const res = await fetch(`${identity.home_server}/posts/user?user_id=${encodeURIComponent(identity.user_id)}`);
         if (res.ok) {
           const data = await res.json();
           setPosts(data.posts || []);
         }
       } catch (err) {
-        console.error("Failed to fetch posts:", err);
+        console.error('Error fetching posts:', err);
       } finally {
         setLoadingPosts(false);
       }
@@ -96,7 +86,7 @@ export default function ProfilePage() {
 
     fetchProfile();
     fetchPosts();
-  }, [authLoading, identity, paramUserId]);
+  }, [authLoading, identity]);
 
 
   if (error) {

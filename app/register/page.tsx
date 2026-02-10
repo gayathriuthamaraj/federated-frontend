@@ -1,13 +1,13 @@
 "use client";
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 
 
 export default function RegisterPage() {
-    const { login } = useAuth();
+    const { login, loginWithoutRedirect } = useAuth();
     const router = useRouter();
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
@@ -52,14 +52,18 @@ export default function RegisterPage() {
 
             const data = await res.json();
 
-            // Log the user in
-            login(data.user_id, data.home_server);
+            console.log('[Register] Registration successful, data:', data);
+
+            // Set identity without redirecting (so we can show recovery key)
+            loginWithoutRedirect(data.user_id, data.home_server);
 
             // Set recovery key to show it
             if (data.recovery_key) {
+                console.log('[Register] Recovery key received, showing recovery screen');
                 setRecoveryKey(data.recovery_key);
             } else {
-                // Fallback if no key (should happen with new backend)
+                // Fallback if no key
+                console.log('[Register] No recovery key, redirecting to setup');
                 router.push('/profile/setup');
             }
 
@@ -70,6 +74,30 @@ export default function RegisterPage() {
         }
     };
 
+    const [hasCopied, setHasCopied] = useState(false);
+    const [confirmed, setConfirmed] = useState(false);
+
+    // Set flag when recovery key is shown to prevent AuthContext redirect
+    useEffect(() => {
+        if (recoveryKey) {
+            sessionStorage.setItem('showing_recovery_key', 'true');
+        } else {
+            sessionStorage.removeItem('showing_recovery_key');
+        }
+    }, [recoveryKey]);
+
+    const handleCopyKey = () => {
+        navigator.clipboard.writeText(recoveryKey || '');
+        setHasCopied(true);
+    };
+
+    const handleDone = () => {
+        setConfirmed(true);
+        // Clear the flag before navigating
+        sessionStorage.removeItem('showing_recovery_key');
+        router.push('/profile/setup');
+    };
+
     if (recoveryKey) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
@@ -77,27 +105,62 @@ export default function RegisterPage() {
                     <h1 className="text-3xl font-bold text-bat-yellow mb-2">Account Created!</h1>
                     <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50 mb-6"></div>
 
+                    <div className="bg-red-900/20 border border-red-500/50 rounded-md p-4 mb-4">
+                        <p className="text-red-400 text-sm font-bold">⚠️ CRITICAL</p>
+                        <p className="text-red-400 text-xs mt-1">
+                            Save this recovery key NOW. You cannot view it again!
+                        </p>
+                    </div>
+
                     <p className="text-bat-gray mb-4">
-                        Please save your Identity Recovery Key. You will need this to restore your account if you lose access or move servers.
+                        Your Identity Recovery Key is needed to restore your account if you lose access or move servers.
                     </p>
 
-                    <div className="bg-black/50 p-4 rounded border border-bat-yellow/30 font-mono text-sm text-bat-yellow break-all mb-6">
+                    <div className="bg-black/50 p-4 rounded border border-bat-yellow/30 font-mono text-sm text-bat-yellow break-all mb-3 select-all">
                         {recoveryKey}
                     </div>
 
                     <button
-                        onClick={() => router.push('/profile/setup')}
+                        onClick={handleCopyKey}
                         className="
-                            w-full py-3 px-4 rounded-md font-bold text-lg
-                            bg-bat-yellow text-bat-black
-                            hover:bg-yellow-400
-                            transform active:scale-[0.98]
+                            w-full py-3 px-4 mb-4 rounded-md font-bold text-base
+                            bg-bat-black text-bat-gray
+                            border-2 border-bat-gray/30
+                            hover:border-bat-yellow hover:text-bat-yellow
                             transition-all duration-200
-                            shadow-[0_0_15px_rgba(245,197,24,0.3)]
                         "
                     >
-                        I've Saved It, Continue
+                        {hasCopied ? '✓ Copied to Clipboard!' : '📋 Copy Recovery Key'}
                     </button>
+
+                    {hasCopied && (
+                        <button
+                            onClick={handleDone}
+                            className="
+                                w-full py-3 px-4 rounded-md font-bold text-lg
+                                bg-bat-yellow text-bat-black
+                                hover:bg-yellow-400
+                                transform active:scale-[0.98]
+                                transition-all duration-200
+                                shadow-[0_0_15px_rgba(245,197,24,0.3)]
+                                animate-pulse
+                            "
+                        >
+                            I've Saved It - Continue to Setup
+                        </button>
+                    )}
+
+                    {!hasCopied && (
+                        <p className="text-sm text-bat-gray/60 mt-2">
+                            Click the button above to copy your recovery key
+                        </p>
+                    )}
+
+                    {hasCopied && (
+                        <p className="text-sm text-green-400 mt-3">
+                            ✓ Key copied! Click "Continue" when you've saved it safely.
+                        </p>
+                    )}
                 </div>
             </div>
         )

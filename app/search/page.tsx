@@ -1,61 +1,129 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import UserCard from '../components/UserCard';
+import ProfileCard from '../components/ProfileCard';
+import PostCard from '../components/PostCard';
+import { Post } from '@/types/post';
+
+interface UserProfile {
+    userId: string;
+    username: string;
+    displayName: string;
+    avatarUrl: string;
+    bio: string;
+    bannerUrl: string;
+    location: string;
+    portfolioUrl: string;
+    followersCount: number;
+    followingCount: number;
+}
 
 export default function SearchPage() {
     const { identity, isLoading: authLoading } = useAuth();
     const router = useRouter();
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
     const [searching, setSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+
+    // Profile display state
+    const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+    const [userPosts, setUserPosts] = useState<Post[]>([]);
+    const [loadingPosts, setLoadingPosts] = useState(false);
 
     const handleSearch = async () => {
         if (!searchQuery.trim() || !identity) return;
 
         setSearching(true);
         setHasSearched(true);
+        setSelectedUser(null); // Clear previous selection
 
         try {
             const res = await fetch(
-                `${identity.home_server}/user/search?query=${encodeURIComponent(searchQuery)}`
+                `${identity.home_server}/user/search?user_id=${encodeURIComponent(searchQuery)}`
             );
 
             if (res.ok) {
                 const data = await res.json();
-                // Handle both single user and array responses
-                if (data.user) {
-                    setSearchResults([{
-                        userId: data.user.user_id || data.identity?.user_id,
-                        username: (data.user.user_id || data.identity?.user_id)?.split('@')[0] || 'unknown',
-                        displayName: data.user.display_name || data.profile?.display_name || 'Unknown',
-                        avatarUrl: data.user.avatar_url || data.profile?.avatar_url || '',
-                        bio: data.user.bio || data.profile?.bio || '',
-                    }]);
-                } else if (data.users) {
-                    setSearchResults(data.users.map(u => ({
-                        userId: u.user_id || u.identity?.user_id,
-                        username: (u.user_id || u.identity?.user_id)?.split('@')[0] || 'unknown',
-                        displayName: u.display_name || u.profile?.display_name || 'Unknown',
-                        avatarUrl: u.avatar_url || u.profile?.avatar_url || '',
-                        bio: u.bio || u.profile?.bio || '',
-                    })));
+                // The backend returns a single user with identity and profile
+                if (data.identity && data.profile) {
+                    // Fetch followers and following counts
+                    const [followersRes, followingRes] = await Promise.all([
+                        fetch(`${identity.home_server}/followers?user_id=${encodeURIComponent(data.identity.user_id)}`),
+                        fetch(`${identity.home_server}/following?user_id=${encodeURIComponent(data.identity.user_id)}`)
+                    ]);
+
+                    let followersCount = 0;
+                    let followingCount = 0;
+
+                    if (followersRes.ok) {
+                        const followersData = await followersRes.json();
+                        followersCount = followersData.followers?.length || 0;
+                    }
+
+                    if (followingRes.ok) {
+                        const followingData = await followingRes.json();
+                        followingCount = followingData.following?.length || 0;
+                    }
+
+                    const user = {
+                        userId: data.identity.user_id,
+                        username: data.identity.user_id.split('@')[0],
+                        displayName: data.profile.display_name || 'Unknown',
+                        avatarUrl: data.profile.avatar_url || '',
+                        bio: data.profile.bio || '',
+                        bannerUrl: data.profile.banner_url || '',
+                        location: data.profile.location || '',
+                        portfolioUrl: data.profile.portfolio_url || '',
+                        followersCount,
+                        followingCount,
+                    };
+
+                    // Show the user profile immediately
+                    setSelectedUser(user);
+
+                    // Fetch their posts
+                    fetchUserPosts(user.userId);
                 } else {
-                    setSearchResults([]);
+                    setSelectedUser(null);
                 }
             } else {
-                setSearchResults([]);
+                setSelectedUser(null);
             }
         } catch (err) {
             console.error('Search error:', err);
-            setSearchResults([]);
+            setSelectedUser(null);
         } finally {
             setSearching(false);
         }
     };
+
+    const fetchUserPosts = async (userId: string) => {
+        if (!identity) return;
+
+        setLoadingPosts(true);
+        try {
+            const res = await fetch(
+                `${identity.home_server}/user/posts?user_id=${encodeURIComponent(userId)}&viewer_id=${encodeURIComponent(identity.user_id)}`
+            );
+
+            if (res.ok) {
+                const data = await res.json();
+                setUserPosts(data.posts || []);
+            }
+        } catch (err) {
+            console.error('Error fetching posts:', err);
+        } finally {
+            setLoadingPosts(false);
+        }
+    };
+
+    useEffect(() => {
+        if (!authLoading && !identity) {
+            router.push('/login');
+        }
+    }, [authLoading, identity, router]);
 
     if (authLoading) {
         return (
@@ -69,7 +137,6 @@ export default function SearchPage() {
     }
 
     if (!identity) {
-        router.push('/login');
         return null;
     }
 
@@ -124,7 +191,7 @@ export default function SearchPage() {
                     </button>
                 </div>
                 <p className="text-sm text-bat-gray/60 mt-2">
-                    Search by username or user ID (e.g., "alice" or "alice@localhost:8082")
+                    Search by username or user ID (e.g., "alice" or "alice@localhost")
                 </p>
             </div>
 
@@ -135,29 +202,38 @@ export default function SearchPage() {
                     <p className="mt-2">Searching...</p>
                 </div>
             ) : hasSearched ? (
-                searchResults.length === 0 ? (
+                selectedUser ? (
+                    <div>
+                        {/* User Profile - includes posts */}
+                        <ProfileCard
+                            profile={{
+                                user_id: selectedUser.userId,
+                                display_name: selectedUser.displayName,
+                                avatar_url: selectedUser.avatarUrl,
+                                bio: selectedUser.bio,
+                                banner_url: selectedUser.bannerUrl,
+                                portfolio_url: selectedUser.portfolioUrl,
+                                birth_date: '',
+                                location: selectedUser.location,
+                                followers_visibility: 'public',
+                                following_visibility: 'public',
+                                created_at: '',
+                                updated_at: '',
+                                followers_count: selectedUser.followersCount,
+                                following_count: selectedUser.followingCount,
+                            }}
+                            isOwnProfile={false}
+                            posts={userPosts}
+                            loadingPosts={loadingPosts}
+                        />
+                    </div>
+                ) : (
                     <div className="text-center py-12 text-bat-gray">
                         <svg className="w-16 h-16 mx-auto mb-4 text-bat-gray/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <p className="text-lg">No users found</p>
                         <p className="text-sm mt-2">Try searching with a different query</p>
-                    </div>
-                ) : (
-                    <div>
-                        <p className="text-sm text-bat-gray/60 mb-4">
-                            Found {searchResults.length} user{searchResults.length !== 1 ? 's' : ''}
-                        </p>
-                        <div className="space-y-3">
-                            {searchResults.map(user => (
-                                <UserCard
-                                    key={user.userId}
-                                    user={user}
-                                    showFollowButton={true}
-                                    onClick={() => router.push(`/profile?user_id=${encodeURIComponent(user.userId)}`)}
-                                />
-                            ))}
-                        </div>
                     </div>
                 )
             ) : (

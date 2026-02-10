@@ -32,10 +32,12 @@ export default function ProfileSetupPage() {
             return;
         }
 
+        console.log('[ProfileSetup] Starting profile update...');
         setIsSubmitting(true);
         setError('');
 
         try {
+            console.log('[ProfileSetup] Calling updateProfile API...');
             await updateProfile({
                 user_id: identity.user_id,
                 display_name: formData.displayName || undefined,
@@ -49,8 +51,11 @@ export default function ProfileSetupPage() {
                 following_visibility: formData.followingVisibility,
             });
 
+            console.log('[ProfileSetup] Profile updated successfully, redirecting to /profile');
+            // Redirect to profile page after onboarding
             router.push('/profile');
         } catch (err) {
+            console.error('[ProfileSetup] Error updating profile:', err);
             setError(err instanceof Error ? err.message : 'Failed to update profile');
         } finally {
             setIsSubmitting(false);
@@ -58,6 +63,8 @@ export default function ProfileSetupPage() {
     };
 
     const handleSkip = () => {
+        console.log('[ProfileSetup] User skipped setup, redirecting to /profile');
+        // Redirect to profile page even if skipped
         router.push('/profile');
     };
 
@@ -66,10 +73,10 @@ export default function ProfileSetupPage() {
             <div className="max-w-2xl mx-auto bg-bat-dark rounded-lg shadow-2xl border border-bat-gray/10">
                 {/* Header */}
                 <div className="p-8 border-b border-bat-gray/10">
-                    <h1 className="text-3xl font-bold text-bat-gray mb-2">Complete Your Profile</h1>
+                    <h1 className="text-3xl font-bold text-bat-yellow mb-2">Welcome! 🎉</h1>
                     <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50 mb-3"></div>
-                    <p className="text-sm text-gray-500">
-                        Add your details to personalize your Gotham Social experience
+                    <p className="text-sm text-bat-gray">
+                        Let's set up your profile to get started. You can always update this later.
                     </p>
                 </div>
 
@@ -329,7 +336,7 @@ export default function ProfileSetupPage() {
                                 shadow-[0_0_15px_rgba(245,197,24,0.3)]
                             "
                         >
-                            {isSubmitting ? 'Saving...' : 'Complete Profile'}
+                            {isSubmitting ? 'Setting up...' : 'Complete Setup & Continue'}
                         </button>
 
                         <button
