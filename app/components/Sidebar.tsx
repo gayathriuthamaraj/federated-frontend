@@ -87,24 +87,15 @@ export default function Sidebar() {
                 </button>
 
                 {/* Main Navigation */}
-                <NavItem label="Demo" href="/showcase" expanded={expanded} active={pathname.startsWith("/showcase")}>
+                <NavItem label="Home" href="/home" expanded={expanded} active={pathname.startsWith("/home")}>
                     <Home_svg />
                 </NavItem>
 
                 <NavItem
-                    label="Feed"
-                    href="/feed"
+                    label="Search"
+                    href="/search"
                     expanded={expanded}
-                    active={pathname.startsWith("/feed")}
-                >
-                    <Bookmark_svg />
-                </NavItem>
-
-                <NavItem
-                    label="Explore"
-                    href="/explore"
-                    expanded={expanded}
-                    active={pathname.startsWith("/explore")}
+                    active={pathname.startsWith("/search")}
                 >
                     <Search_svg />
                 </NavItem>

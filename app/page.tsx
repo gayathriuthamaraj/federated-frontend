@@ -11,8 +11,8 @@ export default function HomePage() {
   useEffect(() => {
     if (!isLoading) {
       if (identity) {
-        // Redirect to feed if logged in
-        router.push('/feed')
+        // Redirect to home/explore if logged in
+        router.push('/home')
       } else {
         // Redirect to showcase if not logged in
         router.push('/showcase')
