@@ -4,4 +4,10 @@ export interface Post {
     content: string
     created_at: string
     updated_at: string
+    image_url?: string
+    like_count?: number
+    reply_count?: number
+    repost_count?: number
+    has_liked?: boolean
+    has_reposted?: boolean
 }

@@ -1,16 +1,25 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import PostCard from '../../components/PostCard';
+import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
+import PostCard from '../components/PostCard';
 
 export default function FeedPage() {
-    const { identity } = useAuth();
+    const { identity, isLoading: authLoading } = useAuth();
+    const router = useRouter();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [newPostContent, setNewPostContent] = useState('');
     const [posting, setPosting] = useState(false);
+
+    // Redirect to login if not authenticated
+    useEffect(() => {
+        if (!authLoading && !identity) {
+            router.push('/login');
+        }
+    }, [identity, authLoading, router]);
 
     // Fetch feed
     useEffect(() => {
@@ -39,7 +48,7 @@ export default function FeedPage() {
             }
         }
 
-        fetchFeed();
+        if (identity) fetchFeed();
     }, [identity]);
 
     // Handle post creation
@@ -87,11 +96,12 @@ export default function FeedPage() {
         }
     };
 
-    if (!identity) {
+    if (authLoading || !identity) {
         return (
             <div className="max-w-3xl mx-auto p-6">
                 <div className="text-center text-bat-gray">
-                    Please log in to view your feed
+                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
+                    <p className="mt-2">Loading...</p>
                 </div>
             </div>
         );

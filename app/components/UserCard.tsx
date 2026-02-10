@@ -3,13 +3,25 @@
 import { MockUser } from '../data/mockData';
 import FollowButton from './FollowButton';
 
+// Flexible user type that works with both mock and real data
 interface UserCardProps {
-    user: MockUser;
+    user: MockUser | {
+        userId: string;
+        username: string;
+        displayName: string;
+        avatarUrl: string;
+        bio: string;
+        followersCount?: number;
+        followingCount?: number;
+    };
     showFollowButton?: boolean;
     onClick?: () => void;
 }
 
 export default function UserCard({ user, showFollowButton = true, onClick }: UserCardProps) {
+    const followersCount = 'followersCount' in user ? user.followersCount : 0;
+    const followingCount = 'followingCount' in user ? user.followingCount : 0;
+
     return (
         <article
             onClick={onClick}
@@ -21,11 +33,17 @@ export default function UserCard({ user, showFollowButton = true, onClick }: Use
         >
             {/* Left: Avatar */}
             <div className="flex-shrink-0">
-                <img
-                    src={user.avatarUrl}
-                    alt={user.displayName}
-                    className="h-12 w-12 rounded-full"
-                />
+                {user.avatarUrl ? (
+                    <img
+                        src={user.avatarUrl}
+                        alt={user.displayName}
+                        className="h-12 w-12 rounded-full"
+                    />
+                ) : (
+                    <div className="h-12 w-12 rounded-full bg-bat-dark border border-bat-yellow/50 flex items-center justify-center text-bat-yellow font-bold text-lg">
+                        {user.displayName[0].toUpperCase()}
+                    </div>
+                )}
             </div>
 
             {/* Middle: User Info */}
@@ -48,20 +66,22 @@ export default function UserCard({ user, showFollowButton = true, onClick }: Use
                 )}
 
                 {/* Stats - Only show on larger screens */}
-                <div className="mt-2 flex gap-4 text-sm">
-                    <div>
-                        <span className="font-bold text-bat-gray mr-1">
-                            {user.followersCount.toLocaleString()}
-                        </span>
-                        <span className="text-bat-gray/60">Followers</span>
+                {((followersCount || 0) > 0 || (followingCount || 0) > 0) && (
+                    <div className="mt-2 flex gap-4 text-sm">
+                        <div>
+                            <span className="font-bold text-bat-gray mr-1">
+                                {followersCount?.toLocaleString() || 0}
+                            </span>
+                            <span className="text-bat-gray/60">Followers</span>
+                        </div>
+                        <div>
+                            <span className="font-bold text-bat-gray mr-1">
+                                {followingCount?.toLocaleString() || 0}
+                            </span>
+                            <span className="text-bat-gray/60">Following</span>
+                        </div>
                     </div>
-                    <div>
-                        <span className="font-bold text-bat-gray mr-1">
-                            {user.followingCount.toLocaleString()}
-                        </span>
-                        <span className="text-bat-gray/60">Following</span>
-                    </div>
-                </div>
+                )}
             </div>
 
             {/* Right: Follow Button */}

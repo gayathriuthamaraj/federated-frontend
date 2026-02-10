@@ -2,19 +2,24 @@
 
 import { Post } from '@/types/post';
 import { useState } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface PostCardProps {
     post: Post;
 }
 
 export default function PostCard({ post }: PostCardProps) {
-    const [isLiked, setIsLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(Math.floor(Math.random() * 500));
-    const [isReposted, setIsReposted] = useState(false);
-    const [repostCount, setRepostCount] = useState(Math.floor(Math.random() * 100));
+    const { identity } = useAuth();
+
+    // Use post data from API
+    const [isLiked, setIsLiked] = useState(post.has_liked || false);
+    const [likeCount, setLikeCount] = useState(post.like_count || 0);
+    const [isReposted, setIsReposted] = useState(post.has_reposted || false);
+    const [repostCount, setRepostCount] = useState(post.repost_count || 0);
     const [showComments, setShowComments] = useState(false);
     const [commentText, setCommentText] = useState('');
     const [comments, setComments] = useState<Array<{ id: string, author: string, text: string, replies: Array<{ id: string, author: string, text: string }> }>>([]);
+    const [commentCount] = useState(post.reply_count || 0);
 
     const displayName = post.author.split('@')[0];
     const handle = `@${post.author}`;
@@ -25,25 +30,98 @@ export default function PostCard({ post }: PostCardProps) {
         day: 'numeric',
     });
 
-    const handleLike = () => {
-        setIsLiked(!isLiked);
-        setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+    const handleLike = async () => {
+        if (!identity) return;
+
+        const newLikedState = !isLiked;
+        setIsLiked(newLikedState);
+        setLikeCount((prev: number) => newLikedState ? prev + 1 : prev - 1);
+
+        try {
+            const res = await fetch(`${identity.home_server}/post/like`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: identity.user_id,
+                    post_id: post.id,
+                }),
+            });
+
+            if (!res.ok) {
+                // Revert on error
+                setIsLiked(!newLikedState);
+                setLikeCount((prev: number) => newLikedState ? prev - 1 : prev + 1);
+            }
+        } catch (err) {
+            console.error('Like error:', err);
+            setIsLiked(!newLikedState);
+            setLikeCount(prev => newLikedState ? prev - 1 : prev + 1);
+        }
     };
 
-    const handleRepost = () => {
-        setIsReposted(!isReposted);
-        setRepostCount(prev => isReposted ? prev - 1 : prev + 1);
+    const handleRepost = async () => {
+        if (!identity) return;
+
+        const newRepostedState = !isReposted;
+        setIsReposted(newRepostedState);
+        setRepostCount((prev: number) => newRepostedState ? prev + 1 : prev - 1);
+
+        try {
+            const res = await fetch(`${identity.home_server}/post/repost`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: identity.user_id,
+                    post_id: post.id,
+                }),
+            });
+
+            if (!res.ok) {
+                // Revert on error
+                setIsReposted(!newRepostedState);
+                setRepostCount((prev: number) => newRepostedState ? prev - 1 : prev + 1);
+            }
+        } catch (err) {
+            console.error('Repost error:', err);
+            setIsReposted(!newRepostedState);
+            setRepostCount(prev => newRepostedState ? prev - 1 : prev + 1);
+        }
     };
 
-    const handleComment = () => {
-        if (commentText.trim()) {
-            setComments([...comments, {
-                id: Date.now().toString(),
-                author: 'You',
-                text: commentText,
-                replies: []
-            }]);
-            setCommentText('');
+    const handleComment = async () => {
+        if (!commentText.trim() || !identity) return;
+
+        const tempComment = {
+            id: Date.now().toString(),
+            author: identity.user_id,
+            text: commentText,
+            replies: []
+        };
+
+        setComments([...comments, tempComment]);
+        const savedText = commentText;
+        setCommentText('');
+
+        try {
+            const res = await fetch(`${identity.home_server}/post/reply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: identity.user_id,
+                    post_id: post.id,
+                    content: savedText,
+                }),
+            });
+
+            if (!res.ok) {
+                // Revert on error
+                setComments(comments);
+                setCommentText(savedText);
+            }
+        } catch (err) {
+            console.error('Comment error:', err);
+            setComments(comments);
+            setCommentText(savedText);
         }
     };
 
@@ -96,7 +174,7 @@ export default function PostCard({ post }: PostCardProps) {
                                     <path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path>
                                 </svg>
                             </div>
-                            <span className="text-xs font-medium">{comments.length}</span>
+                            <span className="text-xs font-medium">{commentCount + comments.length}</span>
                         </button>
 
                         {/* Repost */}
