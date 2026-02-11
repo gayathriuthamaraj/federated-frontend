@@ -1,4 +1,18 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+// Helper to get API base URL from pinned server
+function getApiBaseUrl(): string {
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+
+    const trustedServer = localStorage.getItem('trusted_server');
+    if (trustedServer) {
+        try {
+            const data = JSON.parse(trustedServer);
+            return data.server_url || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+        } catch (e) {
+            return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+        }
+    }
+    return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+}
 
 export interface AdminLoginData {
     username: string;
@@ -40,7 +54,7 @@ function getAuthToken(): string | null {
 
 // Admin login
 export async function adminLogin(data: AdminLoginData): Promise<{ token: string; message: string }> {
-    const response = await fetch(`${API_BASE_URL}/admin/login`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/login`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -61,7 +75,7 @@ export async function getServerConfig(): Promise<ServerConfig> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
 
-    const response = await fetch(`${API_BASE_URL}/admin/config/server`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/config/server`, {
         headers: {
             'Authorization': `Bearer ${token}`,
         },
@@ -79,7 +93,7 @@ export async function updateServerName(serverName: string): Promise<{ message: s
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
 
-    const response = await fetch(`${API_BASE_URL}/admin/config/server`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/config/server`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -101,7 +115,7 @@ export async function testDatabaseConnection(connectionString: string): Promise<
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
 
-    const response = await fetch(`${API_BASE_URL}/admin/config/test-db`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/config/test-db`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -119,7 +133,7 @@ export async function startDatabaseMigration(connectionString: string): Promise<
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
 
-    const response = await fetch(`${API_BASE_URL}/admin/migrate/start`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/migrate/start`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -141,7 +155,7 @@ export async function getMigrationStatus(migrationId: string): Promise<Migration
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
 
-    const response = await fetch(`${API_BASE_URL}/admin/migrate/status?migration_id=${migrationId}`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/migrate/status?migration_id=${migrationId}`, {
         headers: {
             'Authorization': `Bearer ${token}`,
         },
@@ -159,7 +173,7 @@ export async function getAllUsers(): Promise<{ users: any[]; count: number }> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
 
-    const response = await fetch(`${API_BASE_URL}/admin/users/list`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/users/list`, {
         headers: {
             'Authorization': `Bearer ${token}`,
         },
@@ -177,7 +191,7 @@ export async function getServerStats(): Promise<ServerStats> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
 
-    const response = await fetch(`${API_BASE_URL}/admin/stats`, {
+    const response = await fetch(`${getApiBaseUrl()}/admin/stats`, {
         headers: {
             'Authorization': `Bearer ${token}`,
         },
@@ -188,4 +202,88 @@ export async function getServerStats(): Promise<ServerStats> {
     }
 
     return response.json();
+}
+
+// ============================================================================
+// Invite Management
+// ============================================================================
+
+export interface Invite {
+    id: string;
+    invite_code: string;
+    invite_type: 'user' | 'admin';
+    created_by: string;
+    max_uses: number;
+    current_uses: number;
+    expires_at?: string;
+    revoked: boolean;
+    created_at: string;
+}
+
+export interface GenerateInviteRequest {
+    invite_type: 'user' | 'admin';
+    max_uses: number;
+    expires_in: number;
+}
+
+export async function getInvites(): Promise<{ invites: Invite[] }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${getApiBaseUrl()}/admin/invites/list`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch invites');
+    return response.json();
+}
+
+export async function generateInvite(data: GenerateInviteRequest): Promise<Invite> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${getApiBaseUrl()}/admin/invites/generate`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(data),
+    });
+
+    if (!response.ok) throw new Error(await response.text());
+    return response.json();
+}
+
+export async function revokeInvite(inviteCode: string): Promise<void> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${getApiBaseUrl()}/admin/invites/revoke`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ invite_code: inviteCode }),
+    });
+
+    if (!response.ok) throw new Error(await response.text());
+}
+
+export async function fetchInviteQR(code: string): Promise<string> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const response = await fetch(`${getApiBaseUrl()}/admin/invites/qr?code=${code}`, {
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+
+    if (!response.ok) throw new Error('Failed to fetch QR code');
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
 }
