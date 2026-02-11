@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import Sidebar from '../components/Sidebar';
+
 import UserCard from '../components/UserCard';
 
 interface Notification {
@@ -78,66 +78,76 @@ export default function NotificationsPage() {
         }
     };
 
-    if (authLoading || loading) {
-        return (
-            <div className="min-h-screen bg-bat-dark text-white flex">
-                <Sidebar />
-                <div className="flex-1 ml-64 p-6 flex justify-center items-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-bat-dark text-white flex">
-            <Sidebar />
-            <main className="flex-1 ml-64 p-6 max-w-2xl mx-auto w-full">
-                <div className="mb-6">
-                    <h1 className="text-3xl font-bold text-bat-gray mb-2">Notifications</h1>
-                    <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
-                </div>
+        <div className="max-w-2xl mx-auto w-full py-6">
+            <div className="mb-6">
+                <h1 className="text-3xl font-bold text-bat-gray mb-2">Notifications</h1>
+                <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
+            </div>
 
-                {notifications.length === 0 ? (
-                    <div className="text-center py-12 text-bat-gray">
-                        <p className="text-lg">No notifications yet</p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {notifications.map(n => (
-                            <div
-                                key={n.id}
-                                className={`
-                                    flex items-center gap-4 p-4 rounded-lg border
-                                    ${n.is_read ? 'bg-bat-black border-bat-gray/10' : 'bg-bat-black border-bat-yellow/30'}
-                                    hover:border-bat-yellow/50 transition-colors duration-200
-                                `}
-                            >
-                                <div className="text-2xl">
-                                    {getIcon(n.type)}
-                                </div>
-                                <div className="flex-1">
-                                    {n.type === 'SYSTEM' ? (
-                                        <p className="text-bat-gray">{n.message}</p>
-                                    ) : (
-                                        <div className="flex items-center gap-2">
-                                            <span className="font-bold text-white hover:underline cursor-pointer">
-                                                {n.actor_name || n.actor_id}
+            {notifications.length === 0 ? (
+                <div className="text-center py-12 text-bat-gray">
+                    <p className="text-lg">No notifications yet</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {notifications.map(n => (
+                        <div
+                            key={n.id}
+                            onClick={() => {
+                                if (n.type === 'FOLLOW') {
+                                    router.push(`/profile?user_id=${encodeURIComponent(n.actor_id)}`);
+                                } else if (n.entity_id) {
+                                    router.push(`/post/${n.entity_id}`);
+                                }
+                            }}
+                            className={`
+                                flex items-center gap-4 p-4 rounded-lg border cursor-pointer
+                                ${n.is_read ? 'bg-bat-black border-bat-gray/10' : 'bg-bat-black border-bat-yellow/30'}
+                                hover:border-bat-yellow/50 transition-colors duration-200
+                            `}
+                        >
+                            <div className="flex-shrink-0">
+                                {n.actor_avatar && n.actor_avatar !== "" ? (
+                                    <img src={n.actor_avatar} alt={n.actor_name} className="w-10 h-10 rounded-full object-cover" />
+                                ) : (
+                                    <div className="text-2xl w-10 h-10 flex items-center justify-center bg-bat-dark rounded-full">
+                                        {getIcon(n.type)}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                {n.type === 'SYSTEM' ? (
+                                    <p className="text-bat-gray">{n.message}</p>
+                                ) : (
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span
+                                                className="font-bold text-white hover:underline cursor-pointer"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    router.push(`/profile?user_id=${encodeURIComponent(n.actor_id)}`);
+                                                }}
+                                            >
+                                                {n.actor_name || n.actor_id.split('@')[0]}
                                             </span>
-                                            <span className="text-bat-gray">
+                                            <span className="text-bat-gray text-sm">
                                                 {getNotificationText(n)}
                                             </span>
                                         </div>
-                                    )}
-                                    <p className="text-xs text-bat-gray/50 mt-1">
-                                        {new Date(n.created_at).toLocaleDateString()} at {new Date(n.created_at).toLocaleTimeString()}
-                                    </p>
-                                </div>
+                                        <span className="text-xs text-bat-gray/40 mt-1">
+                                            {new Date(n.created_at).toLocaleDateString()} at {new Date(n.created_at).toLocaleTimeString()}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
-                        ))}
-                    </div>
-                )}
-            </main>
+                            {!n.is_read && (
+                                <div className="w-2 h-2 rounded-full bg-bat-yellow"></div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

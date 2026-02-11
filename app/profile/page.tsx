@@ -1,10 +1,11 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from 'react';
 import ProfileCard from '../components/ProfileCard';
 import PostCard from '../components/PostCard';
 import { useAuth } from '../context/AuthContext';
 import { Profile } from '../types/profile';
+import { useCache } from '../context/CacheContext';
 
 interface Post {
   id: string;
@@ -16,8 +17,9 @@ interface Post {
 
 export default function ProfilePage() {
   const { identity, isLoading: authLoading } = useAuth();
+  const { getProfile, setProfile } = useCache();
 
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfileState] = useState<Profile | null>(null);
   const [did, setDid] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,16 @@ export default function ProfilePage() {
     }
 
     const fetchProfile = async () => {
+      // Check cache first
+      const cached = getProfile(identity.user_id);
+      if (cached) {
+        setProfileState(cached.profile);
+        if (cached.did) setDid(cached.did);
+        setLoading(false);
+        // Optional: Revalidate in background? For now, we trust cache.
+        return;
+      }
+
       setLoading(true);
       setError(null);
 
@@ -39,12 +51,11 @@ export default function ProfilePage() {
         // Only fetch the logged-in user's own profile
         const url = `${identity.home_server}/user/me?user_id=${encodeURIComponent(identity.user_id)}`;
 
-
         const res = await fetch(url);
 
         if (!res.ok) {
           if (res.status === 404) {
-            setProfile(null);
+            setProfileState(null);
             return;
           }
           // Get error details for debugging
@@ -53,12 +64,20 @@ export default function ProfilePage() {
         }
 
         const data = await res.json();
-        setProfile(data.profile ?? data.user ?? null);
+        const profileData = data.profile ?? data.user ?? null;
+        setProfileState(profileData);
+
+        let didVal = null;
         if (data.identity?.did) {
+          didVal = data.identity.did;
           setDid(data.identity.did);
         } else if (data.data?.identity?.did) {
-          // Handle federated lookup format
+          didVal = data.data.identity.did;
           setDid(data.data.identity.did);
+        }
+
+        if (profileData) {
+          setProfile(identity.user_id, { profile: profileData, did: didVal });
         }
 
       } catch (err: any) {
@@ -96,6 +115,14 @@ export default function ProfilePage() {
           <h2 className="text-2xl font-bold text-bat-yellow mb-2">Error</h2>
           <p>{error}</p>
         </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-bat-black text-bat-gray">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
       </div>
     );
   }

@@ -12,7 +12,7 @@ export default function HomePage() {
     if (!isLoading) {
       if (identity) {
         // Redirect to home/explore if logged in
-        router.push('/home')
+        router.push('/explore')
       } else {
         // Redirect to showcase if not logged in
         router.push('/showcase')
