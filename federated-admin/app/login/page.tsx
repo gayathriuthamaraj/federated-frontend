@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminLogin } from '../api/admin';
 
@@ -10,6 +10,26 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [serverName, setServerName] = useState('');
+
+    useEffect(() => {
+        // Check if server is configured
+        const trustedServer = localStorage.getItem('trusted_server');
+        if (!trustedServer && !process.env.NEXT_PUBLIC_BACKEND_URL) {
+            // If no server pinned and no env set, redirect to setup
+            router.push('/setup');
+            return;
+        }
+
+        if (trustedServer) {
+            try {
+                const data = JSON.parse(trustedServer);
+                setServerName(data.server_name || 'Admin Panel');
+            } catch (e) {
+                // Ignore parsing errors
+            }
+        }
+    }, [router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -32,7 +52,7 @@ export default function LoginPage() {
             <div className="w-full max-w-md bg-gray-800 border border-gray-700 rounded-lg p-8">
                 <div className="mb-8 text-center">
                     <div className="text-5xl mb-4">🔐</div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Admin Login</h1>
+                    <h1 className="text-3xl font-bold text-white mb-2">{serverName || 'Admin Login'}</h1>
                     <p className="text-gray-400">Enter your credentials to access the admin panel</p>
                 </div>
 
@@ -84,6 +104,12 @@ export default function LoginPage() {
 
                 <div className="mt-6 pt-6 border-t border-gray-700 text-center text-gray-400 text-sm">
                     <p>Admin access only. Unauthorized attempts will be logged.</p>
+                    <button
+                        onClick={() => router.push('/setup')}
+                        className="mt-4 text-blue-400 hover:text-blue-300 transition-colors"
+                    >
+                        Switch Server
+                    </button>
                 </div>
             </div>
         </div>

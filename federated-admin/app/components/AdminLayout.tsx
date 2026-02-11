@@ -32,8 +32,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     <Link
                         href="/dashboard"
                         className={`block px-4 py-3 rounded-lg transition-colors ${isActive('/dashboard')
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-300 hover:bg-gray-700'
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-300 hover:bg-gray-700'
                             }`}
                     >
                         <div className="flex items-center gap-3">
@@ -45,8 +45,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     <Link
                         href="/server-config"
                         className={`block px-4 py-3 rounded-lg transition-colors ${isActive('/server-config')
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-300 hover:bg-gray-700'
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-300 hover:bg-gray-700'
                             }`}
                     >
                         <div className="flex items-center gap-3">
@@ -58,8 +58,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     <Link
                         href="/database-config"
                         className={`block px-4 py-3 rounded-lg transition-colors ${isActive('/database-config')
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-300 hover:bg-gray-700'
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-300 hover:bg-gray-700'
                             }`}
                     >
                         <div className="flex items-center gap-3">
@@ -69,10 +69,23 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     </Link>
 
                     <Link
+                        href="/invites"
+                        className={`block px-4 py-3 rounded-lg transition-colors ${isActive('/invites')
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-300 hover:bg-gray-700'
+                            }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <span>🎟️</span>
+                            <span>Invites</span>
+                        </div>
+                    </Link>
+
+                    <Link
                         href="/users"
                         className={`block px-4 py-3 rounded-lg transition-colors ${isActive('/users')
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-300 hover:bg-gray-700'
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-300 hover:bg-gray-700'
                             }`}
                     >
                         <div className="flex items-center gap-3">

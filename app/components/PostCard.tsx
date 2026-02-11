@@ -1,11 +1,21 @@
 "use client";
 
 import { Post } from '@/types/post';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 interface PostCardProps {
     post: Post;
+}
+
+interface Reply {
+    id: string;
+    post_id: string;
+    user_id: string;
+    content: string;
+    parent_id?: string;
+    created_at: string;
+    replies?: Reply[]; // For UI tree structure
 }
 
 export default function PostCard({ post }: PostCardProps) {
@@ -18,8 +28,10 @@ export default function PostCard({ post }: PostCardProps) {
     const [repostCount, setRepostCount] = useState(post.repost_count || 0);
     const [showComments, setShowComments] = useState(false);
     const [commentText, setCommentText] = useState('');
-    const [comments, setComments] = useState<Array<{ id: string, author: string, text: string, replies: Array<{ id: string, author: string, text: string }> }>>([]);
-    const [commentCount] = useState(post.reply_count || 0);
+    const [comments, setComments] = useState<Reply[]>([]);
+    const [loadingComments, setLoadingComments] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<string | null>(null); // ID of comment being replied to
+    const [replyText, setReplyText] = useState(''); // Text for the nested reply
 
     const displayName = post.author.split('@')[0];
     const handle = `@${post.author}`;
@@ -29,6 +41,52 @@ export default function PostCard({ post }: PostCardProps) {
         month: 'short',
         day: 'numeric',
     });
+
+    // Fetch replies when comments are expanded
+    useEffect(() => {
+        if (showComments && post.id && identity) {
+            fetchReplies();
+        }
+    }, [showComments, post.id, identity]);
+
+    const fetchReplies = async () => {
+        if (!identity) return;
+        setLoadingComments(true);
+        try {
+            const res = await fetch(`${identity.home_server}/post/replies?post_id=${post.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                const rawReplies: Reply[] = data.replies || [];
+                // Build tree
+                setComments(buildReplyTree(rawReplies));
+            }
+        } catch (err) {
+            console.error('Failed to fetch replies:', err);
+        } finally {
+            setLoadingComments(false);
+        }
+    };
+
+    const buildReplyTree = (replies: Reply[]): Reply[] => {
+        const map: { [key: string]: Reply } = {};
+        const roots: Reply[] = [];
+
+        // Initialize map
+        replies.forEach(r => {
+            map[r.id] = { ...r, replies: [] };
+        });
+
+        // Connect nodes
+        replies.forEach(r => {
+            if (r.parent_id && map[r.parent_id]) {
+                map[r.parent_id].replies?.push(map[r.id]);
+            } else {
+                roots.push(map[r.id]);
+            }
+        });
+
+        return roots;
+    };
 
     const handleLike = async () => {
         if (!identity) return;
@@ -88,19 +146,9 @@ export default function PostCard({ post }: PostCardProps) {
         }
     };
 
-    const handleComment = async () => {
-        if (!commentText.trim() || !identity) return;
-
-        const tempComment = {
-            id: Date.now().toString(),
-            author: identity.user_id,
-            text: commentText,
-            replies: []
-        };
-
-        setComments([...comments, tempComment]);
-        const savedText = commentText;
-        setCommentText('');
+    const handleComment = async (parentId?: string) => {
+        const text = parentId ? replyText : commentText;
+        if (!text.trim() || !identity) return;
 
         try {
             const res = await fetch(`${identity.home_server}/post/reply`, {
@@ -109,20 +157,98 @@ export default function PostCard({ post }: PostCardProps) {
                 body: JSON.stringify({
                     user_id: identity.user_id,
                     post_id: post.id,
-                    content: savedText,
+                    content: text,
+                    parent_id: parentId // Optional
                 }),
             });
 
-            if (!res.ok) {
-                // Revert on error
-                setComments(comments);
-                setCommentText(savedText);
+            if (res.ok) {
+                // Clear inputs
+                if (parentId) {
+                    setReplyText('');
+                    setReplyingTo(null);
+                } else {
+                    setCommentText('');
+                }
+                // Refresh comments
+                fetchReplies();
             }
         } catch (err) {
             console.error('Comment error:', err);
-            setComments(comments);
-            setCommentText(savedText);
         }
+    };
+
+    // Recursive render function for replies
+    const renderReply = (reply: Reply, depth: number = 0) => {
+        const isReplying = replyingTo === reply.id;
+
+        return (
+            <div key={reply.id} className={`flex flex-col ${depth > 0 ? 'ml-8 mt-2 relative' : 'border-t border-bat-dark/30'}`}>
+                {/* Visual Branch Line for nested replies */}
+                {depth > 0 && (
+                    <div className="absolute -left-6 top-0 bottom-0 w-0.5 bg-bat-dark/30"></div>
+                )}
+                {depth > 0 && (
+                    <div className="absolute -left-6 top-6 w-4 h-0.5 bg-bat-dark/30"></div>
+                )}
+
+                <div className="flex gap-3 px-4 py-3">
+                    <div className="h-8 w-8 rounded-full bg-bat-blue/20 flex items-center justify-center text-bat-blue font-bold text-sm shrink-0">
+                        {reply.user_id.split('@')[0][0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1.5">
+                            <span className="font-bold text-gray-200 text-sm truncate">{reply.user_id.split('@')[0]}</span>
+                            <span className="text-bat-gray/60 text-xs">· {new Date(reply.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <p className="text-bat-gray text-[15px] mt-0.5 whitespace-pre-wrap break-words">{reply.content}</p>
+
+                        {/* Comment Actions */}
+                        <div className="flex gap-4 mt-2 text-bat-gray/50 text-xs">
+                            <button
+                                onClick={() => {
+                                    setReplyingTo(isReplying ? null : reply.id);
+                                    setReplyText(`@${reply.user_id.split('@')[0]} `);
+                                }}
+                                className="hover:text-bat-blue transition-colors"
+                            >
+                                Reply
+                            </button>
+                            <button className="hover:text-pink-600 transition-colors">Like</button>
+                        </div>
+
+                        {/* Nested Reply Input */}
+                        {isReplying && (
+                            <div className="mt-3 flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Briefly reply..."
+                                    value={replyText}
+                                    onChange={(e) => setReplyText(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && handleComment(reply.id)}
+                                    autoFocus
+                                    className="flex-1 bg-bat-black/50 border border-bat-dark rounded-md px-3 py-1.5 text-sm text-bat-gray focus:border-bat-blue outline-none"
+                                />
+                                <button
+                                    onClick={() => handleComment(reply.id)}
+                                    disabled={!replyText.trim()}
+                                    className="px-3 py-1.5 rounded-md bg-bat-blue text-white text-xs font-bold disabled:opacity-50"
+                                >
+                                    Reply
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Render children */}
+                {reply.replies && reply.replies.length > 0 && (
+                    <div className={depth === 0 ? "" : ""}>
+                        {reply.replies.map(child => renderReply(child, depth + 1))}
+                    </div>
+                )}
+            </div>
+        );
     };
 
     return (
@@ -174,7 +300,7 @@ export default function PostCard({ post }: PostCardProps) {
                                     <path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path>
                                 </svg>
                             </div>
-                            <span className="text-xs font-medium">{commentCount + comments.length}</span>
+                            <span className="text-xs font-medium">{comments.length > 0 ? comments.length : (post.reply_count || 0)}</span>
                         </button>
 
                         {/* Repost */}
@@ -222,7 +348,7 @@ export default function PostCard({ post }: PostCardProps) {
             {/* Comments Section */}
             {showComments && (
                 <div className="border-t border-bat-dark/50 bg-bat-dark/10">
-                    {/* Comment Input */}
+                    {/* Top Comment Input */}
                     <div className="flex gap-3 px-4 py-3">
                         <div className="h-8 w-8 rounded-full bg-bat-yellow/20 flex items-center justify-center text-bat-yellow font-bold text-sm">
                             Y
@@ -238,7 +364,7 @@ export default function PostCard({ post }: PostCardProps) {
                             />
                         </div>
                         <button
-                            onClick={handleComment}
+                            onClick={() => handleComment()}
                             disabled={!commentText.trim()}
                             className="px-4 py-1.5 rounded-full bg-bat-yellow text-bat-black font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-bat-yellow/90 transition-colors"
                         >
@@ -246,31 +372,15 @@ export default function PostCard({ post }: PostCardProps) {
                         </button>
                     </div>
 
+                    {/* Loading State */}
+                    {loadingComments && (
+                        <div className="px-4 py-2 text-bat-gray/50 text-sm text-center">Loading replies...</div>
+                    )}
+
                     {/* Comments List */}
-                    {comments.map((comment) => (
-                        <div key={comment.id} className="border-t border-bat-dark/30">
-                            <div className="flex gap-3 px-4 py-3">
-                                <div className="h-8 w-8 rounded-full bg-bat-blue/20 flex items-center justify-center text-bat-blue font-bold text-sm">
-                                    {comment.author[0]}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex items-baseline gap-1.5">
-                                        <span className="font-bold text-gray-200 text-sm">{comment.author}</span>
-                                        <span className="text-bat-gray/60 text-xs">· just now</span>
-                                    </div>
-                                    <p className="text-bat-gray text-[15px] mt-0.5">{comment.text}</p>
+                    {comments.map((comment) => renderReply(comment))}
 
-                                    {/* Comment Actions */}
-                                    <div className="flex gap-4 mt-2 text-bat-gray/50 text-xs">
-                                        <button className="hover:text-bat-blue transition-colors">Reply</button>
-                                        <button className="hover:text-pink-600 transition-colors">Like</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-
-                    {comments.length === 0 && (
+                    {!loadingComments && comments.length === 0 && (
                         <div className="px-4 py-6 text-center text-bat-gray/40 text-sm">
                             No replies yet. Be the first to reply!
                         </div>

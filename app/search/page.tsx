@@ -18,6 +18,7 @@ interface UserProfile {
     portfolioUrl: string;
     followersCount: number;
     followingCount: number;
+    isFollowing?: boolean;
 }
 
 export default function SearchPage() {
@@ -41,7 +42,7 @@ export default function SearchPage() {
 
         try {
             const res = await fetch(
-                `${identity.home_server}/user/search?user_id=${encodeURIComponent(searchQuery)}`
+                `${identity.home_server}/user/search?user_id=${encodeURIComponent(searchQuery)}&viewer_id=${encodeURIComponent(identity.user_id)}`
             );
 
             if (res.ok) {
@@ -78,6 +79,7 @@ export default function SearchPage() {
                         portfolioUrl: data.profile.portfolio_url || '',
                         followersCount,
                         followingCount,
+                        isFollowing: data.is_following,
                     };
 
                     // Show the user profile immediately
@@ -105,7 +107,7 @@ export default function SearchPage() {
         setLoadingPosts(true);
         try {
             const res = await fetch(
-                `${identity.home_server}/user/posts?user_id=${encodeURIComponent(userId)}&viewer_id=${encodeURIComponent(identity.user_id)}`
+                `${identity.home_server}/posts/user?user_id=${encodeURIComponent(userId)}&viewer_id=${encodeURIComponent(identity.user_id)}`
             );
 
             if (res.ok) {
@@ -223,6 +225,7 @@ export default function SearchPage() {
                                 following_count: selectedUser.followingCount,
                             }}
                             isOwnProfile={false}
+                            isFollowing={selectedUser.isFollowing}
                             posts={userPosts}
                             loadingPosts={loadingPosts}
                         />

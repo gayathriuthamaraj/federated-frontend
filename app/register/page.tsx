@@ -1,21 +1,35 @@
 "use client";
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 
-
-export default function RegisterPage() {
+function RegisterForm() {
     const { login, loginWithoutRedirect } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
+
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [inviteCode, setInviteCode] = useState('');
     const [error, setError] = useState('');
     const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Parse invite code from URL
+    useEffect(() => {
+        const code = searchParams.get('invite');
+        if (code) {
+            setInviteCode(code);
+        } else {
+            // Also check session storage (if admin setup flow set it, though less likely for user reg)
+            const stored = sessionStorage.getItem('invite_code');
+            if (stored) setInviteCode(stored);
+        }
+    }, [searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,8 +40,8 @@ export default function RegisterPage() {
             return;
         }
 
-        if (!username || !email) {
-            setError('Please fill in all required fields');
+        if (!username || !email || !inviteCode) {
+            setError('Please fill in all required fields, including invite code');
             return;
         }
 
@@ -42,6 +56,7 @@ export default function RegisterPage() {
                 body: JSON.stringify({
                     username: username,
                     password: password,
+                    invite_code: inviteCode
                 }),
             });
 
@@ -56,6 +71,9 @@ export default function RegisterPage() {
 
             // Set identity without redirecting (so we can show recovery key)
             loginWithoutRedirect(data.user_id, data.home_server);
+
+            // Clear invite from storage if used
+            sessionStorage.removeItem('invite_code');
 
             // Set recovery key to show it
             if (data.recovery_key) {
@@ -74,6 +92,7 @@ export default function RegisterPage() {
         }
     };
 
+    // ... copy key logic ...
     const [hasCopied, setHasCopied] = useState(false);
     const [confirmed, setConfirmed] = useState(false);
 
@@ -100,6 +119,7 @@ export default function RegisterPage() {
 
     if (recoveryKey) {
         return (
+            // ... recovery key UI ...
             <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
                 <div className="w-full max-w-md bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10 text-center">
                     <h1 className="text-3xl font-bold text-bat-yellow mb-2">Account Created!</h1>
@@ -182,7 +202,6 @@ export default function RegisterPage() {
                     )}
 
                     <div>
-
                         <label
                             htmlFor="username"
                             className="block text-sm font-medium text-bat-gray mb-1"
@@ -228,6 +247,31 @@ export default function RegisterPage() {
                 placeholder-gray-600
               "
                             placeholder="Enter your email"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label
+                            htmlFor="invite"
+                            className="block text-sm font-medium text-bat-gray mb-1"
+                        >
+                            Invite Code
+                        </label>
+                        <input
+                            type="text"
+                            id="invite"
+                            value={inviteCode}
+                            onChange={(e) => setInviteCode(e.target.value)}
+                            className="
+                w-full px-4 py-3 rounded-md
+                bg-bat-black text-white
+                border border-bat-gray/20
+                focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
+                outline-none transition-all duration-200
+                placeholder-gray-600
+              "
+                            placeholder="Enter invite code"
                             required
                         />
                     </div>
@@ -312,5 +356,13 @@ export default function RegisterPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function RegisterPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-bat-black flex items-center justify-center text-white">Loading...</div>}>
+            <RegisterForm />
+        </Suspense>
     );
 }

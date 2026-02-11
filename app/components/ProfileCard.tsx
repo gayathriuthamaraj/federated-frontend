@@ -11,25 +11,36 @@ import Link from 'next/link'
 interface ProfileCardProps {
     profile: Profile;
     isOwnProfile?: boolean;
+    isFollowing?: boolean;
     posts?: Post[];
     loadingPosts?: boolean;
     did?: string;
 }
 
-export default function ProfileCard({ profile: initialProfile, isOwnProfile = false, posts = [], loadingPosts = false, did }: ProfileCardProps) {
+export default function ProfileCard({
+    profile: initialProfile,
+    isOwnProfile = false,
+    isFollowing = false,
+    posts = [],
+    loadingPosts = false,
+    did
+}: ProfileCardProps) {
     const [profile, setProfile] = useState(initialProfile)
+    const [followingState, setFollowingState] = useState(isFollowing)
 
-    // Sync state if prop changes (e.g. navigation)
+    // Sync state if prop changes
     useEffect(() => {
         setProfile(initialProfile)
-    }, [initialProfile])
+        setFollowingState(isFollowing)
+    }, [initialProfile, isFollowing])
 
     const handleFollowSuccess = () => {
         // Optimistically update follower count
         setProfile(prev => ({
             ...prev,
-            followers_count: (prev.followers_count || 0) + 1
+            followers_count: (prev.followers_count || 0) + (followingState ? -1 : 1)
         }))
+        setFollowingState(!followingState)
     }
 
     return (
@@ -87,6 +98,7 @@ export default function ProfileCard({ profile: initialProfile, isOwnProfile = fa
                             <>
                                 <FollowButton
                                     targetUser={profile.user_id}
+                                    isFollowing={followingState}
                                     onSuccess={handleFollowSuccess}
                                 />
                                 <Link

@@ -72,7 +72,7 @@ export default function ProfilePage() {
     const fetchPosts = async () => {
       setLoadingPosts(true);
       try {
-        const res = await fetch(`${identity.home_server}/posts/user?user_id=${encodeURIComponent(identity.user_id)}`);
+        const res = await fetch(`${identity.home_server}/posts/user?user_id=${encodeURIComponent(identity.user_id)}&viewer_id=${encodeURIComponent(identity.user_id)}`);
         if (res.ok) {
           const data = await res.json();
           setPosts(data.posts || []);
