@@ -287,3 +287,125 @@ export async function fetchInviteQR(code: string): Promise<string> {
     const blob = await response.blob();
     return URL.createObjectURL(blob);
 }
+
+// ============================================================================
+// OTP Authentication
+// ============================================================================
+
+export interface SendOTPResponse {
+    message: string;
+    session_id: string;
+    email_hint: string;
+    expires_in: number;
+    requires_otp: boolean;
+}
+
+export interface VerifyOTPResponse {
+    message: string;
+    access_token: string;
+    refresh_token: string;
+    user_id?: string;
+    home_server?: string;
+    recovery_key?: string;
+}
+
+// Send OTP for login (username/password => OTP sent to email)
+export async function sendLoginOTP(username: string, password: string): Promise<SendOTPResponse> {
+    const response = await fetch(`${getApiBaseUrl()}/login`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to send OTP');
+    }
+
+    return response.json();
+}
+
+// Verify OTP and get tokens
+export async function verifyLoginOTP(email: string, otp: string, sessionId: string): Promise<VerifyOTPResponse> {
+    const response = await fetch(`${getApiBaseUrl()}/verify-otp`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            email,
+            otp,
+            session_id: sessionId,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'OTP verification failed');
+    }
+
+    return response.json();
+}
+
+// Send registration OTP
+export async function sendRegistrationOTP(
+    username: string,
+    email: string,
+    password: string,
+    inviteCode: string
+): Promise<SendOTPResponse> {
+    const response = await fetch(`${getApiBaseUrl()}/register`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            username,
+            email,
+            password,
+            invite_code: inviteCode,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to send registration OTP');
+    }
+
+    return response.json();
+}
+
+// Complete registration after OTP verification
+export async function completeRegistration(
+    sessionId: string,
+    otp: string,
+    email: string,
+    username: string,
+    password: string,
+    inviteCode: string
+): Promise<VerifyOTPResponse> {
+    const response = await fetch(`${getApiBaseUrl()}/complete-registration`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            session_id: sessionId,
+            otp,
+            email,
+            username,
+            password,
+            invite_code: inviteCode,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Registration failed');
+    }
+
+    return response.json();
+}
+
