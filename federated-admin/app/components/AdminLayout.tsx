@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode } from 'react';
+import { LayoutDashboard, Server, Database, Ticket, Users, LogOut } from 'lucide-react';
 
 interface AdminLayoutProps {
     children: ReactNode;
@@ -37,7 +38,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             }`}
                     >
                         <div className="flex items-center gap-3">
-                            <span>📊</span>
+                            <LayoutDashboard className="w-5 h-5" />
                             <span>Dashboard</span>
                         </div>
                     </Link>
@@ -50,7 +51,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             }`}
                     >
                         <div className="flex items-center gap-3">
-                            <span>⚙️</span>
+                            <Server className="w-5 h-5" />
                             <span>Server Config</span>
                         </div>
                     </Link>
@@ -63,7 +64,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             }`}
                     >
                         <div className="flex items-center gap-3">
-                            <span>🗄️</span>
+                            <Database className="w-5 h-5" />
                             <span>Database Config</span>
                         </div>
                     </Link>
@@ -76,7 +77,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             }`}
                     >
                         <div className="flex items-center gap-3">
-                            <span>🎟️</span>
+                            <Ticket className="w-5 h-5" />
                             <span>Invites</span>
                         </div>
                     </Link>
@@ -89,7 +90,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             }`}
                     >
                         <div className="flex items-center gap-3">
-                            <span>👥</span>
+                            <Users className="w-5 h-5" />
                             <span>Users</span>
                         </div>
                     </Link>
@@ -100,7 +101,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         onClick={handleLogout}
                         className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
-                        <span>🚪</span>
+                        <LogOut className="w-5 h-5" />
                         <span>Logout</span>
                     </button>
                 </div>

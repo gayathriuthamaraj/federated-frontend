@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import StatCard from '../components/StatCard';
 import { getServerStats, ServerStats } from '../api/admin';
+import { Users, FileText, Activity, Link as LinkIcon, Settings, Database } from 'lucide-react';
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -66,25 +67,25 @@ export default function DashboardPage() {
                             <StatCard
                                 title="Total Users"
                                 value={stats.total_users}
-                                icon="👥"
+                                icon={<Users className="w-6 h-6" />}
                                 color="blue"
                             />
                             <StatCard
                                 title="Total Posts"
                                 value={stats.total_posts}
-                                icon="📝"
+                                icon={<FileText className="w-6 h-6" />}
                                 color="green"
                             />
                             <StatCard
                                 title="Activities"
                                 value={stats.total_activities}
-                                icon="⚡"
+                                icon={<Activity className="w-6 h-6" />}
                                 color="purple"
                             />
                             <StatCard
                                 title="Follows"
                                 value={stats.total_follows}
-                                icon="🔗"
+                                icon={<LinkIcon className="w-6 h-6" />}
                                 color="orange"
                             />
                         </div>
@@ -100,8 +101,8 @@ export default function DashboardPage() {
                                     <div className="flex justify-between items-center pb-3 border-b border-gray-700">
                                         <span className="text-gray-400">Database Status:</span>
                                         <span className={`px-3 py-1 rounded-full text-sm ${stats.database_status === 'connected'
-                                                ? 'bg-green-900/30 text-green-400'
-                                                : 'bg-red-900/30 text-red-400'
+                                            ? 'bg-green-900/30 text-green-400'
+                                            : 'bg-red-900/30 text-red-400'
                                             }`}>
                                             {stats.database_status}
                                         </span>
@@ -120,21 +121,21 @@ export default function DashboardPage() {
                                         onClick={() => router.push('/server-config')}
                                         className="w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-left flex items-center gap-3"
                                     >
-                                        <span>⚙️</span>
+                                        <Settings className="w-5 h-5" />
                                         <span>Configure Server</span>
                                     </button>
                                     <button
                                         onClick={() => router.push('/database-config')}
                                         className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-left flex items-center gap-3"
                                     >
-                                        <span>🗄️</span>
+                                        <Database className="w-5 h-5" />
                                         <span>Database Migration</span>
                                     </button>
                                     <button
                                         onClick={() => router.push('/users')}
                                         className="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-left flex items-center gap-3"
                                     >
-                                        <span>👥</span>
+                                        <Users className="w-5 h-5" />
                                         <span>View Users</span>
                                     </button>
                                 </div>

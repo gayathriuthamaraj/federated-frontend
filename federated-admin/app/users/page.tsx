@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { getAllUsers } from '../api/admin';
+import { MapPin } from 'lucide-react';
 
 interface UserData {
     identity: {
@@ -125,8 +126,8 @@ export default function UsersPage() {
                                                 {user.profile.display_name}
                                             </h3>
                                             <span className={`px-2 py-1 rounded-full text-xs ${user.identity.allow_discovery
-                                                    ? 'bg-green-900/30 text-green-400'
-                                                    : 'bg-gray-900/30 text-gray-400'
+                                                ? 'bg-green-900/30 text-green-400'
+                                                : 'bg-gray-900/30 text-gray-400'
                                                 }`}>
                                                 {user.identity.allow_discovery ? 'Discoverable' : 'Private'}
                                             </span>
@@ -138,7 +139,10 @@ export default function UsersPage() {
                                             <p className="text-gray-300 text-sm mb-2">{user.profile.bio}</p>
                                         )}
                                         {user.profile.location && (
-                                            <p className="text-gray-400 text-sm">📍 {user.profile.location}</p>
+                                            <p className="text-gray-400 text-sm flex items-center gap-1">
+                                                <MapPin className="w-3 h-3" />
+                                                {user.profile.location}
+                                            </p>
                                         )}
                                     </div>
                                     <div className="text-right text-sm text-gray-400">

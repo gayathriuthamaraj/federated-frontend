@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { testDatabaseConnection, startDatabaseMigration, getMigrationStatus, MigrationStatus } from '../api/admin';
+import { Eye, EyeOff, Search, Rocket, CheckCircle, XCircle, AlertTriangle, Play } from 'lucide-react';
 
 export default function DatabaseConfigPage() {
     const router = useRouter();
@@ -130,9 +131,19 @@ export default function DatabaseConfigPage() {
                             />
                             <button
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute top-3 right-3 px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded transition-colors"
+                                className="absolute top-3 right-3 px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded transition-colors flex items-center gap-1"
                             >
-                                {showPassword ? '🙈 Hide' : '👁️ Show'}
+                                {showPassword ? (
+                                    <>
+                                        <EyeOff className="w-4 h-4" />
+                                        <span>Hide</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Eye className="w-4 h-4" />
+                                        <span>Show</span>
+                                    </>
+                                )}
                             </button>
                         </div>
                         <p className="text-xs text-gray-400 mt-2">
@@ -143,19 +154,27 @@ export default function DatabaseConfigPage() {
                     <button
                         onClick={handleTestConnection}
                         disabled={isTesting || !connectionString}
-                        className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
+                        className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                     >
-                        {isTesting ? 'Testing Connection...' : '🔍 Test Connection'}
+                        {isTesting ? (
+                            'Testing Connection...'
+                        ) : (
+                            <>
+                                <Search className="w-5 h-5" />
+                                <span>Test Connection</span>
+                            </>
+                        )}
                     </button>
 
                     {testResult && (
                         <div className={`p-4 rounded-lg border ${testResult.status === 'success'
-                                ? 'bg-green-900/20 border-green-500/50'
-                                : 'bg-red-900/20 border-red-500/50'
+                            ? 'bg-green-900/20 border-green-500/50'
+                            : 'bg-red-900/20 border-red-500/50'
                             }`}>
-                            <p className={testResult.status === 'success' ? 'text-green-400' : 'text-red-400'}>
-                                {testResult.status === 'success' ? '✅' : '❌'} {testResult.message}
-                            </p>
+                            <div className={`flex items-center gap-2 ${testResult.status === 'success' ? 'text-green-400' : 'text-red-400'}`}>
+                                {testResult.status === 'success' ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                                <span>{testResult.message}</span>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -165,7 +184,10 @@ export default function DatabaseConfigPage() {
                     <h2 className="text-xl font-bold text-white">Database Migration</h2>
 
                     <div className="bg-yellow-900/20 border border-yellow-500/50 rounded-lg p-4">
-                        <p className="text-yellow-400 text-sm font-bold mb-2">⚠️ Important Information</p>
+                        <div className="flex items-center gap-2 text-yellow-400 font-bold mb-2">
+                            <AlertTriangle className="w-5 h-5" />
+                            <span>Important Information</span>
+                        </div>
                         <ul className="text-yellow-300 text-sm space-y-1 list-disc list-inside">
                             <li>Always backup your current database before migrating</li>
                             <li>The server may experience brief downtime during migration</li>
@@ -178,9 +200,16 @@ export default function DatabaseConfigPage() {
                         <button
                             onClick={handleStartMigration}
                             disabled={isMigrating || !testResult || testResult.status !== 'success'}
-                            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
+                            className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
                         >
-                            {isMigrating ? 'Starting Migration...' : '🚀 Start Migration'}
+                            {isMigrating ? (
+                                'Starting Migration...'
+                            ) : (
+                                <>
+                                    <Rocket className="w-5 h-5" />
+                                    <span>Start Migration</span>
+                                </>
+                            )}
                         </button>
                     )}
 
@@ -191,9 +220,9 @@ export default function DatabaseConfigPage() {
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="text-white font-bold">Migration Status</span>
                                     <span className={`px-3 py-1 rounded-full text-sm ${migrationStatus.status === 'completed' ? 'bg-green-900/30 text-green-400' :
-                                            migrationStatus.status === 'failed' ? 'bg-red-900/30 text-red-400' :
-                                                migrationStatus.status === 'in_progress' ? 'bg-blue-900/30 text-blue-400' :
-                                                    'bg-gray-900/30 text-gray-400'
+                                        migrationStatus.status === 'failed' ? 'bg-red-900/30 text-red-400' :
+                                            migrationStatus.status === 'in_progress' ? 'bg-blue-900/30 text-blue-400' :
+                                                'bg-gray-900/30 text-gray-400'
                                         }`}>
                                         {migrationStatus.status}
                                     </span>
@@ -203,8 +232,8 @@ export default function DatabaseConfigPage() {
                                 <div className="w-full bg-gray-600 rounded-full h-4 mb-2">
                                     <div
                                         className={`h-4 rounded-full transition-all duration-500 ${migrationStatus.status === 'completed' ? 'bg-green-600' :
-                                                migrationStatus.status === 'failed' ? 'bg-red-600' :
-                                                    'bg-blue-600'
+                                            migrationStatus.status === 'failed' ? 'bg-red-600' :
+                                                'bg-blue-600'
                                             }`}
                                         style={{ width: `${getMigrationProgress()}%` }}
                                     />
@@ -220,7 +249,7 @@ export default function DatabaseConfigPage() {
                                         {Object.entries(migrationStatus.tables_migrated).map(([table, status]) => (
                                             <div key={table} className="flex items-center gap-2">
                                                 <span className={status === 'success' ? 'text-green-400' : 'text-red-400'}>
-                                                    {status === 'success' ? '✅' : '❌'}
+                                                    {status === 'success' ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                                                 </span>
                                                 <span className="text-gray-300 text-sm">{table}</span>
                                             </div>
@@ -237,8 +266,9 @@ export default function DatabaseConfigPage() {
 
                             {migrationStatus.status === 'completed' && (
                                 <div className="bg-green-900/20 border border-green-500/50 rounded-lg p-4">
-                                    <p className="text-green-400">
-                                        ✅ Migration completed successfully! You may need to restart the server with the new database connection.
+                                    <p className="text-green-400 flex items-center gap-2">
+                                        <CheckCircle className="w-5 h-5" />
+                                        Migration completed successfully! You may need to restart the server with the new database connection.
                                     </p>
                                 </div>
                             )}

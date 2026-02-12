@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { getInvites, generateInvite, revokeInvite, fetchInviteQR, Invite } from '../api/admin';
+import { QrCode, Trash2 } from 'lucide-react';
 
 export default function InvitesPage() {
     const router = useRouter();
@@ -189,14 +190,16 @@ export default function InvitesPage() {
                                                 <>
                                                     <button
                                                         onClick={() => handleShowQR(invite)}
-                                                        className="text-blue-400 hover:text-blue-300 text-sm"
+                                                        className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
                                                     >
+                                                        <QrCode className="w-4 h-4" />
                                                         Show QR
                                                     </button>
                                                     <button
                                                         onClick={() => handleRevoke(invite.invite_code)}
-                                                        className="text-red-400 hover:text-red-300 text-sm"
+                                                        className="text-red-400 hover:text-red-300 text-sm flex items-center gap-1"
                                                     >
+                                                        <Trash2 className="w-4 h-4" />
                                                         Revoke
                                                     </button>
                                                 </>
