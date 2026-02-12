@@ -1,47 +1,54 @@
 "use client";
 
 import Link from 'next/link';
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import OTPInput from '../components/OTPInput';
 
-function RegisterForm() {
-    const { login, loginWithoutRedirect } = useAuth();
-    const router = useRouter();
-    const searchParams = useSearchParams();
+export default function RegisterPage() {
+    const { loginWithoutRedirect } = useAuth();
 
+    // Step 1: Collect initial registration data
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [inviteCode, setInviteCode] = useState('');
+
+    // Step 2: OTP verification
+    const [step, setStep] = useState<'registration' | 'otp' | 'success'>('registration');
+    const [sessionId, setSessionId] = useState('');
+    const [emailHint, setEmailHint] = useState('');
+
+    // Step 3: Success
+    const [recoveryKey, setRecoveryKey] = useState('');
+    const [userId, setUserId] = useState('');
+
     const [error, setError] = useState('');
-    const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Parse invite code from URL
-    useEffect(() => {
-        const code = searchParams.get('invite');
-        if (code) {
-            setInviteCode(code);
-        } else {
-            // Also check session storage (if admin setup flow set it, though less likely for user reg)
-            const stored = sessionStorage.getItem('invite_code');
-            if (stored) setInviteCode(stored);
-        }
-    }, [searchParams]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleRegistrationSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
 
+        // Validation
         if (password !== confirmPassword) {
             setError('Passwords do not match');
             return;
         }
 
-        if (!username || !email || !inviteCode) {
-            setError('Please fill in all required fields, including invite code');
+        if (password.length < 8) {
+            setError('Password must be at least 8 characters');
+            return;
+        }
+
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            setError('Username can only contain letters, numbers, and underscores');
+            return;
+        }
+
+        if (!email.includes('@')) {
+            setError('Please enter a valid email address');
             return;
         }
 
@@ -55,36 +62,22 @@ function RegisterForm() {
                 },
                 body: JSON.stringify({
                     username: username,
+                    email: email,
                     password: password,
-                    invite_code: inviteCode
+                    invite_code: inviteCode,
                 }),
             });
 
-            if (!res.ok) {
-                const errorText = await res.text();
-                throw new Error(errorText || 'Registration failed');
-            }
-
             const data = await res.json();
 
-            console.log('[Register] Registration successful, data:', data);
-
-            // Set identity without redirecting (so we can show recovery key)
-            loginWithoutRedirect(data.user_id, data.home_server);
-
-            // Clear invite from storage if used
-            sessionStorage.removeItem('invite_code');
-
-            // Set recovery key to show it
-            if (data.recovery_key) {
-                console.log('[Register] Recovery key received, showing recovery screen');
-                setRecoveryKey(data.recovery_key);
-            } else {
-                // Fallback if no key
-                console.log('[Register] No recovery key, redirecting to setup');
-                router.push('/profile/setup');
+            if (!res.ok) {
+                throw new Error(data.error || 'Registration failed');
             }
 
+            // OTP sent successfully
+            setSessionId(data.session_id);
+            setEmailHint(data.email_hint || email);
+            setStep('otp');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Registration failed');
         } finally {
@@ -92,100 +85,211 @@ function RegisterForm() {
         }
     };
 
-    // ... copy key logic ...
-    const [hasCopied, setHasCopied] = useState(false);
-    const [confirmed, setConfirmed] = useState(false);
+    const handleOTPComplete = async (otp: string) => {
+        setError('');
+        setIsSubmitting(true);
 
-    // Set flag when recovery key is shown to prevent AuthContext redirect
-    useEffect(() => {
-        if (recoveryKey) {
+        try {
+            const res = await fetch('http://localhost:8082/complete-registration', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    otp: otp,
+                    email: email,
+                    username: username,
+                    password: password,
+                    invite_code: inviteCode,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'OTP verification failed');
+            }
+
+            // Registration successful!
+            setRecoveryKey(data.recovery_key);
+            setUserId(data.user_id);
+
+            // Login user without redirect (to show recovery key)
+            loginWithoutRedirect(data.user_id, data.home_server, data.access_token, data.refresh_token);
+
+            // Mark that we're showing recovery key
             sessionStorage.setItem('showing_recovery_key', 'true');
-        } else {
-            sessionStorage.removeItem('showing_recovery_key');
+
+            setStep('success');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'OTP verification failed');
+        } finally {
+            setIsSubmitting(false);
         }
-    }, [recoveryKey]);
-
-    const handleCopyKey = () => {
-        navigator.clipboard.writeText(recoveryKey || '');
-        setHasCopied(true);
     };
 
-    const handleDone = () => {
-        setConfirmed(true);
-        // Clear the flag before navigating
+    const handleResendOTP = async () => {
+        setError('');
+        try {
+            const res = await fetch('http://localhost:8082/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    email: email,
+                    password: password,
+                    invite_code: inviteCode,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to resend OTP');
+            }
+
+            setSessionId(data.session_id);
+            setEmailHint(data.email_hint || email);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to resend OTP');
+        }
+    };
+
+    const handleCopyRecoveryKey = () => {
+        navigator.clipboard.writeText(recoveryKey);
+    };
+
+    const handleContinue = () => {
         sessionStorage.removeItem('showing_recovery_key');
-        router.push('/profile/setup');
+        window.location.href = '/profile';
     };
 
-    if (recoveryKey) {
+    // Step 3: Success - Show recovery key
+    if (step === 'success') {
         return (
-            // ... recovery key UI ...
             <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
-                <div className="w-full max-w-md bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10 text-center">
-                    <h1 className="text-3xl font-bold text-bat-yellow mb-2">Account Created!</h1>
-                    <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50 mb-6"></div>
-
-                    <div className="bg-red-900/20 border border-red-500/50 rounded-md p-4 mb-4">
-                        <p className="text-red-400 text-sm font-bold">⚠️ CRITICAL</p>
-                        <p className="text-red-400 text-xs mt-1">
-                            Save this recovery key NOW. You cannot view it again!
+                <div className="w-full max-w-lg bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10">
+                    <div className="mb-8 text-center">
+                        <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+                            <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        </div>
+                        <h1 className="text-3xl font-bold text-bat-gray mb-2">Registration Successful!</h1>
+                        <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50 mb-4"></div>
+                        <p className="text-sm text-gray-400">
+                            Welcome to the network, <span className="text-bat-yellow">{userId}</span>
                         </p>
                     </div>
 
-                    <p className="text-bat-gray mb-4">
-                        Your Identity Recovery Key is needed to restore your account if you lose access or move servers.
-                    </p>
+                    <div className="mb-6 p-4 rounded-md bg-yellow-900/20 border border-yellow-500/50">
+                        <div className="flex items-start gap-2">
+                            <svg className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            <div className="flex-1">
+                                <p className="text-sm font-semibold text-yellow-400 mb-1">Save Your Recovery Key</p>
+                                <p className="text-xs text-yellow-200/80">
+                                    This key is required to recover your account if you lose access. Store it securely - it will not be shown again.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div className="bg-black/50 p-4 rounded border border-bat-yellow/30 font-mono text-sm text-bat-yellow break-all mb-3 select-all">
-                        {recoveryKey}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-bat-gray mb-2">
+                            Recovery Key
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={recoveryKey}
+                                readOnly
+                                className="
+                                    flex-1 px-4 py-3 rounded-md font-mono text-sm
+                                    bg-bat-black text-bat-yellow
+                                    border border-bat-yellow/30
+                                    focus:outline-none focus:border-bat-yellow
+                                "
+                            />
+                            <button
+                                onClick={handleCopyRecoveryKey}
+                                className="
+                                    px-4 py-3 rounded-md
+                                    bg-bat-yellow/10 text-bat-yellow
+                                    border border-bat-yellow/30
+                                    hover:bg-bat-yellow/20
+                                    transition-colors
+                                "
+                                title="Copy to clipboard"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <button
-                        onClick={handleCopyKey}
+                        onClick={handleContinue}
                         className="
-                            w-full py-3 px-4 mb-4 rounded-md font-bold text-base
-                            bg-bat-black text-bat-gray
-                            border-2 border-bat-gray/30
-                            hover:border-bat-yellow hover:text-bat-yellow
+                            w-full py-3 px-4 rounded-md font-bold text-lg
+                            bg-bat-yellow text-bat-black
+                            hover:bg-yellow-400
+                            transform active:scale-[0.98]
                             transition-all duration-200
+                            shadow-[0_0_15px_rgba(245,197,24,0.3)]
                         "
                     >
-                        {hasCopied ? '✓ Copied to Clipboard!' : '📋 Copy Recovery Key'}
+                        Continue to Profile
                     </button>
-
-                    {hasCopied && (
-                        <button
-                            onClick={handleDone}
-                            className="
-                                w-full py-3 px-4 rounded-md font-bold text-lg
-                                bg-bat-yellow text-bat-black
-                                hover:bg-yellow-400
-                                transform active:scale-[0.98]
-                                transition-all duration-200
-                                shadow-[0_0_15px_rgba(245,197,24,0.3)]
-                                animate-pulse
-                            "
-                        >
-                            I've Saved It - Continue to Setup
-                        </button>
-                    )}
-
-                    {!hasCopied && (
-                        <p className="text-sm text-bat-gray/60 mt-2">
-                            Click the button above to copy your recovery key
-                        </p>
-                    )}
-
-                    {hasCopied && (
-                        <p className="text-sm text-green-400 mt-3">
-                            ✓ Key copied! Click "Continue" when you've saved it safely.
-                        </p>
-                    )}
                 </div>
             </div>
-        )
+        );
     }
 
+    // Step 2: OTP Verification
+    if (step === 'otp') {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
+                <div className="w-full max-w-md bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10">
+                    <div className="mb-8 text-center">
+                        <h1 className="text-3xl font-bold text-bat-gray mb-2">Verify Your Email</h1>
+                        <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50 mb-4"></div>
+                        <p className="text-sm text-gray-400">
+                            Enter the 6-digit code sent to<br />
+                            <span className="text-bat-yellow font-mono">{emailHint}</span>
+                        </p>
+                    </div>
+
+                    {error && (
+                        <div className="mb-4 p-3 rounded-md bg-red-900/20 border border-red-500/50 text-red-400 text-sm">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="flex flex-col items-center gap-6">
+                        <OTPInput
+                            onComplete={handleOTPComplete}
+                            onResend={handleResendOTP}
+                        />
+
+                        <button
+                            onClick={() => setStep('registration')}
+                            className="text-sm text-gray-500 hover:text-bat-yellow transition-colors"
+                        >
+                            ← Back to registration
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Step 1: Registration Form
     return (
         <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
             <div className="w-full max-w-md bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10">
@@ -194,18 +298,15 @@ function RegisterForm() {
                     <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50"></div>
                 </div>
 
-                <form className="space-y-4" onSubmit={handleSubmit}>
+                <form className="space-y-6" onSubmit={handleRegistrationSubmit}>
                     {error && (
-                        <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-md">
-                            <p className="text-red-400 text-sm">{error}</p>
+                        <div className="p-3 rounded-md bg-red-900/20 border border-red-500/50 text-red-400 text-sm">
+                            {error}
                         </div>
                     )}
 
                     <div>
-                        <label
-                            htmlFor="username"
-                            className="block text-sm font-medium text-bat-gray mb-1"
-                        >
+                        <label htmlFor="username" className="block text-sm font-medium text-bat-gray mb-2">
                             Username
                         </label>
                         <input
@@ -213,74 +314,33 @@ function RegisterForm() {
                             id="username"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            className="
-                w-full px-4 py-3 rounded-md
-                bg-bat-black text-white
-                border border-bat-gray/20
-                focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
-                outline-none transition-all duration-200
-                placeholder-gray-600
-              "
+                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 placeholder-gray-600"
                             placeholder="Choose a username"
                             required
+                            disabled={isSubmitting}
                         />
+                        <p className="mt-1 text-xs text-gray-500">Alphanumeric and underscores only</p>
                     </div>
 
                     <div>
-                        <label
-                            htmlFor="email"
-                            className="block text-sm font-medium text-bat-gray mb-1"
-                        >
-                            Email
+                        <label htmlFor="email" className="block text-sm font-medium text-bat-gray mb-2">
+                            Email Address
                         </label>
                         <input
                             type="email"
                             id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="
-                w-full px-4 py-3 rounded-md
-                bg-bat-black text-white
-                border border-bat-gray/20
-                focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
-                outline-none transition-all duration-200
-                placeholder-gray-600
-              "
-                            placeholder="Enter your email"
+                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 placeholder-gray-600"
+                            placeholder="your@email.com"
                             required
+                            disabled={isSubmitting}
                         />
+                        <p className="mt-1 text-xs text-gray-500">Used for OTP verification</p>
                     </div>
 
                     <div>
-                        <label
-                            htmlFor="invite"
-                            className="block text-sm font-medium text-bat-gray mb-1"
-                        >
-                            Invite Code
-                        </label>
-                        <input
-                            type="text"
-                            id="invite"
-                            value={inviteCode}
-                            onChange={(e) => setInviteCode(e.target.value)}
-                            className="
-                w-full px-4 py-3 rounded-md
-                bg-bat-black text-white
-                border border-bat-gray/20
-                focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
-                outline-none transition-all duration-200
-                placeholder-gray-600
-              "
-                            placeholder="Enter invite code"
-                            required
-                        />
-                    </div>
-
-                    <div>
-                        <label
-                            htmlFor="password"
-                            className="block text-sm font-medium text-bat-gray mb-1"
-                        >
+                        <label htmlFor="password" className="block text-sm font-medium text-bat-gray mb-2">
                             Password
                         </label>
                         <input
@@ -288,81 +348,64 @@ function RegisterForm() {
                             id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="
-                w-full px-4 py-3 rounded-md
-                bg-bat-black text-white
-                border border-bat-gray/20
-                focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
-                outline-none transition-all duration-200
-                placeholder-gray-600
-              "
-                            placeholder="Create a password"
+                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 placeholder-gray-600"
+                            placeholder="••••••••"
                             required
+                            disabled={isSubmitting}
                         />
+                        <p className="mt-1 text-xs text-gray-500">At least 8 characters</p>
                     </div>
 
                     <div>
-                        <label
-                            htmlFor="confirm-password"
-                            className="block text-sm font-medium text-bat-gray mb-1"
-                        >
+                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-bat-gray mb-2">
                             Confirm Password
                         </label>
                         <input
                             type="password"
-                            id="confirm-password"
+                            id="confirmPassword"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="
-                w-full px-4 py-3 rounded-md
-                bg-bat-black text-white
-                border border-bat-gray/20
-                focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
-                outline-none transition-all duration-200
-                placeholder-gray-600
-              "
-                            placeholder="Confirm your password"
+                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 placeholder-gray-600"
+                            placeholder="••••••••"
                             required
+                            disabled={isSubmitting}
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="inviteCode" className="block text-sm font-medium text-bat-gray mb-2">
+                            Invite Code
+                        </label>
+                        <input
+                            type="text"
+                            id="inviteCode"
+                            value={inviteCode}
+                            onChange={(e) => setInviteCode(e.target.value)}
+                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 placeholder-gray-600 font-mono"
+                            placeholder="XXXX-XXXX-XXXX"
+                            required
+                            disabled={isSubmitting}
                         />
                     </div>
 
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="
-              w-full py-3 px-4 mt-2 rounded-md font-bold text-lg
-              bg-bat-yellow text-bat-black
-              hover:bg-yellow-400
-              disabled:opacity-50 disabled:cursor-not-allowed
-              transform active:scale-[0.98]
-              transition-all duration-200
-              shadow-[0_0_15px_rgba(245,197,24,0.3)]
-            "
+                        className="w-full py-3 px-4 rounded-md font-bold text-lg bg-bat-yellow text-bat-black hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.98] transition-all duration-200 shadow-[0_0_15px_rgba(245,197,24,0.3)]"
                     >
-                        {isSubmitting ? 'Creating Account...' : 'Create Account'}
+                        {isSubmitting ? 'Sending OTP...' : 'Continue'}
                     </button>
                 </form>
 
                 <div className="mt-6 text-center">
                     <p className="text-sm text-gray-500">
                         Already have an account?{' '}
-                        <Link
-                            href="/login"
-                            className="text-bat-yellow hover:text-white transition-colors duration-200 font-medium"
-                        >
+                        <Link href="/login" className="text-bat-yellow hover:text-white transition-colors duration-200 font-medium">
                             Sign in
                         </Link>
                     </p>
                 </div>
             </div>
         </div>
-    );
-}
-
-export default function RegisterPage() {
-    return (
-        <Suspense fallback={<div className="min-h-screen bg-bat-black flex items-center justify-center text-white">Loading...</div>}>
-            <RegisterForm />
-        </Suspense>
     );
 }
