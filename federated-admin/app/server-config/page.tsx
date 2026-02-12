@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { getServerConfig, updateServerName, ServerConfig } from '../api/admin';
+import { AlertTriangle } from 'lucide-react';
 
 export default function ServerConfigPage() {
     const router = useRouter();
@@ -139,8 +140,12 @@ export default function ServerConfigPage() {
                                 </div>
 
                                 <div className="bg-yellow-900/20 border border-yellow-500/50 rounded-lg p-4">
-                                    <p className="text-yellow-400 text-sm">
-                                        ⚠️ <strong>Important:</strong> All users will receive a notification about this change.
+                                    <div className="flex items-center gap-2 text-yellow-400 font-bold mb-2">
+                                        <AlertTriangle className="w-5 h-5" />
+                                        <span>Important</span>
+                                    </div>
+                                    <p className="text-yellow-300 text-sm">
+                                        All users will receive a notification about this change.
                                     </p>
                                 </div>
 

@@ -1,9 +1,11 @@
 "use client";
 
+import { ReactNode } from 'react';
+
 interface StatCardProps {
     title: string;
     value: string | number;
-    icon: string;
+    icon: ReactNode;
     color?: string;
 }
 
@@ -25,7 +27,7 @@ export default function StatCard({ title, value, icon, color = 'blue' }: StatCar
                     <p className="text-gray-400 text-sm font-medium">{title}</p>
                     <p className="text-3xl font-bold text-white mt-2">{value}</p>
                 </div>
-                <div className={`${bgColor} w-12 h-12 rounded-lg flex items-center justify-center text-2xl`}>
+                <div className={`${bgColor} w-12 h-12 rounded-lg flex items-center justify-center text-white`}>
                     {icon}
                 </div>
             </div>

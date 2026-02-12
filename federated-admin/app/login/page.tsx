@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminLogin } from '../api/admin';
+import { Lock } from 'lucide-react';
 
 export default function LoginPage() {
     const router = useRouter();
@@ -50,8 +51,10 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
             <div className="w-full max-w-md bg-gray-800 border border-gray-700 rounded-lg p-8">
-                <div className="mb-8 text-center">
-                    <div className="text-5xl mb-4">🔐</div>
+                <div className="mb-8 text-center flex flex-col items-center">
+                    <div className="mb-4 p-3 bg-blue-900/30 rounded-full">
+                        <Lock className="w-12 h-12 text-blue-500" />
+                    </div>
                     <h1 className="text-3xl font-bold text-white mb-2">{serverName || 'Admin Login'}</h1>
                     <p className="text-gray-400">Enter your credentials to access the admin panel</p>
                 </div>
