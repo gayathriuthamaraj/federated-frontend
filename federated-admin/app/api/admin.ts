@@ -295,6 +295,7 @@ export async function fetchInviteQR(code: string): Promise<string> {
 export interface SendOTPResponse {
     message: string;
     session_id: string;
+    email: string; // Actual email for OTP verification
     email_hint: string;
     expires_in: number;
     requires_otp: boolean;

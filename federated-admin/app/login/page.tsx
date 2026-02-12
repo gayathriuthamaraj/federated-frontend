@@ -54,7 +54,7 @@ export default function LoginPage() {
 
             // Store session data for OTP verification
             setSessionId(response.session_id);
-            setEmail(username); // Will be used for OTP verification
+            setEmail(response.email); // Extract actual email from response
             setEmailHint(response.email_hint);
             setExpiresIn(response.expires_in);
 
