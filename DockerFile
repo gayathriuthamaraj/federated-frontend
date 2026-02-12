@@ -1,0 +1,7 @@
+FROM node:18-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+# Default to development mode for local integration
+CMD ["npm", "run", "dev"]
