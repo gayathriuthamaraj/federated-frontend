@@ -20,7 +20,7 @@ export function Tab({ children, active }: TabProps) {
     >
       {children}
 
-      {/* Active underline */}
+      {}
       {active && (
         <span
           className="

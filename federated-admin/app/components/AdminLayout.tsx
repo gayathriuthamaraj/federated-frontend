@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { LayoutDashboard, Server, Database, Ticket, Users, LogOut } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -12,6 +12,22 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
     const pathname = usePathname();
     const router = useRouter();
+    const [serverInfo, setServerInfo] = useState({ name: 'Unknown', url: '' });
+
+    useEffect(() => {
+        const trusted = localStorage.getItem('trusted_server');
+        if (trusted) {
+            try {
+                const data = JSON.parse(trusted);
+                setServerInfo({
+                    name: data.server_name || 'Unknown Server',
+                    url: data.server_url || ''
+                });
+            } catch (e) {
+                
+            }
+        }
+    }, []);
 
     const handleLogout = () => {
         localStorage.removeItem('admin_token');
@@ -22,7 +38,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
     return (
         <div className="min-h-screen bg-gray-900 flex">
-            {/* Sidebar */}
+            {}
             <aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
                 <div className="p-6 border-b border-gray-700">
                     <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
@@ -97,6 +113,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </nav>
 
                 <div className="p-4 border-t border-gray-700">
+                    <div className="mb-4 px-2 py-2 bg-gray-900/50 rounded text-xs text-gray-400">
+                        <p className="font-semibold text-gray-300">Connected to:</p>
+                        <p className="truncate">{serverInfo.name}</p>
+                        <p className="truncate opacity-75">{serverInfo.url}</p>
+                    </div>
                     <button
                         onClick={handleLogout}
                         className="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
@@ -107,7 +128,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </div>
             </aside>
 
-            {/* Main Content */}
+            {}
             <main className="flex-1 overflow-y-auto">
                 <div className="p-8">
                     {children}

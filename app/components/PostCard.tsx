@@ -15,13 +15,13 @@ interface Reply {
     content: string;
     parent_id?: string;
     created_at: string;
-    replies?: Reply[]; // For UI tree structure
+    replies?: Reply[]; 
 }
 
 export default function PostCard({ post }: PostCardProps) {
     const { identity } = useAuth();
 
-    // Use post data from API
+    
     const [isLiked, setIsLiked] = useState(post.has_liked || false);
     const [likeCount, setLikeCount] = useState(post.like_count || 0);
     const [isReposted, setIsReposted] = useState(post.has_reposted || false);
@@ -30,8 +30,8 @@ export default function PostCard({ post }: PostCardProps) {
     const [commentText, setCommentText] = useState('');
     const [comments, setComments] = useState<Reply[]>([]);
     const [loadingComments, setLoadingComments] = useState(false);
-    const [replyingTo, setReplyingTo] = useState<string | null>(null); // ID of comment being replied to
-    const [replyText, setReplyText] = useState(''); // Text for the nested reply
+    const [replyingTo, setReplyingTo] = useState<string | null>(null); 
+    const [replyText, setReplyText] = useState(''); 
 
     const displayName = post.author.split('@')[0];
     const handle = `@${post.author}`;
@@ -42,7 +42,7 @@ export default function PostCard({ post }: PostCardProps) {
         day: 'numeric',
     });
 
-    // Fetch replies when comments are expanded
+    
     useEffect(() => {
         if (showComments && post.id && identity) {
             fetchReplies();
@@ -57,7 +57,7 @@ export default function PostCard({ post }: PostCardProps) {
             if (res.ok) {
                 const data = await res.json();
                 const rawReplies: Reply[] = data.replies || [];
-                // Build tree
+                
                 setComments(buildReplyTree(rawReplies));
             }
         } catch (err) {
@@ -71,12 +71,12 @@ export default function PostCard({ post }: PostCardProps) {
         const map: { [key: string]: Reply } = {};
         const roots: Reply[] = [];
 
-        // Initialize map
+        
         replies.forEach(r => {
             map[r.id] = { ...r, replies: [] };
         });
 
-        // Connect nodes
+        
         replies.forEach(r => {
             if (r.parent_id && map[r.parent_id]) {
                 map[r.parent_id].replies?.push(map[r.id]);
@@ -106,7 +106,7 @@ export default function PostCard({ post }: PostCardProps) {
             });
 
             if (!res.ok) {
-                // Revert on error
+                
                 setIsLiked(!newLikedState);
                 setLikeCount((prev: number) => newLikedState ? prev - 1 : prev + 1);
             }
@@ -135,7 +135,7 @@ export default function PostCard({ post }: PostCardProps) {
             });
 
             if (!res.ok) {
-                // Revert on error
+                
                 setIsReposted(!newRepostedState);
                 setRepostCount((prev: number) => newRepostedState ? prev - 1 : prev + 1);
             }
@@ -158,19 +158,19 @@ export default function PostCard({ post }: PostCardProps) {
                     user_id: identity.user_id,
                     post_id: post.id,
                     content: text,
-                    parent_id: parentId // Optional
+                    parent_id: parentId 
                 }),
             });
 
             if (res.ok) {
-                // Clear inputs
+                
                 if (parentId) {
                     setReplyText('');
                     setReplyingTo(null);
                 } else {
                     setCommentText('');
                 }
-                // Refresh comments
+                
                 fetchReplies();
             }
         } catch (err) {
@@ -178,13 +178,13 @@ export default function PostCard({ post }: PostCardProps) {
         }
     };
 
-    // Recursive render function for replies
+    
     const renderReply = (reply: Reply, depth: number = 0) => {
         const isReplying = replyingTo === reply.id;
 
         return (
             <div key={reply.id} className={`flex flex-col ${depth > 0 ? 'ml-8 mt-2 relative' : 'border-t border-bat-dark/30'}`}>
-                {/* Visual Branch Line for nested replies */}
+                {}
                 {depth > 0 && (
                     <div className="absolute -left-6 top-0 bottom-0 w-0.5 bg-bat-dark/30"></div>
                 )}
@@ -203,7 +203,7 @@ export default function PostCard({ post }: PostCardProps) {
                         </div>
                         <p className="text-bat-gray text-[15px] mt-0.5 whitespace-pre-wrap break-words">{reply.content}</p>
 
-                        {/* Comment Actions */}
+                        {}
                         <div className="flex gap-4 mt-2 text-bat-gray/50 text-xs">
                             <button
                                 onClick={() => {
@@ -217,7 +217,7 @@ export default function PostCard({ post }: PostCardProps) {
                             <button className="hover:text-pink-600 transition-colors">Like</button>
                         </div>
 
-                        {/* Nested Reply Input */}
+                        {}
                         {isReplying && (
                             <div className="mt-3 flex gap-2">
                                 <input
@@ -241,7 +241,7 @@ export default function PostCard({ post }: PostCardProps) {
                     </div>
                 </div>
 
-                {/* Render children */}
+                {}
                 {reply.replies && reply.replies.length > 0 && (
                     <div className={depth === 0 ? "" : ""}>
                         {reply.replies.map(child => renderReply(child, depth + 1))}
@@ -254,16 +254,16 @@ export default function PostCard({ post }: PostCardProps) {
     return (
         <article className="border-b border-bat-dark hover:bg-bat-dark/20 transition-colors">
             <div className="flex gap-3 px-4 py-3">
-                {/* Left: Avatar */}
+                {}
                 <div className="flex-shrink-0">
                     <div className="h-10 w-10 rounded-full bg-bat-dark border border-bat-dark flex items-center justify-center text-bat-yellow font-bold text-lg select-none">
                         {displayName[0].toUpperCase()}
                     </div>
                 </div>
 
-                {/* Right: Content */}
+                {}
                 <div className="flex-1 min-w-0">
-                    {/* Header */}
+                    {}
                     <div className="flex items-baseline gap-1.5 text-[15px] leading-5">
                         <span className="font-bold text-gray-200 truncate">
                             {displayName}
@@ -276,21 +276,21 @@ export default function PostCard({ post }: PostCardProps) {
                         </span>
                     </div>
 
-                    {/* Body */}
+                    {}
                     <div className="mt-0.5 text-[15px] text-bat-gray whitespace-pre-wrap leading-normal">
                         {post.content}
                     </div>
 
-                    {/* Image if exists */}
+                    {}
                     {post.image_url && (
                         <div className="mt-3 rounded-2xl overflow-hidden border border-bat-gray/20">
                             <img src={post.image_url} alt="Post image" className="w-full" />
                         </div>
                     )}
 
-                    {/* Footer Actions */}
+                    {}
                     <div className="flex justify-between mt-3 text-bat-gray/50 max-w-md">
-                        {/* Reply/Comment */}
+                        {}
                         <button
                             onClick={() => setShowComments(!showComments)}
                             className="group flex items-center gap-1.5 hover:text-bat-blue transition-colors"
@@ -303,7 +303,7 @@ export default function PostCard({ post }: PostCardProps) {
                             <span className="text-xs font-medium">{comments.length > 0 ? comments.length : (post.reply_count || 0)}</span>
                         </button>
 
-                        {/* Repost */}
+                        {}
                         <button
                             onClick={handleRepost}
                             className={`group flex items-center gap-1.5 transition-colors ${isReposted ? 'text-green-500' : 'hover:text-green-500'}`}
@@ -316,7 +316,7 @@ export default function PostCard({ post }: PostCardProps) {
                             <span className="text-xs font-medium">{repostCount}</span>
                         </button>
 
-                        {/* Like */}
+                        {}
                         <button
                             onClick={handleLike}
                             className={`group flex items-center gap-1.5 transition-colors ${isLiked ? 'text-pink-600' : 'hover:text-pink-600'}`}
@@ -333,7 +333,7 @@ export default function PostCard({ post }: PostCardProps) {
                             <span className="text-xs font-medium">{likeCount}</span>
                         </button>
 
-                        {/* Share */}
+                        {}
                         <button className="group flex items-center gap-1.5 hover:text-bat-blue transition-colors">
                             <div className="p-1.5 rounded-full group-hover:bg-bat-blue/10 transition-colors">
                                 <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[1.15rem] w-[1.15rem] fill-current">
@@ -345,10 +345,10 @@ export default function PostCard({ post }: PostCardProps) {
                 </div>
             </div>
 
-            {/* Comments Section */}
+            {}
             {showComments && (
                 <div className="border-t border-bat-dark/50 bg-bat-dark/10">
-                    {/* Top Comment Input */}
+                    {}
                     <div className="flex gap-3 px-4 py-3">
                         <div className="h-8 w-8 rounded-full bg-bat-yellow/20 flex items-center justify-center text-bat-yellow font-bold text-sm">
                             Y
@@ -372,12 +372,12 @@ export default function PostCard({ post }: PostCardProps) {
                         </button>
                     </div>
 
-                    {/* Loading State */}
+                    {}
                     {loadingComments && (
                         <div className="px-4 py-2 text-bat-gray/50 text-sm text-center">Loading replies...</div>
                     )}
 
-                    {/* Comments List */}
+                    {}
                     {comments.map((comment) => renderReply(comment))}
 
                     {!loadingComments && comments.length === 0 && (

@@ -28,7 +28,7 @@ export default function SearchPage() {
     const [searching, setSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
 
-    // Profile display state
+
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
     const [userPosts, setUserPosts] = useState<Post[]>([]);
     const [loadingPosts, setLoadingPosts] = useState(false);
@@ -38,60 +38,98 @@ export default function SearchPage() {
 
         setSearching(true);
         setHasSearched(true);
-        setSelectedUser(null); // Clear previous selection
+        setSelectedUser(null);
 
         try {
-            const res = await fetch(
-                `${identity.home_server}/user/search?user_id=${encodeURIComponent(searchQuery)}&viewer_id=${encodeURIComponent(identity.user_id)}`
-            );
+            // Check if this is a federated search (contains @)
+            const isFederated = searchQuery.includes('@');
 
-            if (res.ok) {
-                const data = await res.json();
-                // The backend returns a single user with identity and profile
-                if (data.identity && data.profile) {
-                    // Fetch followers and following counts
-                    const [followersRes, followingRes] = await Promise.all([
-                        fetch(`${identity.home_server}/followers?user_id=${encodeURIComponent(data.identity.user_id)}`),
-                        fetch(`${identity.home_server}/following?user_id=${encodeURIComponent(data.identity.user_id)}`)
-                    ]);
+            if (isFederated) {
+                // Use federated search API
+                const res = await fetch(
+                    `${identity.home_server}/api/search?q=${encodeURIComponent(searchQuery)}`
+                );
 
-                    let followersCount = 0;
-                    let followingCount = 0;
+                if (res.ok) {
+                    const data = await res.json();
 
-                    if (followersRes.ok) {
-                        const followersData = await followersRes.json();
-                        followersCount = followersData.followers?.length || 0;
+                    if (data.found && data.user) {
+                        // Format federated user for display
+                        const user = {
+                            userId: data.user.user_id,
+                            username: data.user.username,
+                            displayName: data.user.display_name || 'Unknown',
+                            avatarUrl: data.user.avatar_url || '',
+                            bio: data.user.bio || '',
+                            bannerUrl: '',
+                            location: '',
+                            portfolioUrl: '',
+                            followersCount: 0,
+                            followingCount: 0,
+                            isFollowing: false,
+                        };
+
+                        setSelectedUser(user);
+                    } else {
+                        setSelectedUser(null);
                     }
-
-                    if (followingRes.ok) {
-                        const followingData = await followingRes.json();
-                        followingCount = followingData.following?.length || 0;
-                    }
-
-                    const user = {
-                        userId: data.identity.user_id,
-                        username: data.identity.user_id.split('@')[0],
-                        displayName: data.profile.display_name || 'Unknown',
-                        avatarUrl: data.profile.avatar_url || '',
-                        bio: data.profile.bio || '',
-                        bannerUrl: data.profile.banner_url || '',
-                        location: data.profile.location || '',
-                        portfolioUrl: data.profile.portfolio_url || '',
-                        followersCount,
-                        followingCount,
-                        isFollowing: data.is_following,
-                    };
-
-                    // Show the user profile immediately
-                    setSelectedUser(user);
-
-                    // Fetch their posts
-                    fetchUserPosts(user.userId);
                 } else {
                     setSelectedUser(null);
                 }
             } else {
-                setSelectedUser(null);
+                // Use local search API
+                const res = await fetch(
+                    `${identity.home_server}/user/search?user_id=${encodeURIComponent(searchQuery)}&viewer_id=${encodeURIComponent(identity.user_id)}`
+                );
+
+                if (res.ok) {
+                    const data = await res.json();
+
+                    if (data.identity && data.profile) {
+
+                        const [followersRes, followingRes] = await Promise.all([
+                            fetch(`${identity.home_server}/followers?user_id=${encodeURIComponent(data.identity.user_id)}`),
+                            fetch(`${identity.home_server}/following?user_id=${encodeURIComponent(data.identity.user_id)}`)
+                        ]);
+
+                        let followersCount = 0;
+                        let followingCount = 0;
+
+                        if (followersRes.ok) {
+                            const followersData = await followersRes.json();
+                            followersCount = followersData.followers?.length || 0;
+                        }
+
+                        if (followingRes.ok) {
+                            const followingData = await followingRes.json();
+                            followingCount = followingData.following?.length || 0;
+                        }
+
+                        const user = {
+                            userId: data.identity.user_id,
+                            username: data.identity.user_id.split('@')[0],
+                            displayName: data.profile.display_name || 'Unknown',
+                            avatarUrl: data.profile.avatar_url || '',
+                            bio: data.profile.bio || '',
+                            bannerUrl: data.profile.banner_url || '',
+                            location: data.profile.location || '',
+                            portfolioUrl: data.profile.portfolio_url || '',
+                            followersCount,
+                            followingCount,
+                            isFollowing: data.is_following,
+                        };
+
+
+                        setSelectedUser(user);
+
+
+                        fetchUserPosts(user.userId);
+                    } else {
+                        setSelectedUser(null);
+                    }
+                } else {
+                    setSelectedUser(null);
+                }
             }
         } catch (err) {
             console.error('Search error:', err);
@@ -144,19 +182,19 @@ export default function SearchPage() {
 
     return (
         <div className="max-w-3xl mx-auto p-6">
-            {/* Header */}
+            { }
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-bat-gray mb-2">Search Users</h1>
                 <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
             </div>
 
-            {/* Search Bar */}
+            { }
             <div className="mb-6">
                 <div className="flex gap-3">
                     <div className="flex-1 relative">
                         <input
                             type="text"
-                            placeholder="Search for users on your home server..."
+                            placeholder="Search for users (e.g., alice or alice@server-b)..."
                             className="
                                 w-full px-4 py-3 pl-12 rounded-lg
                                 bg-bat-dark text-white
@@ -193,11 +231,11 @@ export default function SearchPage() {
                     </button>
                 </div>
                 <p className="text-sm text-bat-gray/60 mt-2">
-                    Search by username or user ID (e.g., "alice" or "alice@localhost")
+                    Search by username or federated ID (e.g., "alice" or "alice@server-b")
                 </p>
             </div>
 
-            {/* Results */}
+            { }
             {searching ? (
                 <div className="text-center py-12 text-bat-gray">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
@@ -206,7 +244,7 @@ export default function SearchPage() {
             ) : hasSearched ? (
                 selectedUser ? (
                     <div>
-                        {/* User Profile - includes posts */}
+                        { }
                         <ProfileCard
                             profile={{
                                 user_id: selectedUser.userId,

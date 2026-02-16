@@ -15,7 +15,7 @@ interface Notification {
     entity_id?: string;
     is_read: boolean;
     created_at: string;
-    message?: string; // For system notifications
+    message?: string; 
 }
 
 export default function NotificationsPage() {
@@ -40,7 +40,7 @@ export default function NotificationsPage() {
                     const data = await res.json();
                     setNotifications(data.notifications || []);
 
-                    // Mark all as read
+                    
                     await fetch(`${identity.home_server}/notifications/read`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },

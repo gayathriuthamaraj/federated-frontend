@@ -6,7 +6,7 @@ interface OTPInputProps {
     length?: number;
     onComplete: (otp: string) => void;
     onResend?: () => void;
-    resendCooldown?: number; // seconds
+    resendCooldown?: number; 
 }
 
 export default function OTPInput({
@@ -21,7 +21,7 @@ export default function OTPInput({
     const [canResend, setCanResend] = useState(false);
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-    // Countdown timer for resend
+    
     useEffect(() => {
         if (resendTimer > 0) {
             const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
@@ -32,20 +32,20 @@ export default function OTPInput({
     }, [resendTimer]);
 
     const handleChange = (index: number, value: string) => {
-        // Only allow numbers
+        
         if (value && !/^\d$/.test(value)) return;
 
         const newOtp = [...otp];
         newOtp[index] = value;
         setOtp(newOtp);
 
-        // Auto-focus next input
+        
         if (value && index < length - 1) {
             inputRefs.current[index + 1]?.focus();
             setActiveIndex(index + 1);
         }
 
-        // Check if OTP is complete
+        
         if (newOtp.every(digit => digit !== '')) {
             onComplete(newOtp.join(''));
         }
@@ -57,11 +57,11 @@ export default function OTPInput({
             const newOtp = [...otp];
 
             if (otp[index]) {
-                // Clear current input
+                
                 newOtp[index] = '';
                 setOtp(newOtp);
             } else if (index > 0) {
-                // Move to previous input and clear it
+                
                 newOtp[index - 1] = '';
                 setOtp(newOtp);
                 inputRefs.current[index - 1]?.focus();
@@ -80,19 +80,19 @@ export default function OTPInput({
         e.preventDefault();
         const pastedData = e.clipboardData.getData('text').slice(0, length);
 
-        if (!/^\d+$/.test(pastedData)) return; // Only allow numbers
+        if (!/^\d+$/.test(pastedData)) return; 
 
         const newOtp = pastedData.split('');
         while (newOtp.length < length) newOtp.push('');
 
         setOtp(newOtp);
 
-        // Focus last filled input or last input
+        
         const lastFilledIndex = Math.min(pastedData.length, length - 1);
         inputRefs.current[lastFilledIndex]?.focus();
         setActiveIndex(lastFilledIndex);
 
-        // Auto-submit if complete
+        
         if (pastedData.length === length) {
             onComplete(pastedData);
         }

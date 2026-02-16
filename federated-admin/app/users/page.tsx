@@ -99,7 +99,7 @@ export default function UsersPage() {
                     </div>
                 )}
 
-                {/* Search */}
+                {}
                 <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
                     <input
                         type="text"
@@ -110,7 +110,7 @@ export default function UsersPage() {
                     />
                 </div>
 
-                {/* Users List */}
+                {}
                 <div className="bg-gray-800 border border-gray-700 rounded-lg divide-y divide-gray-700">
                     {filteredUsers.length === 0 ? (
                         <div className="p-8 text-center text-gray-400">

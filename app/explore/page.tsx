@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { apiGet } from '../utils/api';
 import PostCard from '../components/PostCard';
 import UserCard from '../components/UserCard';
 
@@ -10,8 +11,8 @@ export default function ExplorePage() {
     const { identity, isLoading: authLoading } = useAuth();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'posts' | 'users'>('posts');
-    const [posts, setPosts] = useState([]);
-    const [users, setUsers] = useState([]);
+    const [posts, setPosts] = useState<any[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -28,20 +29,16 @@ export default function ExplorePage() {
                 setLoading(true);
 
                 if (activeTab === 'posts') {
-                    // Fetch recent posts from all users
-                    const res = await fetch(
-                        `${identity.home_server}/posts/recent?limit=20`
-                    );
+                    
+                    const res = await apiGet('/posts/recent?limit=20');
 
                     if (res.ok) {
                         const data = await res.json();
                         setPosts(data.posts || []);
                     }
                 } else {
-                    // Fetch suggested users
-                    const res = await fetch(
-                        `${identity.home_server}/users/suggested?user_id=${encodeURIComponent(identity.user_id)}&limit=20`
-                    );
+                    
+                    const res = await apiGet('/users/suggested?limit=20');
 
                     if (res.ok) {
                         const data = await res.json();
@@ -71,19 +68,19 @@ export default function ExplorePage() {
 
     return (
         <div className="max-w-3xl mx-auto p-6">
-            {/* Header */}
+            {}
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-bat-gray mb-2">Explore</h1>
                 <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
             </div>
 
-            {/* Tabs */}
+            {}
             <div className="flex gap-4 mb-6 border-b border-bat-gray/20">
                 <button
                     onClick={() => setActiveTab('posts')}
                     className={`pb-3 px-4 font-bold transition-colors relative ${activeTab === 'posts'
-                            ? 'text-bat-yellow'
-                            : 'text-bat-gray hover:text-bat-gray/80'
+                        ? 'text-bat-yellow'
+                        : 'text-bat-gray hover:text-bat-gray/80'
                         }`}
                 >
                     Posts
@@ -94,8 +91,8 @@ export default function ExplorePage() {
                 <button
                     onClick={() => setActiveTab('users')}
                     className={`pb-3 px-4 font-bold transition-colors relative ${activeTab === 'users'
-                            ? 'text-bat-yellow'
-                            : 'text-bat-gray hover:text-bat-gray/80'
+                        ? 'text-bat-yellow'
+                        : 'text-bat-gray hover:text-bat-gray/80'
                         }`}
                 >
                     Users
@@ -105,7 +102,7 @@ export default function ExplorePage() {
                 </button>
             </div>
 
-            {/* Content */}
+            {}
             {loading ? (
                 <div className="text-center py-12 text-bat-gray">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>

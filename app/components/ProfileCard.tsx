@@ -1,6 +1,6 @@
 'use client'
 
-// ProfileCard.tsx
+
 import { useState, useEffect } from 'react'
 import FollowButton from './FollowButton'
 import PostCard from './PostCard'
@@ -28,14 +28,14 @@ export default function ProfileCard({
     const [profile, setProfile] = useState(initialProfile)
     const [followingState, setFollowingState] = useState(isFollowing)
 
-    // Sync state if prop changes
+    
     useEffect(() => {
         setProfile(initialProfile)
         setFollowingState(isFollowing)
     }, [initialProfile, isFollowing])
 
     const handleFollowSuccess = () => {
-        // Optimistically update follower count
+        
         setProfile(prev => ({
             ...prev,
             followers_count: (prev.followers_count || 0) + (followingState ? -1 : 1)
@@ -46,7 +46,7 @@ export default function ProfileCard({
     return (
         <div className="w-full bg-bat-black flex flex-col">
 
-            {/* Banner */}
+            {}
             <div className="relative h-48 sm:h-64 w-full bg-bat-dark">
                 {profile.banner_url ? (
                     <img
@@ -59,10 +59,10 @@ export default function ProfileCard({
                 )}
             </div>
 
-            {/* Top Section */}
+            {}
             <div className="px-4 pb-4">
                 <div className="relative flex justify-between items-start">
-                    {/* Avatar - Negative margin to pull it up */}
+                    {}
                     <div className="-mt-[15%] sm:-mt-16 mb-3">
                         <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-bat-black bg-bat-black overflow-hidden">
                             {profile.avatar_url ? (
@@ -79,7 +79,7 @@ export default function ProfileCard({
                         </div>
                     </div>
 
-                    {/* Edit Profile or Follow/Message Buttons */}
+                    {}
                     <div className="pt-3 flex gap-2">
                         {isOwnProfile ? (
                             <Link
@@ -118,7 +118,7 @@ export default function ProfileCard({
                     </div>
                 </div>
 
-                {/* Identity Block */}
+                {}
                 <div className="mt-2">
                     <h1 className="text-xl sm:text-2xl font-bold text-bat-gray leading-tight">
                         {profile.display_name}
@@ -133,14 +133,14 @@ export default function ProfileCard({
                     )}
                 </div>
 
-                {/* Bio */}
+                {}
                 {profile.bio && (
                     <p className="mt-4 text-bat-gray text-[15px] leading-normal whitespace-pre-wrap">
                         {profile.bio}
                     </p>
                 )}
 
-                {/* Metadata Row */}
+                {}
                 <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-bat-gray/60">
                     {profile.location && (
                         <span className="flex items-center gap-1.5">
@@ -173,7 +173,7 @@ export default function ProfileCard({
                     </span>
                 </div>
 
-                {/* Stats Row */}
+                {}
                 <div className="mt-4 flex gap-5 text-sm">
                     <div className="hover:underline cursor-pointer">
                         <span className="font-bold text-bat-gray mr-1">{profile.following_count ?? 0}</span>
@@ -186,7 +186,7 @@ export default function ProfileCard({
                 </div>
             </div>
 
-            {/* Tabs Navigation */}
+            {}
             <div className="mt-2 flex border-b border-bat-dark">
                 {['Posts', 'Replies', 'Highlights', 'Media', 'Likes'].map((tab, i) => (
                     <div
@@ -204,7 +204,7 @@ export default function ProfileCard({
                 ))}
             </div>
 
-            {/* Feed - Posts Display */}
+            {}
             <div className="flex-1">
                 {loadingPosts ? (
                     <div className="text-center text-bat-gray py-8">Loading posts...</div>

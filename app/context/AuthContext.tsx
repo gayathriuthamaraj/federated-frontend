@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { apiPost } from '../utils/api';
 import { useRouter, usePathname } from "next/navigation";
 
 export interface LocalIdentity {
@@ -27,15 +28,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
-        // Load identity and tokens from localStorage
+        
         const storedIdentity = localStorage.getItem("local_identity");
         if (storedIdentity) {
             try {
                 const parsed = JSON.parse(storedIdentity);
-                // Auto-fix legacy port 8080
+                
                 if (parsed.home_server && parsed.home_server.includes(":8080")) {
-                    parsed.home_server = parsed.home_server.replace(":8080", ":8082");
-                    localStorage.setItem("local_identity", JSON.stringify(parsed));
+                    
                 }
                 setIdentity(parsed);
             } catch (e) {
@@ -60,24 +60,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const isPublicShowcase = publicShowcaseRoutes.includes(pathname) || pathname.startsWith("/showcase");
         const isPublicRoute = isUnauthenticatedOnly || isAuthenticatedRoute || isPublicShowcase;
 
-        // Check if we're showing recovery key (don't redirect)
+        
         const showingRecoveryKey = sessionStorage.getItem('showing_recovery_key') === 'true';
 
         if (!identity && !isPublicRoute) {
-            // Not logged in and trying to access protected route -> go to login
+            
             router.push("/login");
         } else if (identity && isUnauthenticatedOnly && !showingRecoveryKey) {
-            // Logged in and visiting login/register -> go to profile
-            // BUT: don't redirect if we're showing the recovery key
+            
+            
             router.push("/profile");
         }
     }, [identity, isLoading, pathname, router]);
 
     const login = (userId: string, homeServer: string, accessToken: string, refreshToken: string) => {
-        // Auto-fix legacy port 8080 coming from backend
-        if (homeServer && homeServer.includes(":8080")) {
-            homeServer = homeServer.replace(":8080", ":8082");
-        }
+        
         const newIdentity = { user_id: userId, home_server: homeServer };
         setIdentity(newIdentity);
         localStorage.setItem("local_identity", JSON.stringify(newIdentity));
@@ -87,34 +84,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const loginWithoutRedirect = (userId: string, homeServer: string, accessToken: string, refreshToken: string) => {
-        // Auto-fix legacy port 8080 coming from backend
-        if (homeServer && homeServer.includes(":8080")) {
-            homeServer = homeServer.replace(":8080", ":8082");
-        }
+        
         const newIdentity = { user_id: userId, home_server: homeServer };
         setIdentity(newIdentity);
         localStorage.setItem("local_identity", JSON.stringify(newIdentity));
         localStorage.setItem("access_token", accessToken);
         localStorage.setItem("refresh_token", refreshToken);
-        // No redirect - used during registration to show recovery key
+        
     };
 
     const logout = async () => {
         const refreshToken = localStorage.getItem("refresh_token");
 
-        // Call backend to revoke refresh token
+        
         if (refreshToken) {
             try {
-                await fetch('http://localhost:8082/logout', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ refresh_token: refreshToken }),
-                });
+                await apiPost('/logout', { refresh_token: refreshToken }, false);
             } catch (error) {
                 console.error('Logout error:', error);
-                // Continue with local logout even if backend call fails
+                
             }
         }
 
@@ -145,16 +133,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         try {
-            const res = await fetch('http://localhost:8082/refresh-token', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ refresh_token: refreshToken }),
-            });
+            const res = await apiPost('/refresh-token', { refresh_token: refreshToken }, false);
 
             if (!res.ok) {
-                // Refresh token is invalid or expired - logout user
+                
                 await logout();
                 return false;
             }

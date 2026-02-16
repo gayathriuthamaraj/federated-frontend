@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { apiPost } from '../utils/api';
 
 export default function RecoverPage() {
     const router = useRouter();
@@ -18,16 +19,10 @@ export default function RecoverPage() {
         setIsSubmitting(true);
 
         try {
-            const response = await fetch('http://localhost:8082/identity/recover', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    user_id: userId,
-                    recovery_key: recoveryKey,
-                }),
-            });
+            const response = await apiPost('/identity/recover', {
+                user_id: userId,
+                recovery_key: recoveryKey,
+            }, false);
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -35,7 +30,7 @@ export default function RecoverPage() {
             }
 
             const data = await response.json();
-            // Expected: { message, new_private_key, new_recovery_key, user_id }
+            
             setNewCredentials({
                 private_key: data.new_private_key,
                 recovery_key: data.new_recovery_key

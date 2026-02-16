@@ -8,7 +8,7 @@ interface Message {
     timestamp: string;
 }
 
-// In-memory storage for messages
+
 const conversations = new Map<string, Message[]>();
 
 export async function GET(request: Request) {
@@ -16,11 +16,11 @@ export async function GET(request: Request) {
     const conversationId = searchParams.get('conversationId');
 
     if (!conversationId) {
-        // Return all conversations
+        
         return NextResponse.json(mockMessages);
     }
 
-    // Return messages for specific conversation
+    
     const messages = conversations.get(conversationId) || [];
     return NextResponse.json(messages);
 }

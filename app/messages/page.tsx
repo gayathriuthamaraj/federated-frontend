@@ -31,14 +31,14 @@ export default function MessagesPage() {
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
 
-    // Redirect if not authenticated
+    
     useEffect(() => {
         if (!authLoading && !identity) {
             router.push('/login');
         }
     }, [identity, authLoading, router]);
 
-    // Check for user query parameter and auto-select
+    
     useEffect(() => {
         const userParam = searchParams.get('user');
         if (userParam) {
@@ -46,7 +46,7 @@ export default function MessagesPage() {
         }
     }, [searchParams]);
 
-    // Fetch conversations
+    
     useEffect(() => {
         async function fetchConversations() {
             if (!identity) return;
@@ -70,7 +70,7 @@ export default function MessagesPage() {
         if (identity) fetchConversations();
     }, [identity]);
 
-    // Fetch messages for selected conversation
+    
     useEffect(() => {
         async function fetchMessages() {
             if (!identity || !selectedUserId) return;
@@ -92,7 +92,7 @@ export default function MessagesPage() {
         fetchMessages();
     }, [identity, selectedUserId]);
 
-    // Send message
+    
     const handleSendMessage = async () => {
         if (!newMessage.trim() || !identity || !selectedUserId) return;
 
@@ -109,7 +109,7 @@ export default function MessagesPage() {
             });
 
             if (res.ok) {
-                // Add message to list
+                
                 const newMsg: Message = {
                     id: Date.now().toString(),
                     sender: identity.user_id,
@@ -149,7 +149,7 @@ export default function MessagesPage() {
 
     return (
         <div className="flex h-screen">
-            {/* Conversations List */}
+            {}
             <div className="w-80 border-r border-bat-gray/10 bg-bat-dark">
                 <div className="p-4 border-b border-bat-gray/10">
                     <h1 className="text-2xl font-bold text-bat-gray">Messages</h1>
@@ -184,16 +184,16 @@ export default function MessagesPage() {
                 </div>
             </div>
 
-            {/* Chat Area */}
+            {}
             <div className="flex-1 flex flex-col">
                 {selectedUserId ? (
                     <>
-                        {/* Chat Header */}
+                        {}
                         <div className="p-4 border-b border-bat-gray/10 bg-bat-dark">
                             <h2 className="text-bat-gray font-bold">{selectedUserId}</h2>
                         </div>
 
-                        {/* Messages */}
+                        {}
                         <div className="flex-1 p-6 overflow-y-auto">
                             <div className="space-y-4">
                                 {messages.map(msg => (
@@ -212,7 +212,7 @@ export default function MessagesPage() {
                             </div>
                         </div>
 
-                        {/* Input */}
+                        {}
                         <div className="p-4 border-t border-bat-gray/10 bg-bat-dark">
                             <div className="flex gap-2">
                                 <input

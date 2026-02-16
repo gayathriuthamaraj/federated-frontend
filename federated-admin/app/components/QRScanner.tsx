@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
-// Dynamic import to avoid SSR issues with camera
+
 const QrReader = dynamic(() => import('react-qr-reader').then((mod) => mod.QrReader), {
     ssr: false,
     loading: () => <div className="h-64 w-full bg-gray-200 animate-pulse rounded-lg flex items-center justify-center">Loading Camera...</div>,
@@ -22,8 +22,8 @@ export default function QRScanner({ onScan }: QRScannerProps) {
             onScan(result?.text);
         }
         if (error) {
-            // Filter out common "No QR code found" errors to avoid log spam
-            // console.info(error);
+            
+            
         }
     };
 

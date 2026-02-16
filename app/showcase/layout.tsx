@@ -10,6 +10,6 @@ export default function ShowcaseLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    // Just return children - the root layout already has Sidebar
+    
     return children;
 }

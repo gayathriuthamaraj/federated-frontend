@@ -1,24 +1,39 @@
-// API utility for making authenticated requests with automatic token refresh
 
-const API_BASE_URL = 'http://localhost:8082';
+
+
+
+
+function getApiBaseUrl(): string {
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+
+    const trusted = localStorage.getItem('trusted_server');
+    if (trusted) {
+        try {
+            const data = JSON.parse(trusted);
+            return data.server_url || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+        } catch (e) {
+            return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+        }
+    }
+
+    return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+}
 
 interface FetchOptions extends RequestInit {
     requiresAuth?: boolean;
 }
 
-/**
- * Make an authenticated API call with automatic token refresh
- */
+
 export async function authenticatedFetch(
     endpoint: string,
     options: FetchOptions = {}
 ): Promise<Response> {
     const { requiresAuth = true, ...fetchOptions } = options;
 
-    // Get access token
+
     let accessToken = localStorage.getItem('access_token');
 
-    // Build headers
+
     const headers: HeadersInit = {
         'Content-Type': 'application/json',
         ...(fetchOptions.headers || {}),
@@ -28,19 +43,19 @@ export async function authenticatedFetch(
         (headers as Record<string, string>)['Authorization'] = `Bearer ${accessToken}`;
     }
 
-    // Make the request
-    let response = await fetch(`${API_BASE_URL}${endpoint}`, {
+
+    let response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
         ...fetchOptions,
         headers,
     });
 
-    // If unauthorized, try to refresh the token and retry
+
     if (response.status === 401 && requiresAuth) {
         const refreshToken = localStorage.getItem('refresh_token');
 
         if (refreshToken) {
             try {
-                const refreshResponse = await fetch(`${API_BASE_URL}/refresh-token`, {
+                const refreshResponse = await fetch(`${getApiBaseUrl()}/refresh-token`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -52,14 +67,14 @@ export async function authenticatedFetch(
                     const data = await refreshResponse.json();
                     localStorage.setItem('access_token', data.access_token);
 
-                    // Retry the original request with new token
+
                     (headers as Record<string, string>)['Authorization'] = `Bearer ${data.access_token}`;
-                    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    response = await fetch(`${getApiBaseUrl()}${endpoint}`, {
                         ...fetchOptions,
                         headers,
                     });
                 } else {
-                    // Refresh token is invalid - clear storage and redirect to login
+
                     localStorage.removeItem('local_identity');
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('refresh_token');
@@ -67,14 +82,14 @@ export async function authenticatedFetch(
                 }
             } catch (error) {
                 console.error('Token refresh failed:', error);
-                // Clear storage and redirect to login
+
                 localStorage.removeItem('local_identity');
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('refresh_token');
                 window.location.href = '/login';
             }
         } else {
-            // No refresh token - redirect to login
+
             window.location.href = '/login';
         }
     }
@@ -82,9 +97,7 @@ export async function authenticatedFetch(
     return response;
 }
 
-/**
- * Helper for GET requests
- */
+
 export async function apiGet(endpoint: string, requiresAuth = true): Promise<Response> {
     return authenticatedFetch(endpoint, {
         method: 'GET',
@@ -92,9 +105,7 @@ export async function apiGet(endpoint: string, requiresAuth = true): Promise<Res
     });
 }
 
-/**
- * Helper for POST requests
- */
+
 export async function apiPost(
     endpoint: string,
     data: any,
@@ -107,9 +118,7 @@ export async function apiPost(
     });
 }
 
-/**
- * Helper for PUT requests
- */
+
 export async function apiPut(
     endpoint: string,
     data: any,
@@ -122,9 +131,7 @@ export async function apiPut(
     });
 }
 
-/**
- * Helper for DELETE requests
- */
+
 export async function apiDelete(endpoint: string, requiresAuth = true): Promise<Response> {
     return authenticatedFetch(endpoint, {
         method: 'DELETE',

@@ -8,7 +8,7 @@ export async function GET() {
 export async function POST(request: Request) {
     const { notificationId } = await request.json();
 
-    // Mark notification as read
+    
     const notification = mockNotifications.find(n => n.id === notificationId);
     if (notification) {
         notification.isRead = true;

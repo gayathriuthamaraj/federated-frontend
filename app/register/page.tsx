@@ -3,24 +3,34 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import OTPInput from '../components/OTPInput';
+import { apiPost } from '../utils/api';
+import { generateClientKeyPair, storeClientKeyPair, storeSessionKey } from '../utils/crypto';
 
 export default function RegisterPage() {
     const { loginWithoutRedirect } = useAuth();
 
-    // Step 1: Collect initial registration data
+    // Form State
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [inviteCode, setInviteCode] = useState('');
+    const [serverName, setServerName] = useState<string>(() => {
+        try {
+            const pinned = typeof window !== 'undefined' ? localStorage.getItem('trusted_server') : null;
+            if (pinned) {
+                const parsed = JSON.parse(pinned);
+                return parsed.server_name || '';
+            }
+        } catch (e) {
+            // ignore
+        }
+        return '';
+    });
 
-    // Step 2: OTP verification
-    const [step, setStep] = useState<'registration' | 'otp' | 'success'>('registration');
-    const [sessionId, setSessionId] = useState('');
-    const [emailHint, setEmailHint] = useState('');
+    const [isSuccess, setIsSuccess] = useState(false);
 
-    // Step 3: Success
+    // Success State Data
     const [recoveryKey, setRecoveryKey] = useState('');
     const [userId, setUserId] = useState('');
 
@@ -31,7 +41,7 @@ export default function RegisterPage() {
         e.preventDefault();
         setError('');
 
-        // Validation
+        // Basic Validation
         if (password !== confirmPassword) {
             setError('Passwords do not match');
             return;
@@ -55,18 +65,20 @@ export default function RegisterPage() {
         setIsSubmitting(true);
 
         try {
-            const res = await fetch('http://localhost:8082/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    email: email,
-                    password: password,
-                    invite_code: inviteCode,
-                }),
-            });
+            // Generate client Ed25519 key pair
+            console.log('Generating client key pair...');
+            const clientKeyPair = await generateClientKeyPair();
+            console.log('Client public key:', clientKeyPair.publicKey.substring(0, 20) + '...');
+
+            // Send registration request with client public key
+            const res = await apiPost('/register', {
+                username: username,
+                email: email,
+                password: password,
+                invite_code: inviteCode,
+                home_server: serverName,
+                client_public_key: clientKeyPair.publicKey, // Send client's public key
+            }, false);
 
             const data = await res.json();
 
@@ -74,87 +86,36 @@ export default function RegisterPage() {
                 throw new Error(data.error || 'Registration failed');
             }
 
-            // OTP sent successfully
-            setSessionId(data.session_id);
-            setEmailHint(data.email_hint || email);
-            setStep('otp');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Registration failed');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
+            // Store client key pair securely
+            storeClientKeyPair(clientKeyPair);
+            console.log('Stored client key pair');
 
-    const handleOTPComplete = async (otp: string) => {
-        setError('');
-        setIsSubmitting(true);
-
-        try {
-            const res = await fetch('http://localhost:8082/complete-registration', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    session_id: sessionId,
-                    otp: otp,
-                    email: email,
-                    username: username,
-                    password: password,
-                    invite_code: inviteCode,
-                }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error || 'OTP verification failed');
+            // Store session key from server if provided
+            if (data.session_key_encrypted) {
+                storeSessionKey({
+                    encryptedKey: data.session_key_encrypted,
+                    signature: data.session_key_signature,
+                    version: data.session_key_version,
+                    expiresAt: data.session_key_expires_at,
+                });
+                console.log('Stored session key (version', data.session_key_version, ')');
             }
 
-            // Registration successful!
+            // Direct Success - No OTP
             setRecoveryKey(data.recovery_key);
             setUserId(data.user_id);
 
-            // Login user without redirect (to show recovery key)
+            // Log user in
             loginWithoutRedirect(data.user_id, data.home_server, data.access_token, data.refresh_token);
 
-            // Mark that we're showing recovery key
+            // Show success screen
             sessionStorage.setItem('showing_recovery_key', 'true');
-
-            setStep('success');
+            setIsSuccess(true);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'OTP verification failed');
+            console.error('Registration error:', err);
+            setError(err instanceof Error ? err.message : 'Registration failed');
         } finally {
             setIsSubmitting(false);
-        }
-    };
-
-    const handleResendOTP = async () => {
-        setError('');
-        try {
-            const res = await fetch('http://localhost:8082/register', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    email: email,
-                    password: password,
-                    invite_code: inviteCode,
-                }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error || 'Failed to resend OTP');
-            }
-
-            setSessionId(data.session_id);
-            setEmailHint(data.email_hint || email);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to resend OTP');
         }
     };
 
@@ -167,8 +128,8 @@ export default function RegisterPage() {
         window.location.href = '/profile';
     };
 
-    // Step 3: Success - Show recovery key
-    if (step === 'success') {
+    // Success Screen
+    if (isSuccess) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
                 <div className="w-full max-w-lg bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10">
@@ -251,45 +212,7 @@ export default function RegisterPage() {
         );
     }
 
-    // Step 2: OTP Verification
-    if (step === 'otp') {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
-                <div className="w-full max-w-md bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10">
-                    <div className="mb-8 text-center">
-                        <h1 className="text-3xl font-bold text-bat-gray mb-2">Verify Your Email</h1>
-                        <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50 mb-4"></div>
-                        <p className="text-sm text-gray-400">
-                            Enter the 6-digit code sent to<br />
-                            <span className="text-bat-yellow font-mono">{emailHint}</span>
-                        </p>
-                    </div>
-
-                    {error && (
-                        <div className="mb-4 p-3 rounded-md bg-red-900/20 border border-red-500/50 text-red-400 text-sm">
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="flex flex-col items-center gap-6">
-                        <OTPInput
-                            onComplete={handleOTPComplete}
-                            onResend={handleResendOTP}
-                        />
-
-                        <button
-                            onClick={() => setStep('registration')}
-                            className="text-sm text-gray-500 hover:text-bat-yellow transition-colors"
-                        >
-                            ← Back to registration
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Step 1: Registration Form
+    // Registration Form
     return (
         <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
             <div className="w-full max-w-md bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10">
@@ -336,7 +259,7 @@ export default function RegisterPage() {
                             required
                             disabled={isSubmitting}
                         />
-                        <p className="mt-1 text-xs text-gray-500">Used for OTP verification</p>
+                        <p className="mt-1 text-xs text-gray-500">We don't verify this anymore, but it's good for recovery.</p>
                     </div>
 
                     <div>
@@ -388,12 +311,47 @@ export default function RegisterPage() {
                         />
                     </div>
 
+                    <div>
+                        <label htmlFor="serverName" className="block text-sm font-medium text-bat-gray mb-2">
+                            Select Server
+                        </label>
+                        <select
+                            id="serverName"
+                            value={serverName}
+                            onChange={(e) => {
+                                const newName = e.target.value;
+                                setServerName(newName);
+
+                                // Logic to map name to URL for localStorage
+                                let serverUrl = 'http://localhost:8082'; // fallback
+                                if (newName.toLowerCase() === 'server a') {
+                                    serverUrl = 'http://localhost:8080';
+                                } else if (newName.toLowerCase() === 'server b') {
+                                    serverUrl = 'http://localhost:9080';
+                                }
+
+                                localStorage.setItem('trusted_server', JSON.stringify({
+                                    server_name: newName,
+                                    server_url: serverUrl
+                                }));
+                            }}
+                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200"
+                            required
+                            disabled={isSubmitting}
+                        >
+                            <option value="">-- Choose a Server --</option>
+                            <option value="Server A">Server A (Port 8080)</option>
+                            <option value="Server B">Server B (Port 9080)</option>
+                        </select>
+                        <p className="mt-1 text-xs text-gray-500">Select which backend server to register with</p>
+                    </div>
+
                     <button
                         type="submit"
                         disabled={isSubmitting}
                         className="w-full py-3 px-4 rounded-md font-bold text-lg bg-bat-yellow text-bat-black hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.98] transition-all duration-200 shadow-[0_0_15px_rgba(245,197,24,0.3)]"
                     >
-                        {isSubmitting ? 'Sending OTP...' : 'Continue'}
+                        {isSubmitting ? 'Creating Account...' : 'Create Account'}
                     </button>
                 </form>
 

@@ -45,7 +45,7 @@ export function NavItem({
 
   return (
     <Link href={href} className={`${base} ${variant === "post" ? postStyle : defaultStyle}`}>
-      {/* Icon */}
+      {}
       <div
         className={`
             transition-all duration-200
@@ -59,7 +59,7 @@ export function NavItem({
         {children}
       </div>
 
-      {/* Label */}
+      {}
       <span
         className={`
           text-sm tracking-wide whitespace-nowrap

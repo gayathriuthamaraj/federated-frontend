@@ -95,7 +95,7 @@ export default function DemoPage() {
 
     return (
         <div className="min-h-screen bg-bat-black p-8">
-            {/* Header */}
+            {}
             <div className="max-w-7xl mx-auto mb-12 text-center">
                 <h1 className="text-5xl font-bold text-bat-gray mb-4">
                     Gotham Social <span className="text-bat-yellow">Showcase</span>
@@ -106,7 +106,7 @@ export default function DemoPage() {
                 </p>
             </div>
 
-            {/* Page Grid */}
+            {}
             <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {pages.map((page, index) => (
                     <div
@@ -125,16 +125,16 @@ export default function DemoPage() {
                             animationDelay: `${index * 100}ms`,
                         }}
                     >
-                        {/* Gradient Background */}
+                        {}
                         <div className={`
               absolute inset-0 bg-gradient-to-br ${page.color}
               opacity-0 group-hover:opacity-10
               transition-opacity duration-300
             `}></div>
 
-                        {/* Content */}
+                        {}
                         <div className="relative p-6">
-                            {/* Icon */}
+                            {}
                             <div className="
                 w-16 h-16 mb-4 rounded-lg
                 bg-bat-black/50 border border-bat-gray/20
@@ -146,17 +146,17 @@ export default function DemoPage() {
                                 {page.icon}
                             </div>
 
-                            {/* Title */}
+                            {}
                             <h2 className="text-2xl font-bold text-bat-gray mb-2 group-hover:text-bat-yellow transition-colors duration-300">
                                 {page.title}
                             </h2>
 
-                            {/* Description */}
+                            {}
                             <p className="text-gray-400 text-sm leading-relaxed">
                                 {page.description}
                             </p>
 
-                            {/* Arrow Icon */}
+                            {}
                             <div className="
                 absolute bottom-4 right-4
                 text-bat-yellow opacity-0 group-hover:opacity-100
@@ -172,7 +172,7 @@ export default function DemoPage() {
                 ))}
             </div>
 
-            {/* Footer */}
+            {}
             <div className="max-w-7xl mx-auto mt-16 text-center">
                 <p className="text-gray-500">
                     Built with ❤️ for Gotham City

@@ -34,13 +34,13 @@ export default function ProfilePage() {
     }
 
     const fetchProfile = async () => {
-      // Check cache first
+      
       const cached = getProfile(identity.user_id);
       if (cached) {
         setProfileState(cached.profile);
         if (cached.did) setDid(cached.did);
         setLoading(false);
-        // Optional: Revalidate in background? For now, we trust cache.
+        
         return;
       }
 
@@ -48,7 +48,7 @@ export default function ProfilePage() {
       setError(null);
 
       try {
-        // Only fetch the logged-in user's own profile
+        
         const url = `${identity.home_server}/user/me?user_id=${encodeURIComponent(identity.user_id)}`;
 
         const res = await fetch(url);
@@ -58,7 +58,7 @@ export default function ProfilePage() {
             setProfileState(null);
             return;
           }
-          // Get error details for debugging
+          
           const errorText = await res.text();
           throw new Error(`Failed to fetch profile (${res.status}): ${errorText}`);
         }
@@ -135,7 +135,7 @@ export default function ProfilePage() {
     );
   }
 
-  // Determine if this is the user's own profile
+  
   const isOwnProfile = identity?.user_id === profile.user_id;
 
   return (

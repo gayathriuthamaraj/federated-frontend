@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 
 interface FollowButtonProps {
     targetUser: string
-    isFollowing?: boolean // Optional initial state
+    isFollowing?: boolean 
     onSuccess?: () => void
 }
 
@@ -56,7 +56,7 @@ export default function FollowButton({
             } else {
                 const error = await res.text()
                 alert(`Action failed: ${error}`)
-                setStatus(status) // Revert
+                setStatus(status) 
             }
         } catch (err: any) {
             console.error('Follow error:', err)
@@ -75,8 +75,8 @@ export default function FollowButton({
             className={`
                 px-6 py-2 rounded-full font-bold text-sm transition-all duration-200
                 ${status === 'followed'
-                    ? 'bg-transparent border border-bat-dark text-bat-gray hover:text-red-500 hover:border-red-500' // Following state
-                    : 'bg-bat-yellow text-bat-black hover:bg-[#E0B000] shadow-md' // Follow state
+                    ? 'bg-transparent border border-bat-dark text-bat-gray hover:text-red-500 hover:border-red-500' 
+                    : 'bg-bat-yellow text-bat-black hover:bg-[#E0B000] shadow-md' 
                 }
                 ${status === 'loading' ? 'opacity-50 cursor-wait' : ''}
             `}

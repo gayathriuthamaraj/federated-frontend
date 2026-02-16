@@ -24,7 +24,7 @@ export default function DatabaseConfigPage() {
         }
     }, [router]);
 
-    // Poll migration status
+    
     useEffect(() => {
         if (migrationStatus && migrationStatus.status === 'in_progress') {
             const interval = setInterval(async () => {
@@ -80,7 +80,7 @@ export default function DatabaseConfigPage() {
 
         try {
             const result = await startDatabaseMigration(connectionString);
-            // Immediately fetch the status
+            
             const status = await getMigrationStatus(result.migration_id);
             setMigrationStatus(status);
         } catch (err) {
@@ -92,7 +92,7 @@ export default function DatabaseConfigPage() {
     const getMigrationProgress = () => {
         if (!migrationStatus || !migrationStatus.tables_migrated) return 0;
 
-        const total = 8; // Total number of tables
+        const total = 8; 
         const migrated = Object.keys(migrationStatus.tables_migrated).length;
         return Math.round((migrated / total) * 100);
     };
@@ -111,7 +111,7 @@ export default function DatabaseConfigPage() {
                     </div>
                 )}
 
-                {/* Connection Testing */}
+                {}
                 <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
                     <h2 className="text-xl font-bold text-white">Database Connection</h2>
 
@@ -179,7 +179,7 @@ export default function DatabaseConfigPage() {
                     )}
                 </div>
 
-                {/* Database Migration */}
+                {}
                 <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-4">
                     <h2 className="text-xl font-bold text-white">Database Migration</h2>
 
@@ -213,7 +213,7 @@ export default function DatabaseConfigPage() {
                         </button>
                     )}
 
-                    {/* Migration Progress */}
+                    {}
                     {migrationStatus && (
                         <div className="space-y-4">
                             <div className="bg-gray-700 rounded-lg p-4">
@@ -228,7 +228,7 @@ export default function DatabaseConfigPage() {
                                     </span>
                                 </div>
 
-                                {/* Progress Bar */}
+                                {}
                                 <div className="w-full bg-gray-600 rounded-full h-4 mb-2">
                                     <div
                                         className={`h-4 rounded-full transition-all duration-500 ${migrationStatus.status === 'completed' ? 'bg-green-600' :
@@ -241,7 +241,7 @@ export default function DatabaseConfigPage() {
                                 <p className="text-gray-400 text-sm">{getMigrationProgress()}% Complete</p>
                             </div>
 
-                            {/* Tables Status */}
+                            {}
                             {migrationStatus.tables_migrated && Object.keys(migrationStatus.tables_migrated).length > 0 && (
                                 <div className="bg-gray-700 rounded-lg p-4">
                                     <h3 className="text-white font-bold mb-3">Tables Migrated</h3>

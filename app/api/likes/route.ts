@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-// In-memory storage for likes
+
 const likes = new Map<string, Set<string>>();
 
 export async function POST(request: Request) {

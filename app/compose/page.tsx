@@ -25,7 +25,7 @@ export default function ComposePage() {
             });
 
             if (res.ok) {
-                // Redirect to feed after posting
+                
                 router.push('/feed');
             } else {
                 alert('Failed to create post');
@@ -45,7 +45,7 @@ export default function ComposePage() {
 
     return (
         <div className="max-w-2xl mx-auto p-6">
-            {/* Header */}
+            {}
             <div className="mb-6 flex items-center gap-4">
                 <button
                     onClick={() => router.back()}
@@ -58,7 +58,7 @@ export default function ComposePage() {
                 <h1 className="text-2xl font-bold text-bat-gray">Compose Post</h1>
             </div>
 
-            {/* Compose Area */}
+            {}
             <div className="bg-bat-dark rounded-lg border border-bat-gray/10 p-6">
                 <div className="flex gap-3 mb-4">
                     <div className="w-12 h-12 rounded-full bg-bat-dark border border-bat-yellow/50 flex items-center justify-center text-bat-yellow font-bold text-lg">
@@ -124,7 +124,7 @@ export default function ComposePage() {
                 </div>
             </div>
 
-            {/* Tips */}
+            {}
             <div className="mt-6 p-4 bg-bat-dark/50 rounded-lg border border-bat-gray/10">
                 <h3 className="font-bold text-bat-gray mb-2">Tips</h3>
                 <ul className="text-sm text-bat-gray/60 space-y-1">
