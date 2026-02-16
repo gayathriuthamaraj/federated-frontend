@@ -107,12 +107,6 @@ export default function LoginPage() {
 
                 <div className="mt-6 pt-6 border-t border-gray-700 text-center text-gray-400 text-sm">
                     <p>Admin access only. Unauthorized attempts will be logged.</p>
-                    <button
-                        onClick={() => router.push('/setup')}
-                        className="mt-4 text-blue-400 hover:text-blue-300 transition-colors"
-                    >
-                        Switch Server
-                    </button>
                 </div>
             </div>
         </div>

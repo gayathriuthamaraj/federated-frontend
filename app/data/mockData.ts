@@ -216,6 +216,69 @@ export const mockPosts: MockPost[] = [
         created_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
         updated_at: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
     },
+    // New posts for Highlights and Media tabs
+    {
+        id: '6',
+        author: 'batman@gotham.social',
+        content: 'The Bat-Signal is lit. Calling all allies.\n\n#Gotham #Justice',
+        imageUrl: 'https://images.unsplash.com/photo-1509023464722-18d996393ca8?w=600&h=400&fit=crop',
+        likeCount: 2345,
+        commentCount: 145,
+        repostCount: 567,
+        isLiked: true,
+        timestamp: '1d ago',
+        created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+        id: '7',
+        author: 'batman@gotham.social',
+        content: 'Upgrading the Batmobile systems. Faster, stealthier, stronger.',
+        likeCount: 980,
+        commentCount: 67,
+        repostCount: 123,
+        isLiked: false,
+        timestamp: '2d ago',
+        created_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+    },
+];
+
+export interface MockReply extends MockPost {
+    replyTo: string;
+    replyToAuthor: string;
+}
+
+// Sample Replies
+export const mockReplies: MockReply[] = [
+    {
+        id: 'r1',
+        author: 'batman@gotham.social',
+        content: 'Good work, Robin. Stay focused.',
+        replyTo: '2',
+        replyToAuthor: 'robin@gotham.social',
+        likeCount: 45,
+        commentCount: 2,
+        repostCount: 5,
+        isLiked: false,
+        timestamp: '3h ago',
+        created_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+        id: 'r2',
+        author: 'batman@gotham.social',
+        content: 'Return it, Selina. Tonight.',
+        replyTo: '3',
+        replyToAuthor: 'catwoman@gotham.social',
+        likeCount: 120,
+        commentCount: 15,
+        repostCount: 8,
+        isLiked: true,
+        timestamp: '5h ago',
+        created_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+        updated_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+    },
 ];
 
 // Sample Notifications

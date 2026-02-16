@@ -10,4 +10,7 @@ export interface Post {
     repost_count?: number
     has_liked?: boolean
     has_reposted?: boolean
+    // New fields for frontend logic
+    reply_to?: string
+    is_repost?: boolean
 }

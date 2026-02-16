@@ -1,72 +1,53 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
 import PostCard from '../../components/PostCard';
+import { mockPosts, mockUsers } from '../../data/mockData';
+import { Post } from '@/types/post';
 
 export default function FeedPage() {
-    const { identity } = useAuth();
-    const [posts, setPosts] = useState([]);
+    const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [newPostContent, setNewPostContent] = useState('');
     const [posting, setPosting] = useState(false);
 
-    // Fetch feed
+    // Simulate fetch feed
     useEffect(() => {
-        async function fetchFeed() {
-            if (!identity) {
-                setLoading(false);
-                return;
-            }
+        const timer = setTimeout(() => {
+            // Convert MockPost to Post type
+            const mappedPosts: Post[] = mockPosts.map(post => ({
+                id: post.id,
+                author: post.author,
+                content: post.content,
+                image_url: post.imageUrl,
+                created_at: post.created_at,
+                updated_at: post.updated_at,
+                like_count: post.likeCount,
+                reply_count: post.commentCount,
+                repost_count: post.repostCount,
+                has_liked: post.isLiked,
+                has_reposted: post.isReposted,
+                reply_to: (post as any).replyTo,
+                is_repost: false
+            }));
+            setPosts(mappedPosts);
+            setLoading(false);
+        }, 800); // Simulate network delay
 
-            try {
-                const res = await fetch(
-                    `${identity.home_server}/feed?user_id=${encodeURIComponent(identity.user_id)}&limit=20&offset=0`
-                );
-
-                if (!res.ok) {
-                    throw new Error(`Failed to fetch feed: ${res.status}`);
-                }
-
-                const data = await res.json();
-                setPosts(data.posts || []);
-            } catch (err) {
-                console.error('Feed fetch error:', err);
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchFeed();
-    }, [identity]);
+        return () => clearTimeout(timer);
+    }, []);
 
     // Handle post creation
     const handleCreatePost = async () => {
-        if (!newPostContent.trim() || !identity) return;
+        if (!newPostContent.trim()) return;
 
         setPosting(true);
-        try {
-            const res = await fetch(`${identity.home_server}/post/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    user_id: identity.user_id,
-                    content: newPostContent,
-                }),
-            });
 
-            if (!res.ok) {
-                throw new Error('Failed to create post');
-            }
-
-            const data = await res.json();
-
-            // Add new post to the top of the feed
-            const newPost = {
-                id: data.post_id,
-                author: identity.user_id,
+        // Simulate API call
+        setTimeout(() => {
+            const newPost: Post = {
+                id: `new-${Date.now()}`,
+                author: 'guest@showcase',
                 content: newPostContent,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -79,23 +60,9 @@ export default function FeedPage() {
 
             setPosts([newPost, ...posts]);
             setNewPostContent('');
-        } catch (err) {
-            console.error('Post creation error:', err);
-            alert('Failed to create post');
-        } finally {
             setPosting(false);
-        }
+        }, 500);
     };
-
-    if (!identity) {
-        return (
-            <div className="max-w-3xl mx-auto p-6">
-                <div className="text-center text-bat-gray">
-                    Please log in to view your feed
-                </div>
-            </div>
-        );
-    }
 
     if (loading) {
         return (
@@ -103,17 +70,6 @@ export default function FeedPage() {
                 <div className="text-center text-bat-gray">
                     <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
                     <p className="mt-2">Loading feed...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="max-w-3xl mx-auto p-6">
-                <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 text-red-400">
-                    <p className="font-bold">Error loading feed</p>
-                    <p className="text-sm mt-1">{error}</p>
                 </div>
             </div>
         );
@@ -130,7 +86,7 @@ export default function FeedPage() {
             {/* Compose Box */}
             <div className="mb-6 p-4 bg-bat-dark rounded-lg border border-bat-gray/10">
                 <textarea
-                    placeholder="What's happening in Gotham?"
+                    placeholder="What's happening in Gotham? (Mock Mode)"
                     className="
               w-full px-4 py-3 rounded-lg
               bg-bat-black text-white
@@ -168,7 +124,6 @@ export default function FeedPage() {
             {posts.length === 0 ? (
                 <div className="text-center py-12 text-bat-gray">
                     <p className="text-lg">No posts yet</p>
-                    <p className="text-sm mt-2">Follow some users to see their posts here!</p>
                 </div>
             ) : (
                 <div className="space-y-4">
@@ -179,19 +134,17 @@ export default function FeedPage() {
             )}
 
             {/* Load More */}
-            {posts.length >= 20 && (
-                <div className="mt-6 text-center">
-                    <button className="
+            <div className="mt-6 text-center">
+                <button className="
             px-6 py-3 rounded-full font-bold
             bg-bat-dark text-bat-gray
             border border-bat-gray/20
             hover:border-bat-yellow/50
             transition-all duration-200
           ">
-                        Load More Posts
-                    </button>
-                </div>
-            )}
+                    Load More Posts
+                </button>
+            </div>
         </div>
     );
 }

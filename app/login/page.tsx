@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import OTPInput from '../components/OTPInput';
+
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -12,11 +12,11 @@ export default function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
 
-    // Step 2: OTP verification
-    const [step, setStep] = useState<'credentials' | 'otp'>('credentials');
-    const [sessionId, setSessionId] = useState('');
-    const [email, setEmail] = useState('');
-    const [emailHint, setEmailHint] = useState('');
+    // State
+    const [email, setEmail] = useState(''); // Kept if needed or remove if unused, but wait, username is used for login.
+    // Actually `email` state was only used for OTP. `username` state is used for login.
+    // Let's check usage.
+
 
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,16 +44,9 @@ export default function LoginPage() {
                 throw new Error(data.error || 'Login failed');
             }
 
-            // Check if OTP is required
-            if (data.requires_otp) {
-                setSessionId(data.session_id);
-                setEmail(username); // We'll use username as email identifier
-                setEmailHint(data.email_hint || '');
-                setStep('otp');
-            } else {
-                // Old flow - direct login (shouldn't happen with new backend)
-                login(data.user_id, data.home_server, data.access_token || '', data.refresh_token || '');
-            }
+            // Direct login
+            login(data.user_id, data.home_server, data.access_token || '', data.refresh_token || '');
+
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Login failed');
         } finally {
@@ -61,101 +54,9 @@ export default function LoginPage() {
         }
     };
 
-    const handleOTPComplete = async (otp: string) => {
-        setError('');
-        setIsSubmitting(true);
 
-        try {
-            const res = await fetch('http://localhost:8082/verify-otp', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    email: email,
-                    otp: otp,
-                    session_id: sessionId,
-                }),
-            });
 
-            const data = await res.json();
 
-            if (!res.ok) {
-                throw new Error(data.error || 'Invalid OTP');
-            }
-
-            // Login successful with tokens
-            login(data.user_id, data.home_server, data.access_token, data.refresh_token);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'OTP verification failed');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleResendOTP = async () => {
-        setError('');
-        try {
-            const res = await fetch('http://localhost:8082/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    password: password,
-                }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error || 'Failed to resend OTP');
-            }
-
-            setSessionId(data.session_id);
-            setEmailHint(data.email_hint || '');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to resend OTP');
-        }
-    };
-
-    if (step === 'otp') {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
-                <div className="w-full max-w-md bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10">
-                    <div className="mb-8 text-center">
-                        <h1 className="text-3xl font-bold text-bat-gray mb-2">Verify OTP</h1>
-                        <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50 mb-4"></div>
-                        <p className="text-sm text-gray-400">
-                            Enter the 6-digit code sent to<br />
-                            <span className="text-bat-yellow font-mono">{emailHint}</span>
-                        </p>
-                    </div>
-
-                    {error && (
-                        <div className="mb-4 p-3 rounded-md bg-red-900/20 border border-red-500/50 text-red-400 text-sm">
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="flex flex-col items-center gap-6">
-                        <OTPInput
-                            onComplete={handleOTPComplete}
-                            onResend={handleResendOTP}
-                        />
-
-                        <button
-                            onClick={() => setStep('credentials')}
-                            className="text-sm text-gray-500 hover:text-bat-yellow transition-colors"
-                        >
-                            ← Back to login
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
@@ -237,7 +138,7 @@ export default function LoginPage() {
               shadow-[0_0_15px_rgba(245,197,24,0.3)]
             "
                     >
-                        {isSubmitting ? 'Sending OTP...' : 'Continue'}
+                        {isSubmitting ? 'Signing In...' : 'Sign In'}
                     </button>
                 </form>
 

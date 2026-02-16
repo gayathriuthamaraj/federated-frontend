@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
-import { getAllUsers } from '../api/admin';
-import { MapPin } from 'lucide-react';
+import { getAllUsers, deleteUser } from '../api/admin';
+import { MapPin, Trash2 } from 'lucide-react';
 
 interface UserData {
     identity: {
@@ -66,6 +66,20 @@ export default function UsersPage() {
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleDeleteUser = async (userId: string, username: string) => {
+        if (!confirm(`Are you sure you want to delete user ${username}? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            await deleteUser(userId);
+            // Refresh list
+            loadUsers();
+        } catch (err) {
+            alert(err instanceof Error ? err.message : 'Failed to delete user');
         }
     };
 
@@ -145,8 +159,18 @@ export default function UsersPage() {
                                             </p>
                                         )}
                                     </div>
-                                    <div className="text-right text-sm text-gray-400">
-                                        <p>Joined: {new Date(user.profile.created_at).toLocaleDateString()}</p>
+                                    <div className="flex flex-col items-end gap-2">
+                                        <div className="text-sm text-gray-400">
+                                            <p>Joined: {new Date(user.profile.created_at).toLocaleDateString()}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => handleDeleteUser(user.identity.user_id, user.profile.display_name)}
+                                            className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-md transition-colors flex items-center gap-2 text-sm"
+                                            title="Delete User"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                            <span>Delete</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>

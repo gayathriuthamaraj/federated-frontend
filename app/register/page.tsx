@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import OTPInput from '../components/OTPInput';
+
 
 export default function RegisterPage() {
     const { loginWithoutRedirect } = useAuth();
@@ -15,10 +15,8 @@ export default function RegisterPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [inviteCode, setInviteCode] = useState('');
 
-    // Step 2: OTP verification
-    const [step, setStep] = useState<'registration' | 'otp' | 'success'>('registration');
-    const [sessionId, setSessionId] = useState('');
-    const [emailHint, setEmailHint] = useState('');
+    // Step 2: Success
+    const [step, setStep] = useState<'registration' | 'success'>('registration');
 
     // Step 3: Success
     const [recoveryKey, setRecoveryKey] = useState('');
@@ -62,7 +60,7 @@ export default function RegisterPage() {
                 },
                 body: JSON.stringify({
                     username: username,
-                    email: email,
+                    email: email, // Backend ignores email for now but we send it
                     password: password,
                     invite_code: inviteCode,
                 }),
@@ -74,87 +72,54 @@ export default function RegisterPage() {
                 throw new Error(data.error || 'Registration failed');
             }
 
-            // OTP sent successfully
-            setSessionId(data.session_id);
-            setEmailHint(data.email_hint || email);
-            setStep('otp');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Registration failed');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleOTPComplete = async (otp: string) => {
-        setError('');
-        setIsSubmitting(true);
-
-        try {
-            const res = await fetch('http://localhost:8082/complete-registration', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    session_id: sessionId,
-                    otp: otp,
-                    email: email,
-                    username: username,
-                    password: password,
-                    invite_code: inviteCode,
-                }),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error || 'OTP verification failed');
-            }
-
             // Registration successful!
             setRecoveryKey(data.recovery_key);
             setUserId(data.user_id);
 
             // Login user without redirect (to show recovery key)
-            loginWithoutRedirect(data.user_id, data.home_server, data.access_token, data.refresh_token);
+            // Backend register returns home_server but might not return tokens if it expects OTP - 
+            // BUT wait, looking at backend code: RegisterHandler returns user_id, home_server, recovery_key.
+            // It DOES NOT return access_token/refresh_token.
+            // So we can't fully login yet without a separate login call?
+            // Actually, based on backend `RegisterHandler`:
+            // It returns: user_id, home_server, recovery_key.
+            // It does NOT login the user given the stateless nature?
+            // Wait, `loginWithoutRedirect` expects tokens.
+            // If backend doesn't return them on register, we might need to Auto-Login?
+            // or just show recovery key and ask user to login.
+            // Let's check `loginWithoutRedirect` usage in previous code:
+            // "loginWithoutRedirect(data.user_id, data.home_server, data.access_token, data.refresh_token);"
+            // The old code expected access_token/refresh_token from `complete-registration`.
+            // The `register` endpoint only returns user_id, home_server, recovery_key.
+            // So we should probably try to Login automatically or just show success and ask to login.
+            // Auto-login would require sending password again to /login.
 
-            // Mark that we're showing recovery key
-            sessionStorage.setItem('showing_recovery_key', 'true');
-
-            setStep('success');
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'OTP verification failed');
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleResendOTP = async () => {
-        setError('');
-        try {
-            const res = await fetch('http://localhost:8082/register', {
+            // Let's attempt auto-login
+            const loginRes = await fetch('http://localhost:8082/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    email: email,
-                    password: password,
-                    invite_code: inviteCode,
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
             });
 
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error || 'Failed to resend OTP');
+            if (loginRes.ok) {
+                const loginData = await loginRes.json();
+                loginWithoutRedirect(loginData.user_id, loginData.home_server, loginData.access_token || '', loginData.refresh_token || '');
+                // Mark that we're showing recovery key
+                sessionStorage.setItem('showing_recovery_key', 'true');
+                setStep('success');
+            } else {
+                // Fallback if auto-login fails: just show success but maybe redirect to login on continue?
+                // But we want to show recovery key.
+                // We can set step to success anyway, but user won't be "logged in" in context.
+                // That's fine, "Continue" button on success screen redirects to /profile.
+                // If not logged in, auth guard will redirect to /login.
+                setStep('success');
             }
 
-            setSessionId(data.session_id);
-            setEmailHint(data.email_hint || email);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to resend OTP');
+            setError(err instanceof Error ? err.message : 'Registration failed');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -164,7 +129,8 @@ export default function RegisterPage() {
 
     const handleContinue = () => {
         sessionStorage.removeItem('showing_recovery_key');
-        window.location.href = '/profile';
+        // If we failed auto-login, this will just hit auth guard and go to login.
+        window.location.href = '/profile/edit';
     };
 
     // Step 3: Success - Show recovery key
@@ -244,50 +210,14 @@ export default function RegisterPage() {
                             shadow-[0_0_15px_rgba(245,197,24,0.3)]
                         "
                     >
-                        Continue to Profile
+                        Continue to Setup Profile
                     </button>
                 </div>
             </div>
         );
     }
 
-    // Step 2: OTP Verification
-    if (step === 'otp') {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
-                <div className="w-full max-w-md bg-bat-dark rounded-lg shadow-2xl p-8 border border-bat-gray/10">
-                    <div className="mb-8 text-center">
-                        <h1 className="text-3xl font-bold text-bat-gray mb-2">Verify Your Email</h1>
-                        <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50 mb-4"></div>
-                        <p className="text-sm text-gray-400">
-                            Enter the 6-digit code sent to<br />
-                            <span className="text-bat-yellow font-mono">{emailHint}</span>
-                        </p>
-                    </div>
 
-                    {error && (
-                        <div className="mb-4 p-3 rounded-md bg-red-900/20 border border-red-500/50 text-red-400 text-sm">
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="flex flex-col items-center gap-6">
-                        <OTPInput
-                            onComplete={handleOTPComplete}
-                            onResend={handleResendOTP}
-                        />
-
-                        <button
-                            onClick={() => setStep('registration')}
-                            className="text-sm text-gray-500 hover:text-bat-yellow transition-colors"
-                        >
-                            ← Back to registration
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     // Step 1: Registration Form
     return (
@@ -393,7 +323,7 @@ export default function RegisterPage() {
                         disabled={isSubmitting}
                         className="w-full py-3 px-4 rounded-md font-bold text-lg bg-bat-yellow text-bat-black hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.98] transition-all duration-200 shadow-[0_0_15px_rgba(245,197,24,0.3)]"
                     >
-                        {isSubmitting ? 'Sending OTP...' : 'Continue'}
+                        {isSubmitting ? 'Creating Account...' : 'Create Account'}
                     </button>
                 </form>
 

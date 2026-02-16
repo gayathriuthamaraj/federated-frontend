@@ -287,3 +287,19 @@ export async function fetchInviteQR(code: string): Promise<string> {
     const blob = await response.blob();
     return URL.createObjectURL(blob);
 }
+export async function deleteUser(userId: string): Promise<void> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+
+    const res = await fetch(`${getApiBaseUrl()}/admin/users/delete?user_id=${encodeURIComponent(userId)}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+        },
+    });
+
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to delete user: ${res.status}`);
+    }
+}

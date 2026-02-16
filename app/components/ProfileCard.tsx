@@ -43,6 +43,19 @@ export default function ProfileCard({
         setFollowingState(!followingState)
     }
 
+    const [activeTab, setActiveTab] = useState('Posts');
+
+    // Filter posts based on active tab
+    // Filter posts based on active tab
+    const filteredPosts = posts.filter(post => {
+        if (activeTab === 'Posts') return !post.reply_to && !post.is_repost; // Main posts
+        if (activeTab === 'Replies') return post.reply_to;
+        if (activeTab === 'Highlights') return (post.like_count || 0) > 1000; // Example logic for highlights
+        if (activeTab === 'Media') return post.image_url;
+        if (activeTab === 'Likes') return post.has_liked;
+        return true;
+    });
+
     return (
         <div className="w-full bg-bat-black flex flex-col">
 
@@ -187,13 +200,14 @@ export default function ProfileCard({
             </div>
 
             {/* Tabs Navigation */}
-            <div className="mt-2 flex border-b border-bat-dark">
-                {['Posts', 'Replies', 'Highlights', 'Media', 'Likes'].map((tab, i) => (
+            <div className="mt-2 flex border-b border-bat-dark overflow-x-auto no-scrollbar">
+                {['Posts', 'Replies', 'Highlights', 'Media', 'Likes'].map((tab) => (
                     <div
                         key={tab}
+                        onClick={() => setActiveTab(tab)}
                         className={`
-                            flex-1 py-4 text-center text-sm sm:text-base font-medium transition-colors cursor-pointer hover:bg-bat-dark/30
-                            ${i === 0
+                            flex-1 min-w-[80px] py-4 text-center text-sm sm:text-base font-medium transition-colors cursor-pointer hover:bg-bat-dark/30
+                            ${activeTab === tab
                                 ? 'text-bat-yellow border-b-[3px] border-bat-yellow'
                                 : 'text-bat-gray/60 hover:text-bat-gray'
                             }
@@ -208,16 +222,16 @@ export default function ProfileCard({
             <div className="flex-1">
                 {loadingPosts ? (
                     <div className="text-center text-bat-gray py-8">Loading posts...</div>
-                ) : posts.length === 0 ? (
+                ) : filteredPosts.length === 0 ? (
                     <div className="p-8 text-center border-t border-bat-dark/50">
-                        <div className="text-bat-gray/40 text-lg font-medium">No posts yet</div>
+                        <div className="text-bat-gray/40 text-lg font-medium">No {activeTab.toLowerCase()} yet</div>
                         <div className="text-bat-gray/20 text-sm mt-1">
-                            {isOwnProfile ? "Start sharing your thoughts!" : `${profile.display_name} hasn't posted anything yet.`}
+                            {isOwnProfile ? "Start sharing your thoughts!" : `This user hasn't posted any ${activeTab.toLowerCase()} yet.`}
                         </div>
                     </div>
                 ) : (
                     <div className="border-t border-bat-dark/50">
-                        {posts.map((post) => (
+                        {filteredPosts.map((post) => (
                             <PostCard key={post.id} post={post} />
                         ))}
                     </div>
