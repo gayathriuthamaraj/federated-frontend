@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useState, useEffect } from 'react';
-import { LayoutDashboard, Server, Database, Ticket, Users, LogOut } from 'lucide-react';
+import { LayoutDashboard, Server, Database, Ticket, Users, LogOut, Globe } from 'lucide-react';
 
 interface AdminLayoutProps {
     children: ReactNode;
@@ -24,7 +24,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     url: data.server_url || ''
                 });
             } catch (e) {
-                
+
             }
         }
     }, []);
@@ -38,7 +38,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
     return (
         <div className="min-h-screen bg-gray-900 flex">
-            {}
+            { }
             <aside className="w-64 bg-gray-800 border-r border-gray-700 flex flex-col">
                 <div className="p-6 border-b border-gray-700">
                     <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
@@ -110,6 +110,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                             <span>Users</span>
                         </div>
                     </Link>
+
+                    <Link
+                        href="/trusted-servers"
+                        className={`block px-4 py-3 rounded-lg transition-colors ${isActive('/trusted-servers')
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-300 hover:bg-gray-700'
+                            }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Globe className="w-5 h-5" />
+                            <span>Trusted Servers</span>
+                        </div>
+                    </Link>
                 </nav>
 
                 <div className="p-4 border-t border-gray-700">
@@ -128,7 +141,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </div>
             </aside>
 
-            {}
+            { }
             <main className="flex-1 overflow-y-auto">
                 <div className="p-8">
                     {children}

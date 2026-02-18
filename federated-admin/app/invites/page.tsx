@@ -14,7 +14,7 @@ export default function InvitesPage() {
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [selectedInvite, setSelectedInvite] = useState<Invite | null>(null);
 
-    
+
     const [inviteType, setInviteType] = useState<'user' | 'admin'>('user');
     const [maxUses, setMaxUses] = useState(1);
     const [expiresIn, setExpiresIn] = useState(24);
@@ -47,7 +47,7 @@ export default function InvitesPage() {
                 expires_in: expiresIn
             });
             await loadInvites();
-            
+
             setInviteType('user');
             setMaxUses(1);
             setExpiresIn(24);
@@ -97,25 +97,16 @@ export default function InvitesPage() {
                     </div>
                 )}
 
-                {}
+                { }
                 <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
                     <h2 className="text-xl font-bold text-white mb-4">Generate New Invite</h2>
                     <form onSubmit={handleGenerate} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300">Type</label>
-                            <select
-                                value={inviteType}
-                                onChange={(e) => setInviteType(e.target.value as 'user' | 'admin')}
-                                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                            >
-                                <option value="user">User Invite</option>
-                                <option value="admin">Admin Invite</option>
-                            </select>
-                        </div>
+
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-300">Max Uses (-1 for unlimited)</label>
                             <input
                                 type="number"
+                                min="1"
                                 value={maxUses}
                                 onChange={(e) => setMaxUses(parseInt(e.target.value))}
                                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
@@ -140,7 +131,7 @@ export default function InvitesPage() {
                     </form>
                 </div>
 
-                {}
+                { }
                 <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
                     <table className="w-full text-left">
                         <thead className="bg-gray-700/50 text-gray-400 text-sm">
@@ -212,7 +203,7 @@ export default function InvitesPage() {
                     </table>
                 </div>
 
-                {}
+                { }
                 {qrCode && selectedInvite && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={closeQR}>
                         <div className="bg-white rounded-xl p-8 max-w-sm w-full space-y-4 text-center" onClick={e => e.stopPropagation()}>
