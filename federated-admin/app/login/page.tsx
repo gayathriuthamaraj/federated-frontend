@@ -11,29 +11,29 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [serverName, setServerName] = useState('Server A'); 
-    const [selectedServerKey, setSelectedServerKey] = useState('Server A'); 
+    const [serverName, setServerName] = useState('Server A');
+    const [selectedServerKey, setSelectedServerKey] = useState('Server A');
 
     useEffect(() => {
-        
+
         localStorage.removeItem('admin_token');
 
-        
+
         const trustedServer = localStorage.getItem('trusted_server');
         if (trustedServer) {
             try {
                 const data = JSON.parse(trustedServer);
                 setServerName(data.server_name || 'Admin Panel');
 
-                
-                if (data.server_url === 'http://localhost:8080') setSelectedServerKey('Server A');
-                else if (data.server_url === 'http://localhost:9080') setSelectedServerKey('Server B');
+
+                if (data.server_url === 'http://localhost:8082') setSelectedServerKey('Server A');
+                else if (data.server_url === 'http://localhost:9082') setSelectedServerKey('Server B');
                 else setSelectedServerKey('Custom');
             } catch (e) {
-                
+
             }
         } else {
-            
+
             handleServerChange('Server A');
         }
     }, []);
@@ -45,13 +45,13 @@ export default function LoginPage() {
             return;
         }
 
-        let url = 'http://localhost:8082'; 
+        let url = 'http://localhost:8082';
         let name = newServer;
 
         if (newServer === 'Server A') {
-            url = 'http://localhost:8080';
+            url = 'http://localhost:8082';
         } else if (newServer === 'Server B') {
-            url = 'http://localhost:9080';
+            url = 'http://localhost:9082';
         }
 
         const config = {
@@ -72,24 +72,24 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            
+
             const response = await adminLogin({ username, password });
 
-            
+
             localStorage.setItem('admin_token', response.token);
 
-            
-            
+
+
             const config = await getServerConfig();
 
-            
-            
+
+
             if (config.server_name && config.server_name !== serverName) {
-                
+
                 const updatedConfig = {
                     server_name: config.server_name,
-                    server_url: (selectedServerKey === 'Server B' ? 'http://localhost:9080' :
-                        (selectedServerKey === 'Server A' ? 'http://localhost:8080' : 'http://localhost:8082')),
+                    server_url: (selectedServerKey === 'Server B' ? 'http://localhost:9082' :
+                        (selectedServerKey === 'Server A' ? 'http://localhost:8082' : 'http://localhost:8082')),
                     server_id: 'unknown',
                     public_key: '',
                     pinned_at: new Date().toISOString()
@@ -97,10 +97,10 @@ export default function LoginPage() {
                 localStorage.setItem('trusted_server', JSON.stringify(updatedConfig));
             }
 
-            
+
             router.push('/dashboard');
         } catch (err) {
-            
+
             localStorage.removeItem('admin_token');
             setError(err instanceof Error ? err.message : 'Login failed');
         } finally {

@@ -4,19 +4,19 @@
 
 
 function getApiBaseUrl(): string {
-    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
 
     const trusted = localStorage.getItem('trusted_server');
     if (trusted) {
         try {
             const data = JSON.parse(trusted);
-            return data.server_url || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+            return data.server_url || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
         } catch (e) {
-            return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+            return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
         }
     }
 
-    return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+    return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
 }
 
 interface FetchOptions extends RequestInit {

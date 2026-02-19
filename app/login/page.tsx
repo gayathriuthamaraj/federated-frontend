@@ -31,7 +31,7 @@ export default function LoginPage() {
         setIsSubmitting(true);
 
         // Set the trusted server based on selection to route API calls correctly
-        const serverUrl = serverName === 'server-b' ? 'http://localhost:9080' : 'http://localhost:8080';
+        const serverUrl = serverName === 'server-b' ? 'http://localhost:9082' : 'http://localhost:8082';
         localStorage.setItem('trusted_server', JSON.stringify({
             server_name: serverName,
             server_url: serverUrl

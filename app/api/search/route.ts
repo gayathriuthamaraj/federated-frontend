@@ -25,7 +25,6 @@ export async function GET(req: Request) {
 
     const userDocument = await res.json()
 
-    
     if (!userDocument.profile) {
         return NextResponse.json(
             { error: 'profile missing' },
@@ -33,9 +32,7 @@ export async function GET(req: Request) {
         )
     }
 
-    
     return NextResponse.json({
         profile: userDocument.profile,
     })
 }
-

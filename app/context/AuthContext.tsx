@@ -28,14 +28,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
-        
+
         const storedIdentity = localStorage.getItem("local_identity");
         if (storedIdentity) {
             try {
                 const parsed = JSON.parse(storedIdentity);
-                
-                if (parsed.home_server && parsed.home_server.includes(":8080")) {
-                    
+                // Migrate stale port references (8080→8082, 9080→9082)
+                if (parsed.home_server) {
+                    parsed.home_server = parsed.home_server
+                        .replace('localhost:8080', 'localhost:8082')
+                        .replace('localhost:9080', 'localhost:9082');
+                    localStorage.setItem("local_identity", JSON.stringify(parsed));
                 }
                 setIdentity(parsed);
             } catch (e) {
@@ -44,6 +47,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem("access_token");
                 localStorage.removeItem("refresh_token");
             }
+        }
+        // Also migrate trusted_server entry
+        const storedTrust = localStorage.getItem("trusted_server");
+        if (storedTrust) {
+            try {
+                const trust = JSON.parse(storedTrust);
+                if (trust.server_url) {
+                    trust.server_url = trust.server_url
+                        .replace('localhost:8080', 'localhost:8082')
+                        .replace('localhost:9080', 'localhost:9082');
+                    localStorage.setItem("trusted_server", JSON.stringify(trust));
+                }
+            } catch (e) { /* ignore */ }
         }
         setIsLoading(false);
     }, []);
@@ -60,21 +76,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const isPublicShowcase = publicShowcaseRoutes.includes(pathname) || pathname.startsWith("/showcase");
         const isPublicRoute = isUnauthenticatedOnly || isAuthenticatedRoute || isPublicShowcase;
 
-        
+
         const showingRecoveryKey = sessionStorage.getItem('showing_recovery_key') === 'true';
 
         if (!identity && !isPublicRoute) {
-            
+
             router.push("/login");
         } else if (identity && isUnauthenticatedOnly && !showingRecoveryKey) {
-            
-            
+
+
             router.push("/profile");
         }
     }, [identity, isLoading, pathname, router]);
 
     const login = (userId: string, homeServer: string, accessToken: string, refreshToken: string) => {
-        
+
         const newIdentity = { user_id: userId, home_server: homeServer };
         setIdentity(newIdentity);
         localStorage.setItem("local_identity", JSON.stringify(newIdentity));
@@ -84,25 +100,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const loginWithoutRedirect = (userId: string, homeServer: string, accessToken: string, refreshToken: string) => {
-        
+
         const newIdentity = { user_id: userId, home_server: homeServer };
         setIdentity(newIdentity);
         localStorage.setItem("local_identity", JSON.stringify(newIdentity));
         localStorage.setItem("access_token", accessToken);
         localStorage.setItem("refresh_token", refreshToken);
-        
+
     };
 
     const logout = async () => {
         const refreshToken = localStorage.getItem("refresh_token");
 
-        
+
         if (refreshToken) {
             try {
                 await apiPost('/logout', { refresh_token: refreshToken }, false);
             } catch (error) {
                 console.error('Logout error:', error);
-                
+
             }
         }
 
@@ -136,7 +152,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const res = await apiPost('/refresh-token', { refresh_token: refreshToken }, false);
 
             if (!res.ok) {
-                
+
                 await logout();
                 return false;
             }

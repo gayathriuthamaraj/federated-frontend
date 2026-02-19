@@ -325,9 +325,9 @@ export default function RegisterPage() {
                                 // Logic to map name to URL for localStorage
                                 let serverUrl = 'http://localhost:8082'; // fallback
                                 if (newName.toLowerCase() === 'server a') {
-                                    serverUrl = 'http://localhost:8080';
+                                    serverUrl = 'http://localhost:8082';
                                 } else if (newName.toLowerCase() === 'server b') {
-                                    serverUrl = 'http://localhost:9080';
+                                    serverUrl = 'http://localhost:9082';
                                 }
 
                                 localStorage.setItem('trusted_server', JSON.stringify({
@@ -340,8 +340,8 @@ export default function RegisterPage() {
                             disabled={isSubmitting}
                         >
                             <option value="">-- Choose a Server --</option>
-                            <option value="Server A">Server A (Port 8080)</option>
-                            <option value="Server B">Server B (Port 9080)</option>
+                            <option value="Server A">Server A (Port 8082)</option>
+                            <option value="Server B">Server B (Port 9082)</option>
                         </select>
                         <p className="mt-1 text-xs text-gray-500">Select which backend server to register with</p>
                     </div>
