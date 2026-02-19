@@ -2,26 +2,26 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
-// Generic cache interface
+
 interface CacheData<T> {
     data: T;
     timestamp: number;
 }
 
 interface CacheContextType {
-    // Methods for Profile Data
+    
     getProfile: (username: string) => any | null;
     setProfile: (username: string, data: any) => void;
-    // Methods for Post Data (optional for future)
+    
     getPost: (postId: string) => any | null;
     setPost: (postId: string, data: any) => void;
-    // Clear cache
+    
     clearCache: () => void;
 }
 
 const CacheContext = createContext<CacheContextType | undefined>(undefined);
 
-// Cache validity duration (e.g., 5 minutes)
+
 const CACHE_DURATION = 5 * 60 * 1000;
 
 export function CacheProvider({ children }: { children: ReactNode }) {
@@ -32,9 +32,9 @@ export function CacheProvider({ children }: { children: ReactNode }) {
         const item = profileCache[username];
         if (!item) return null;
 
-        // Check expiration
+        
         if (Date.now() - item.timestamp > CACHE_DURATION) {
-            // Remove expired item (lazy removal)
+            
             const newCache = { ...profileCache };
             delete newCache[username];
             setProfileCache(newCache);

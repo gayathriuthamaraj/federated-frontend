@@ -8,7 +8,7 @@ export default function FollowersPage() {
     const [followers, setFollowers] = useState(mockUsers);
     const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
-    // Filter users based on search
+    
     const filteredFollowers = followers.filter(user =>
         user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         user.username.toLowerCase().includes(searchQuery.toLowerCase())
@@ -21,12 +21,12 @@ export default function FollowersPage() {
 
     return (
         <div className="max-w-3xl mx-auto">
-            {/* Header */}
+            {}
             <div className="px-4 py-3 border-b border-bat-dark sticky top-0 bg-bat-black/95 backdrop-blur-sm z-10">
                 <h1 className="text-xl font-bold text-bat-gray">Followers</h1>
             </div>
 
-            {/* Search Bar */}
+            {}
             <div className="px-4 py-3 border-b border-bat-dark">
                 <input
                     type="text"
@@ -44,7 +44,7 @@ export default function FollowersPage() {
                 />
             </div>
 
-            {/* Followers List */}
+            {}
             <div>
                 {filteredFollowers.length > 0 ? (
                     filteredFollowers.map(user => (
@@ -52,7 +52,7 @@ export default function FollowersPage() {
                             key={user.id}
                             className="flex gap-3 px-4 py-3 border-b border-bat-dark hover:bg-bat-dark/20 transition-colors"
                         >
-                            {/* Avatar */}
+                            {}
                             <div className="flex-shrink-0">
                                 <img
                                     src={user.avatarUrl}
@@ -61,7 +61,7 @@ export default function FollowersPage() {
                                 />
                             </div>
 
-                            {/* User Info */}
+                            {}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-baseline gap-1.5 text-[15px] leading-5">
                                     <span className="font-bold text-gray-200 truncate">
@@ -78,7 +78,7 @@ export default function FollowersPage() {
                                 )}
                             </div>
 
-                            {/* Remove Button */}
+                            {}
                             <div className="flex-shrink-0 flex items-start pt-1">
                                 <button
                                     onClick={() => setConfirmRemove(user.id)}
@@ -102,7 +102,7 @@ export default function FollowersPage() {
                 )}
             </div>
 
-            {/* Confirmation Dialog */}
+            {}
             {confirmRemove && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-bat-dark rounded-2xl p-6 max-w-sm w-full border border-bat-gray/20">

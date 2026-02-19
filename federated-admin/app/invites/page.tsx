@@ -14,7 +14,7 @@ export default function InvitesPage() {
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [selectedInvite, setSelectedInvite] = useState<Invite | null>(null);
 
-    // Generation State
+    
     const [inviteType, setInviteType] = useState<'user' | 'admin'>('user');
     const [maxUses, setMaxUses] = useState(1);
     const [expiresIn, setExpiresIn] = useState(24);
@@ -47,7 +47,7 @@ export default function InvitesPage() {
                 expires_in: expiresIn
             });
             await loadInvites();
-            // Reset form defaults
+            
             setInviteType('user');
             setMaxUses(1);
             setExpiresIn(24);
@@ -97,7 +97,7 @@ export default function InvitesPage() {
                     </div>
                 )}
 
-                {/* Generate Invite Form */}
+                {}
                 <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
                     <h2 className="text-xl font-bold text-white mb-4">Generate New Invite</h2>
                     <form onSubmit={handleGenerate} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
@@ -140,7 +140,7 @@ export default function InvitesPage() {
                     </form>
                 </div>
 
-                {/* Invites List */}
+                {}
                 <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
                     <table className="w-full text-left">
                         <thead className="bg-gray-700/50 text-gray-400 text-sm">
@@ -212,7 +212,7 @@ export default function InvitesPage() {
                     </table>
                 </div>
 
-                {/* QR Modal */}
+                {}
                 {qrCode && selectedInvite && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={closeQR}>
                         <div className="bg-white rounded-xl p-8 max-w-sm w-full space-y-4 text-center" onClick={e => e.stopPropagation()}>

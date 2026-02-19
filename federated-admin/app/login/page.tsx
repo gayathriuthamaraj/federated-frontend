@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { adminLogin } from '../api/admin';
+import { adminLogin, getServerConfig } from '../api/admin';
 import { Lock } from 'lucide-react';
 
 export default function LoginPage() {
@@ -11,26 +11,60 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [serverName, setServerName] = useState('');
+    const [serverName, setServerName] = useState('Server A'); 
+    const [selectedServerKey, setSelectedServerKey] = useState('Server A'); 
 
     useEffect(() => {
-        // Check if server is configured
-        const trustedServer = localStorage.getItem('trusted_server');
-        if (!trustedServer && !process.env.NEXT_PUBLIC_BACKEND_URL) {
-            // If no server pinned and no env set, redirect to setup
-            router.push('/setup');
-            return;
-        }
+        
+        localStorage.removeItem('admin_token');
 
+        
+        const trustedServer = localStorage.getItem('trusted_server');
         if (trustedServer) {
             try {
                 const data = JSON.parse(trustedServer);
                 setServerName(data.server_name || 'Admin Panel');
+
+                
+                if (data.server_url === 'http://localhost:8080') setSelectedServerKey('Server A');
+                else if (data.server_url === 'http://localhost:9080') setSelectedServerKey('Server B');
+                else setSelectedServerKey('Custom');
             } catch (e) {
-                // Ignore parsing errors
+                
             }
+        } else {
+            
+            handleServerChange('Server A');
         }
-    }, [router]);
+    }, []);
+
+    const handleServerChange = (newServer: string) => {
+        setSelectedServerKey(newServer);
+        if (newServer === 'Custom') {
+            router.push('/setup');
+            return;
+        }
+
+        let url = 'http://localhost:8082'; 
+        let name = newServer;
+
+        if (newServer === 'Server A') {
+            url = 'http://localhost:8080';
+        } else if (newServer === 'Server B') {
+            url = 'http://localhost:9080';
+        }
+
+        const config = {
+            server_name: name,
+            server_url: url,
+            server_id: 'unknown',
+            public_key: '',
+            pinned_at: new Date().toISOString()
+        };
+
+        localStorage.setItem('trusted_server', JSON.stringify(config));
+        setServerName(name);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,10 +72,36 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
+            
             const response = await adminLogin({ username, password });
+
+            
             localStorage.setItem('admin_token', response.token);
+
+            
+            
+            const config = await getServerConfig();
+
+            
+            
+            if (config.server_name && config.server_name !== serverName) {
+                
+                const updatedConfig = {
+                    server_name: config.server_name,
+                    server_url: (selectedServerKey === 'Server B' ? 'http://localhost:9080' :
+                        (selectedServerKey === 'Server A' ? 'http://localhost:8080' : 'http://localhost:8082')),
+                    server_id: 'unknown',
+                    public_key: '',
+                    pinned_at: new Date().toISOString()
+                };
+                localStorage.setItem('trusted_server', JSON.stringify(updatedConfig));
+            }
+
+            
             router.push('/dashboard');
         } catch (err) {
+            
+            localStorage.removeItem('admin_token');
             setError(err instanceof Error ? err.message : 'Login failed');
         } finally {
             setIsLoading(false);
@@ -55,7 +115,7 @@ export default function LoginPage() {
                     <div className="mb-4 p-3 bg-blue-900/30 rounded-full">
                         <Lock className="w-12 h-12 text-blue-500" />
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">{serverName || 'Admin Login'}</h1>
+                    <h1 className="text-3xl font-bold text-white mb-2">Admin Login</h1>
                     <p className="text-gray-400">Enter your credentials to access the admin panel</p>
                 </div>
 
@@ -66,6 +126,22 @@ export default function LoginPage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label htmlFor="serverSelect" className="block text-sm font-medium text-gray-300 mb-2">
+                            Select Server
+                        </label>
+                        <select
+                            id="serverSelect"
+                            value={selectedServerKey}
+                            onChange={(e) => handleServerChange(e.target.value)}
+                            className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-colors"
+                        >
+                            <option value="Server A">Server A (Port 8080)</option>
+                            <option value="Server B">Server B (Port 9080)</option>
+                            <option value="Custom">Custom / external...</option>
+                        </select>
+                    </div>
+
                     <div>
                         <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-2">
                             Username
@@ -107,12 +183,6 @@ export default function LoginPage() {
 
                 <div className="mt-6 pt-6 border-t border-gray-700 text-center text-gray-400 text-sm">
                     <p>Admin access only. Unauthorized attempts will be logged.</p>
-                    <button
-                        onClick={() => router.push('/setup')}
-                        className="mt-4 text-blue-400 hover:text-blue-300 transition-colors"
-                    >
-                        Switch Server
-                    </button>
                 </div>
             </div>
         </div>

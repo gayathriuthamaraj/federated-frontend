@@ -52,7 +52,7 @@ export default function ProfileSetupPage() {
             });
 
             console.log('[ProfileSetup] Profile updated successfully, redirecting to /profile');
-            // Redirect to profile page after onboarding
+            
             router.push('/profile');
         } catch (err) {
             console.error('[ProfileSetup] Error updating profile:', err);
@@ -64,14 +64,14 @@ export default function ProfileSetupPage() {
 
     const handleSkip = () => {
         console.log('[ProfileSetup] User skipped setup, redirecting to /profile');
-        // Redirect to profile page even if skipped
+        
         router.push('/profile');
     };
 
     return (
         <div className="min-h-screen bg-bat-black p-4 py-8">
             <div className="max-w-2xl mx-auto bg-bat-dark rounded-lg shadow-2xl border border-bat-gray/10">
-                {/* Header */}
+                {}
                 <div className="p-8 border-b border-bat-gray/10">
                     <h1 className="text-3xl font-bold text-bat-yellow mb-2">Welcome! 🎉</h1>
                     <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50 mb-3"></div>
@@ -80,7 +80,7 @@ export default function ProfileSetupPage() {
                     </p>
                 </div>
 
-                {/* Form */}
+                {}
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
                     {error && (
                         <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-md">
@@ -88,7 +88,7 @@ export default function ProfileSetupPage() {
                         </div>
                     )}
 
-                    {/* Display Name */}
+                    {}
                     <div>
                         <label htmlFor="displayName" className="block text-sm font-medium text-bat-gray mb-2">
                             Display Name <span className="text-bat-yellow">*</span>
@@ -111,7 +111,7 @@ export default function ProfileSetupPage() {
                         />
                     </div>
 
-                    {/* Avatar URL */}
+                    {}
                     <div>
                         <label htmlFor="avatarUrl" className="block text-sm font-medium text-bat-gray mb-2">
                             Avatar URL
@@ -146,7 +146,7 @@ export default function ProfileSetupPage() {
                         )}
                     </div>
 
-                    {/* Banner URL */}
+                    {}
                     <div>
                         <label htmlFor="bannerUrl" className="block text-sm font-medium text-bat-gray mb-2">
                             Banner URL
@@ -181,7 +181,7 @@ export default function ProfileSetupPage() {
                         )}
                     </div>
 
-                    {/* Bio */}
+                    {}
                     <div>
                         <label htmlFor="bio" className="block text-sm font-medium text-bat-gray mb-2">
                             Bio
@@ -204,7 +204,7 @@ export default function ProfileSetupPage() {
                         />
                     </div>
 
-                    {/* Portfolio URL */}
+                    {}
                     <div>
                         <label htmlFor="portfolioUrl" className="block text-sm font-medium text-bat-gray mb-2">
                             Portfolio / Website
@@ -226,7 +226,7 @@ export default function ProfileSetupPage() {
                         />
                     </div>
 
-                    {/* Birth Date */}
+                    {}
                     <div>
                         <label htmlFor="birthDate" className="block text-sm font-medium text-bat-gray mb-2">
                             Birth Date
@@ -246,7 +246,7 @@ export default function ProfileSetupPage() {
                         />
                     </div>
 
-                    {/* Location */}
+                    {}
                     <div>
                         <label htmlFor="location" className="block text-sm font-medium text-bat-gray mb-2">
                             Location
@@ -268,7 +268,7 @@ export default function ProfileSetupPage() {
                         />
                     </div>
 
-                    {/* Privacy Settings */}
+                    {}
                     <div className="space-y-4 pt-4 border-t border-bat-gray/10">
                         <h3 className="text-lg font-semibold text-bat-gray">Privacy Settings</h3>
 
@@ -321,7 +321,7 @@ export default function ProfileSetupPage() {
                         </div>
                     </div>
 
-                    {/* Action Buttons */}
+                    {}
                     <div className="flex flex-col gap-3 pt-6">
                         <button
                             type="submit"

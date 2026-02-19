@@ -22,7 +22,7 @@ export function Post({
         transition
       "
     >
-      {/* Avatar */}
+      {}
       <div className="relative h-10 w-10 rounded-full overflow-hidden bg-bat-dark">
         <Image
           src="/avatar-placeholder.png"
@@ -32,9 +32,9 @@ export function Post({
         />
       </div>
 
-      {/* Body */}
+      {}
       <div className="flex-1">
-        {/* Header */}
+        {}
         <div className="flex items-center gap-2 text-sm">
           <span className="font-medium text-bat-yellow">
             {author}
@@ -46,12 +46,12 @@ export function Post({
           <span className="text-bat-gray/40">{time}</span>
         </div>
 
-        {/* Content */}
+        {}
         <p className="mt-1 text-sm leading-relaxed text-bat-gray/95">
           {content}
         </p>
 
-        {/* Actions */}
+        {}
         <div className="mt-3 flex items-center justify-between max-w-xs text-xs text-bat-gray/50">
           <Action label="Reply" />
           <Action label="Boost" />
@@ -62,7 +62,7 @@ export function Post({
   );
 }
 
-/* ---------- Action Button ---------- */
+
 
 function Action({ label }: { label: string }) {
   return (

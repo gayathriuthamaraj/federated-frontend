@@ -53,7 +53,7 @@ export default function ShareButton({
                 <span className="font-medium">Share</span>
             </button>
 
-            {/* Toast Notification */}
+            {}
             {showToast && (
                 <div className="fixed bottom-4 right-4 bg-bat-yellow text-bat-black px-4 py-2 rounded-lg shadow-lg animate-bounce z-50">
                     ✓ Link copied to clipboard!

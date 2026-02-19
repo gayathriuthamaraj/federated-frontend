@@ -1,11 +1,9 @@
-// API Integration Template
-// Copy this file and replace mock data with real API calls
 
-/**
- * Example: Converting Feed Page from Mock to Real API
- */
 
-// BEFORE (Mock Data):
+
+
+
+
 import { mockPosts } from '../../data/mockData';
 
 export default function FeedPage() {
@@ -20,7 +18,7 @@ export default function FeedPage() {
     );
 }
 
-// AFTER (Real API):
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -74,10 +72,10 @@ export default function FeedPage() {
 
     return (
         <div className= "max-w-3xl mx-auto" >
-        {/* Compose Box */ }
+        { }
         < ComposePost onPostCreated = { fetchFeed } />
 
-            {/* Feed */ }
+            { }
     {
         posts.length === 0 ? (
             <div className= "text-center py-12 text-bat-gray/60" >
@@ -93,10 +91,7 @@ export default function FeedPage() {
     );
 }
 
-/**
- * Example: API Service Layer
- * Create this in app/services/api.ts
- */
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -123,7 +118,7 @@ class ApiService {
         return response.json();
     }
 
-    // Posts
+    
     async getFeed() {
         return this.request<{ posts: Post[] }>('/api/feed');
     }
@@ -154,7 +149,7 @@ class ApiService {
         });
     }
 
-    // Users
+    
     async getProfile(userId: string) {
         return this.request<Profile>(`/api/users/${userId}`);
     }
@@ -186,7 +181,7 @@ class ApiService {
         return this.request<{ users: User[] }>(`/api/users/${userId}/following`);
     }
 
-    // Notifications
+    
     async getNotifications() {
         return this.request<{ notifications: Notification[] }>('/api/notifications');
     }
@@ -197,7 +192,7 @@ class ApiService {
         });
     }
 
-    // Messages
+    
     async getConversations() {
         return this.request<{ conversations: Conversation[] }>('/api/messages');
     }
@@ -213,7 +208,7 @@ class ApiService {
         });
     }
 
-    // Search
+    
     async search(query: string, type: 'users' | 'posts' = 'users') {
         return this.request(`/api/search?q=${encodeURIComponent(query)}&type=${type}`);
     }
@@ -222,7 +217,7 @@ class ApiService {
         return this.request('/api/explore/trending');
     }
 
-    // Auth
+    
     async login(username: string, password: string) {
         return this.request<{ token: string; user: User }>('/api/auth/login', {
             method: 'POST',
@@ -243,9 +238,7 @@ class ApiService {
 
 export const api = new ApiService();
 
-/**
- * Example: Using the API Service in a Component
- */
+
 
 import { api } from '@/services/api';
 
@@ -265,7 +258,7 @@ function FollowButton({ userId }: { userId: string }) {
             }
         } catch (error) {
             console.error('Follow error:', error);
-            // Show error toast
+            
         } finally {
             setLoading(false);
         }
@@ -278,17 +271,12 @@ function FollowButton({ userId }: { userId: string }) {
     );
 }
 
-/**
- * Example: Environment Variables
- * Create .env.local file:
- */
 
-// NEXT_PUBLIC_API_URL=http://localhost:8000
-// NEXT_PUBLIC_WS_URL=ws://localhost:8000/ws
 
-/**
- * Example: Error Handling Hook
- */
+
+
+
+
 
 function useApiCall<T>(apiCall: () => Promise<T>) {
     const [data, setData] = useState<T | null>(null);
@@ -313,7 +301,7 @@ function useApiCall<T>(apiCall: () => Promise<T>) {
     return { data, loading, error, execute };
 }
 
-// Usage:
+
 const { data, loading, error, execute } = useApiCall(() => api.getFeed());
 
 useEffect(() => {

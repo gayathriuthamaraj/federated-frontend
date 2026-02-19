@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { mockUsers } from '@/app/data/mockData';
 
-// In-memory storage for followers
+
 const followers = new Map<string, Set<string>>();
 
-// Initialize with some mock data
+
 followers.set('batman', new Set(['robin', 'alfred', 'batgirl', 'gordon']));
 followers.set('catwoman', new Set(['batman']));
 followers.set('joker', new Set(['harley']));

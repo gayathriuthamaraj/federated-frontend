@@ -52,7 +52,7 @@ export default function FollowersPage() {
         }
 
         if (identity) fetchFollowers();
-    }, [identity, refreshKey]); // Refetch when refreshKey changes
+    }, [identity, refreshKey]); 
 
     const handleRemoveFollower = async (userId: string) => {
         if (!identity) return;
@@ -60,7 +60,7 @@ export default function FollowersPage() {
         if (!confirm(`Remove ${userId} from followers?`)) return;
 
         try {
-            // Note: You'll need to implement a backend endpoint for this
+            
             const res = await fetch(`${identity.home_server}/follower/remove`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -71,7 +71,7 @@ export default function FollowersPage() {
             });
 
             if (res.ok) {
-                // Refresh the list
+                
                 setRefreshKey(prev => prev + 1);
             }
         } catch (err) {

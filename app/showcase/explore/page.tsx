@@ -16,13 +16,13 @@ export default function ExplorePage() {
 
     return (
         <div className=" max-w-3xl mx-auto p-6">
-                {/* Header */}
+                {}
                 <div className="mb-6">
                     <h1 className="text-3xl font-bold text-bat-gray mb-2">Explore</h1>
                     <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
                 </div>
 
-                {/* Search Bar */}
+                {}
                 <div className="mb-6">
                     <div className="relative">
                         <input
@@ -45,7 +45,7 @@ export default function ExplorePage() {
                     </div>
                 </div>
 
-                {/* Tabs */}
+                {}
                 <div className="flex gap-4 mb-6 border-b border-bat-gray/10">
                     <button
                         onClick={() => setActiveTab('trending')}
@@ -73,7 +73,7 @@ export default function ExplorePage() {
                     </button>
                 </div>
 
-                {/* Content */}
+                {}
                 {activeTab === 'trending' ? (
                     <div className="space-y-4">
                         {mockPosts.map(post => (

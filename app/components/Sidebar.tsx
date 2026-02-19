@@ -17,7 +17,7 @@ import Follow_svg from "../icons/follow_svg";
 import Community_svg from "../icons/community_svg";
 import Bookmark_svg from "../icons/bookmark_svg";
 
-// Simple Bat Icon Component
+
 function BatLogo() {
     return (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-bat-yellow">
@@ -44,7 +44,7 @@ export default function Sidebar() {
         shadow-[2px_0_10px_rgba(0,0,0,0.5)]
       `}
         >
-            {/* Header / Logo */}
+            {}
             <div className="flex items-center gap-3 px-4 py-6">
                 <div className="min-w-[48px] flex justify-center">
                     <BatLogo />
@@ -60,7 +60,7 @@ export default function Sidebar() {
                 </span>
             </div>
 
-            {/* Navigation */}
+            {}
             <nav className="flex-1 flex flex-col gap-2 px-3">
 
                 <button
@@ -86,7 +86,7 @@ export default function Sidebar() {
                     </span>
                 </button>
 
-                {/* Main Navigation */}
+                {}
                 <NavItem label="Home" href="/explore" expanded={expanded} active={pathname.startsWith("/explore")}>
                     <Home_svg />
                 </NavItem>
@@ -118,10 +118,10 @@ export default function Sidebar() {
                     <Message_svg />
                 </NavItem>
 
-                {/* Divider */}
+                {}
                 <div className="h-px bg-bat-gray/20 my-2"></div>
 
-                {/* Social */}
+                {}
                 <NavItem
                     label="Profile"
                     href="/profile"
@@ -149,7 +149,7 @@ export default function Sidebar() {
                     <Follow_svg />
                 </NavItem>
 
-                {/* Post Button */}
+                {}
                 <div className="mt-auto mb-4">
                     <NavItem
                         label="Post"
@@ -164,7 +164,7 @@ export default function Sidebar() {
 
             </nav>
 
-            {/* Auth Section */}
+            {}
             <div className="p-4 border-t border-bat-gray/10 bg-bat-dark/20">
                 {!identity ? (
                     <div className={`flex flex-col gap-3 ${!expanded ? "items-center" : ""}`}>

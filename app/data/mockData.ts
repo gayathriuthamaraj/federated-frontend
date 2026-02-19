@@ -1,4 +1,4 @@
-// Mock data for frontend showcase
+
 export interface MockUser {
     id: string;
     username: string;
@@ -15,7 +15,7 @@ export interface MockUser {
 
 export interface MockPost {
     id: string;
-    author: string; // Changed to string format like "batman@gotham.social"
+    author: string; 
     content: string;
     imageUrl?: string;
     likeCount: number;
@@ -24,8 +24,8 @@ export interface MockPost {
     isLiked?: boolean;
     isReposted?: boolean;
     timestamp: string;
-    created_at: string; // Added for PostCard compatibility
-    updated_at: string; // Added for PostCard compatibility
+    created_at: string; 
+    updated_at: string; 
 }
 
 export interface MockNotification {
@@ -45,7 +45,7 @@ export interface MockMessage {
     unreadCount: number;
 }
 
-// Sample Users
+
 export const mockUsers: MockUser[] = [
     {
         id: '1',
@@ -152,7 +152,7 @@ export const mockUsers: MockUser[] = [
     },
 ];
 
-// Sample Posts
+
 export const mockPosts: MockPost[] = [
     {
         id: '1',
@@ -218,7 +218,7 @@ export const mockPosts: MockPost[] = [
     },
 ];
 
-// Sample Notifications
+
 export const mockNotifications: MockNotification[] = [
     {
         id: '1',
@@ -261,7 +261,7 @@ export const mockNotifications: MockNotification[] = [
     },
 ];
 
-// Sample Messages
+
 export const mockMessages: MockMessage[] = [
     {
         id: '1',

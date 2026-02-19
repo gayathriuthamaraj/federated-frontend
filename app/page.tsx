@@ -11,16 +11,16 @@ export default function HomePage() {
   useEffect(() => {
     if (!isLoading) {
       if (identity) {
-        // Redirect to home/explore if logged in
+        
         router.push('/explore')
       } else {
-        // Redirect to showcase if not logged in
+        
         router.push('/showcase')
       }
     }
   }, [identity, isLoading, router])
 
-  // Show loading while checking auth
+  
   return (
     <main className="flex items-center justify-center min-h-screen bg-bat-black">
       <div className="text-center">

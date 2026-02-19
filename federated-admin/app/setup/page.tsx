@@ -6,7 +6,7 @@ import QRScanner from '../components/QRScanner';
 
 export default function SetupPage() {
     const router = useRouter();
-    const [scanning, setScanning] = useState(false); // Default to manual for better UX if cam fails
+    const [scanning, setScanning] = useState(false); 
     const [error, setError] = useState<string | null>(null);
     const [manualCode, setManualCode] = useState('');
     const [manualServerUrl, setManualServerUrl] = useState('http://localhost:8082');
@@ -28,7 +28,7 @@ export default function SetupPage() {
     const handleManualSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            // Validate server connection
+            
             const res = await fetch(`${manualServerUrl}/server/info`);
             if (!res.ok) throw new Error("Could not connect to server");
 
@@ -50,7 +50,7 @@ export default function SetupPage() {
     };
 
     const saveAndRedirect = (data: any) => {
-        // Pin server
+        
         localStorage.setItem('trusted_server', JSON.stringify({
             server_url: data.server_url,
             server_id: data.server_id,
@@ -59,7 +59,7 @@ export default function SetupPage() {
             pinned_at: new Date().toISOString()
         }));
 
-        // Store invite code
+        
         if (data.invite_code) {
             sessionStorage.setItem('invite_code', data.invite_code);
         }

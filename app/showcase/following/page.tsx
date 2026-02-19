@@ -20,12 +20,12 @@ export default function FollowingPage() {
 
     return (
         <div className="max-w-3xl mx-auto">
-            {/* Header */}
+            {}
             <div className="px-4 py-3 border-b border-bat-dark sticky top-0 bg-bat-black/95 backdrop-blur-sm z-10">
                 <h1 className="text-xl font-bold text-bat-gray">Following</h1>
             </div>
 
-            {/* Search Bar */}
+            {}
             <div className="px-4 py-3 border-b border-bat-dark">
                 <input
                     type="text"
@@ -43,7 +43,7 @@ export default function FollowingPage() {
                 />
             </div>
 
-            {/* Following List */}
+            {}
             <div>
                 {filteredFollowing.length > 0 ? (
                     filteredFollowing.map(user => (
@@ -51,7 +51,7 @@ export default function FollowingPage() {
                             key={user.id}
                             className="flex gap-3 px-4 py-3 border-b border-bat-dark hover:bg-bat-dark/20 transition-colors"
                         >
-                            {/* Avatar */}
+                            {}
                             <div className="flex-shrink-0">
                                 <img
                                     src={user.avatarUrl}
@@ -60,7 +60,7 @@ export default function FollowingPage() {
                                 />
                             </div>
 
-                            {/* User Info */}
+                            {}
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-baseline gap-1.5 text-[15px] leading-5">
                                     <span className="font-bold text-gray-200 truncate">
@@ -77,7 +77,7 @@ export default function FollowingPage() {
                                 )}
                             </div>
 
-                            {/* Following Button (shows as active) */}
+                            {}
                             <div className="flex-shrink-0 flex items-start pt-1">
                                 <button
                                     onClick={() => setConfirmUnfollow(user.id)}
@@ -105,7 +105,7 @@ export default function FollowingPage() {
                 )}
             </div>
 
-            {/* Confirmation Dialog */}
+            {}
             {confirmUnfollow && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                     <div className="bg-bat-dark rounded-2xl p-6 max-w-sm w-full border border-bat-gray/20">

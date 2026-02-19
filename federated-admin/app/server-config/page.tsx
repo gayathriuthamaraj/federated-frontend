@@ -161,7 +161,7 @@ export default function ServerConfigPage() {
                     </div>
                 )}
 
-                {/* Confirmation Modal */}
+                {}
                 {showConfirmation && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                         <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-md w-full">

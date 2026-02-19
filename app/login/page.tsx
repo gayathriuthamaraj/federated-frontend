@@ -6,8 +6,22 @@ import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
     const { login } = useAuth();
+
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [serverName, setServerName] = useState<string>(() => {
+        try {
+            const pinned = typeof window !== 'undefined' ? localStorage.getItem('trusted_server') : null;
+            if (pinned) {
+                const parsed = JSON.parse(pinned);
+                return parsed.server_name || '';
+            }
+        } catch (e) {
+            // ignore
+        }
+        return '';
+    });
+
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -16,8 +30,15 @@ export default function LoginPage() {
         setError('');
         setIsSubmitting(true);
 
+        // Set the trusted server based on selection to route API calls correctly
+        const serverUrl = serverName === 'server-b' ? 'http://localhost:9080' : 'http://localhost:8080';
+        localStorage.setItem('trusted_server', JSON.stringify({
+            server_name: serverName,
+            server_url: serverUrl
+        }));
+
         try {
-            const res = await fetch('http://localhost:8082/login', {
+            const response = await fetch(`${serverUrl}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -28,15 +49,14 @@ export default function LoginPage() {
                 }),
             });
 
-            if (!res.ok) {
-                const errorText = await res.text();
-                throw new Error(errorText || 'Login failed');
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Login failed');
             }
 
-            const data = await res.json();
-
-            // Log the user in with backend-validated credentials
-            login(data.user_id, data.home_server);
+            // Directly login with the credentials
+            login(data.user_id, data.home_server, data.access_token || '', data.refresh_token || '');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Login failed');
         } finally {
@@ -81,7 +101,35 @@ export default function LoginPage() {
               "
                             placeholder="Enter your username"
                             required
+                            disabled={isSubmitting}
                         />
+                    </div>
+
+                    <div>
+                        <label
+                            htmlFor="server"
+                            className="block text-sm font-medium text-bat-gray mb-2"
+                        >
+                            Home Server
+                        </label>
+                        <select
+                            id="server"
+                            value={serverName}
+                            onChange={(e) => setServerName(e.target.value)}
+                            className="
+                w-full px-4 py-3 rounded-md
+                bg-bat-black text-white
+                border border-bat-gray/20
+                focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
+                outline-none transition-all duration-200
+              "
+                            required
+                            disabled={isSubmitting}
+                        >
+                            <option value="">Select a server</option>
+                            <option value="server-a">Server A (localhost:8082)</option>
+                            <option value="server-b">Server B (localhost:8083)</option>
+                        </select>
                     </div>
 
                     <div>
@@ -106,6 +154,7 @@ export default function LoginPage() {
               "
                             placeholder="••••••••"
                             required
+                            disabled={isSubmitting}
                         />
                     </div>
 
@@ -122,7 +171,7 @@ export default function LoginPage() {
               shadow-[0_0_15px_rgba(245,197,24,0.3)]
             "
                     >
-                        {isSubmitting ? 'Signing in...' : 'Sign in'}
+                        {isSubmitting ? 'Signing in...' : 'Sign In'}
                     </button>
                 </form>
 
