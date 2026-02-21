@@ -16,7 +16,7 @@ export default function InvitesPage() {
 
 
     const [inviteType, setInviteType] = useState<'user' | 'admin'>('user');
-    const [maxUses, setMaxUses] = useState(1);
+    const [maxUses, setMaxUses] = useState(0);
     const [expiresIn, setExpiresIn] = useState(24);
     const [isGenerating, setIsGenerating] = useState(false);
 
@@ -49,7 +49,7 @@ export default function InvitesPage() {
             await loadInvites();
 
             setInviteType('user');
-            setMaxUses(1);
+            setMaxUses(0);
             setExpiresIn(24);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to generate invite');
@@ -103,12 +103,12 @@ export default function InvitesPage() {
                     <form onSubmit={handleGenerate} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300">Max Uses (-1 for unlimited)</label>
+                            <label className="text-sm font-medium text-gray-300">Max Uses (0 for unlimited)</label>
                             <input
                                 type="number"
-                                min="1"
+                                min="0"
                                 value={maxUses}
-                                onChange={(e) => setMaxUses(parseInt(e.target.value))}
+                                onChange={(e) => setMaxUses(parseInt(e.target.value) || 0)}
                                 className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
                             />
                         </div>
@@ -164,7 +164,7 @@ export default function InvitesPage() {
                                             </span>
                                         </td>
                                         <td className="p-4 text-gray-300">
-                                            {invite.current_uses} / {invite.max_uses === -1 ? '∞' : invite.max_uses}
+                                            {invite.current_uses} / {invite.max_uses === -1 || invite.max_uses === 0 ? '∞' : invite.max_uses}
                                         </td>
                                         <td className="p-4 text-gray-300">
                                             {invite.expires_at ? new Date(invite.expires_at).toLocaleString() : 'Never'}

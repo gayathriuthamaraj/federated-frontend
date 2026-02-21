@@ -1,7 +1,7 @@
 'use client'
 
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import FollowButton from './FollowButton'
 import PostCard from './PostCard'
 import { Profile } from '@/types/profile'
@@ -27,6 +27,28 @@ export default function ProfileCard({
 }: ProfileCardProps) {
     const [profile, setProfile] = useState(initialProfile)
     const [followingState, setFollowingState] = useState(isFollowing)
+    const [activeTab, setActiveTab] = useState(0)
+
+    // Touch swipe support
+    const touchStartX = useRef<number | null>(null)
+    const TABS = ['Posts', 'Replies', 'Highlights', 'Media', 'Likes'] as const
+    const TAB_COUNT = TABS.length
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX
+    }
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null) return
+        const dx = e.changedTouches[0].clientX - touchStartX.current
+        if (Math.abs(dx) > 50) {
+            setActiveTab(prev =>
+                dx < 0
+                    ? Math.min(prev + 1, TAB_COUNT - 1)  // swipe left → next
+                    : Math.max(prev - 1, 0)               // swipe right → prev
+            )
+        }
+        touchStartX.current = null
+    }
 
     
     useEffect(() => {
@@ -187,39 +209,56 @@ export default function ProfileCard({
             </div>
 
             {}
-            <div className="mt-2 flex border-b border-bat-dark">
-                {['Posts', 'Replies', 'Highlights', 'Media', 'Likes'].map((tab, i) => (
-                    <div
+            <div
+                className="mt-2 flex border-b border-bat-dark"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+                {TABS.map((tab, i) => (
+                    <button
                         key={tab}
+                        onClick={() => setActiveTab(i)}
                         className={`
-                            flex-1 py-4 text-center text-sm sm:text-base font-medium transition-colors cursor-pointer hover:bg-bat-dark/30
-                            ${i === 0
+                            flex-1 py-4 text-center text-sm sm:text-base font-medium transition-colors hover:bg-bat-dark/30
+                            ${i === activeTab
                                 ? 'text-bat-yellow border-b-[3px] border-bat-yellow'
                                 : 'text-bat-gray/60 hover:text-bat-gray'
                             }
                         `}
                     >
                         {tab}
-                    </div>
+                    </button>
                 ))}
             </div>
 
             {}
-            <div className="flex-1">
-                {loadingPosts ? (
-                    <div className="text-center text-bat-gray py-8">Loading posts...</div>
-                ) : posts.length === 0 ? (
-                    <div className="p-8 text-center border-t border-bat-dark/50">
-                        <div className="text-bat-gray/40 text-lg font-medium">No posts yet</div>
-                        <div className="text-bat-gray/20 text-sm mt-1">
-                            {isOwnProfile ? "Start sharing your thoughts!" : `${profile.display_name} hasn't posted anything yet.`}
+            <div
+                className="flex-1"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+                {activeTab === 0 && (
+                    loadingPosts ? (
+                        <div className="text-center text-bat-gray py-8">Loading posts...</div>
+                    ) : posts.length === 0 ? (
+                        <div className="p-8 text-center border-t border-bat-dark/50">
+                            <div className="text-bat-gray/40 text-lg font-medium">No posts yet</div>
+                            <div className="text-bat-gray/20 text-sm mt-1">
+                                {isOwnProfile ? "Start sharing your thoughts!" : `${profile.display_name} hasn't posted anything yet.`}
+                            </div>
                         </div>
-                    </div>
-                ) : (
-                    <div className="border-t border-bat-dark/50">
-                        {posts.map((post) => (
-                            <PostCard key={post.id} post={post} />
-                        ))}
+                    ) : (
+                        <div className="border-t border-bat-dark/50">
+                            {posts.map((post) => (
+                                <PostCard key={post.id} post={post} />
+                            ))}
+                        </div>
+                    )
+                )}
+                {activeTab !== 0 && (
+                    <div className="p-10 text-center border-t border-bat-dark/50">
+                        <div className="text-bat-gray/40 text-lg font-medium">{TABS[activeTab]}</div>
+                        <div className="text-bat-gray/20 text-sm mt-1">Nothing here yet.</div>
                     </div>
                 )}
             </div>

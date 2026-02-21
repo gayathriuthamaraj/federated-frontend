@@ -6,16 +6,24 @@ import { useRouter } from 'next/navigation';
 
 import UserCard from '../components/UserCard';
 
+interface AS2Activity {
+    type: string; // 'Follow' | 'Like' | 'Create' | 'Announce' | 'Undo' | 'Update'
+    actor: { type: string; id: string };
+    object: { type: string; id?: string; inReplyTo?: string; content?: string };
+    summary?: string;
+}
+
 interface Notification {
     id: string;
-    type: 'FOLLOW' | 'LIKE' | 'REPLY' | 'REPOST' | 'SYSTEM';
+    type: 'FOLLOW' | 'LIKE' | 'REPLY' | 'REPOST' | 'SYSTEM' | 'SERVER_UPDATE' | 'MESSAGE' | 'UNLIKE';
     actor_id: string;
     actor_name?: string;
     actor_avatar?: string;
     entity_id?: string;
     is_read: boolean;
     created_at: string;
-    message?: string; 
+    message?: string;
+    activity_stream?: AS2Activity;
 }
 
 export default function NotificationsPage() {
@@ -58,23 +66,34 @@ export default function NotificationsPage() {
     }, [identity]);
 
     const getNotificationText = (n: Notification) => {
+        // Prefer the richer AS2 summary when available
+        if (n.activity_stream?.summary) return n.activity_stream.summary;
         switch (n.type) {
             case 'FOLLOW': return 'followed you';
             case 'LIKE': return 'liked your post';
+            case 'UNLIKE': return 'unliked your post';
             case 'REPLY': return 'replied to your post';
             case 'REPOST': return 'reposted your post';
-            case 'SYSTEM': return n.message || 'System Notification';
+            case 'MESSAGE': return 'sent you a message';
+            case 'SERVER_UPDATE': return `server updated: ${n.entity_id || ''}`;
+            case 'SYSTEM': return n.entity_id || n.message || 'System notification';
             default: return 'interacted with you';
         }
     };
 
-    const getIcon = (type: string) => {
-        switch (type) {
-            case 'FOLLOW': return <span className="text-blue-500">👤</span>;
-            case 'LIKE': return <span className="text-red-500">❤️</span>;
-            case 'REPLY': return <span className="text-green-500">💬</span>;
-            case 'REPOST': return <span className="text-purple-500">🔁</span>;
-            default: return <span className="text-gray-500">🔔</span>;
+    const getIcon = (n: Notification) => {
+        // If we have an AS2 activity_stream, use its canonical type for the icon
+        const as2Type = n.activity_stream?.type;
+        const key = as2Type ?? n.type;
+        switch (key) {
+            case 'Follow':        case 'FOLLOW':        return <span className="text-blue-500">👤</span>;
+            case 'Like':          case 'LIKE':          return <span className="text-red-500">❤️</span>;
+            case 'Undo':          case 'UNLIKE':        return <span className="text-gray-400">💔</span>;
+            case 'Create':        case 'REPLY':         return <span className="text-green-500">💬</span>;
+            case 'Announce':      case 'REPOST':        return <span className="text-purple-500">🔁</span>;
+            case 'Update':        case 'SERVER_UPDATE': return <span className="text-yellow-500">⚙️</span>;
+            case 'MESSAGE':       return <span className="text-sky-400">✉️</span>;
+            default:              return <span className="text-gray-500">🔔</span>;
         }
     };
 
@@ -112,13 +131,13 @@ export default function NotificationsPage() {
                                     <img src={n.actor_avatar} alt={n.actor_name} className="w-10 h-10 rounded-full object-cover" />
                                 ) : (
                                     <div className="text-2xl w-10 h-10 flex items-center justify-center bg-bat-dark rounded-full">
-                                        {getIcon(n.type)}
+                                        {getIcon(n)}
                                     </div>
                                 )}
                             </div>
                             <div className="flex-1">
                                 {n.type === 'SYSTEM' ? (
-                                    <p className="text-bat-gray">{n.message}</p>
+                                    <p className="text-bat-gray">{n.entity_id || n.message}</p>
                                 ) : (
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-1.5 flex-wrap">

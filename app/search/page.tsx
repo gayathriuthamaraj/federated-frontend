@@ -19,6 +19,10 @@ interface UserProfile {
     followersCount: number;
     followingCount: number;
     isFollowing?: boolean;
+    // Federation metadata
+    isFederated?: boolean;
+    remoteServer?: string;
+    discoveryStatus?: string; // "already_trusted" | "auto_handshake" | "not_found" | "unhealthy"
 }
 
 export default function SearchPage() {
@@ -27,7 +31,7 @@ export default function SearchPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [searching, setSearching] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
-
+    const [federationStep, setFederationStep] = useState<string>('');  // live discovery status text
 
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
     const [userPosts, setUserPosts] = useState<Post[]>([]);
@@ -39,49 +43,36 @@ export default function SearchPage() {
         setSearching(true);
         setHasSearched(true);
         setSelectedUser(null);
+        setFederationStep('');
 
         try {
-            // Check if this is a federated search (contains @)
             const isFederated = searchQuery.includes('@');
 
             if (isFederated) {
-                // Extract server name from search query
                 const parts = searchQuery.split('@');
-                const serverName = parts.length === 2 ? parts[1] : '';
+                const serverSuffix = parts.length === 2 ? parts[1] : '';
+                const currentServerSuffix = identity.user_id.split('@')[1] || '';
+                const isCurrentServer = serverSuffix === currentServerSuffix;
 
-                //Check if we're searching for a user on the current server
-                const currentServerName = identity.user_id.split('@')[1] || '';
-                const isCurrentServer = serverName === currentServerName;
-
-                if (isCurrentServer || !serverName) {
-                    // Same server - use local search
+                if (isCurrentServer || !serverSuffix) {
+                    // Same server — local lookup
+                    setFederationStep('Searching local server…');
                     const res = await fetch(
                         `${identity.home_server}/user/search?user_id=${encodeURIComponent(searchQuery)}&viewer_id=${encodeURIComponent(identity.user_id)}`
                     );
 
                     if (res.ok) {
                         const data = await res.json();
-
                         if (data.identity && data.profile) {
                             const [followersRes, followingRes] = await Promise.all([
                                 fetch(`${identity.home_server}/followers?user_id=${encodeURIComponent(data.identity.user_id)}`),
                                 fetch(`${identity.home_server}/following?user_id=${encodeURIComponent(data.identity.user_id)}`)
                             ]);
 
-                            let followersCount = 0;
-                            let followingCount = 0;
+                            const followersCount = followersRes.ok ? ((await followersRes.json()).followers?.length || 0) : 0;
+                            const followingCount = followingRes.ok ? ((await followingRes.json()).following?.length || 0) : 0;
 
-                            if (followersRes.ok) {
-                                const followersData = await followersRes.json();
-                                followersCount = followersData.followers?.length || 0;
-                            }
-
-                            if (followingRes.ok) {
-                                const followingData = await followingRes.json();
-                                followingCount = followingData.following?.length || 0;
-                            }
-
-                            const user = {
+                            const user: UserProfile = {
                                 userId: data.identity.user_id,
                                 username: data.identity.user_id.split('@')[0],
                                 displayName: data.profile.display_name || 'Unknown',
@@ -93,8 +84,8 @@ export default function SearchPage() {
                                 followersCount,
                                 followingCount,
                                 isFollowing: data.is_following,
+                                isFederated: false,
                             };
-
                             setSelectedUser(user);
                             fetchUserPosts(user.userId);
                         } else {
@@ -103,68 +94,78 @@ export default function SearchPage() {
                     } else {
                         setSelectedUser(null);
                     }
+                    setFederationStep('');
                 } else {
-                    // Different server - use federated search API
+                    // Remote server — federated lookup with auto-discovery
+                    setFederationStep(`Checking server "${serverSuffix}"…`);
+                    await new Promise(r => setTimeout(r, 300)); // let the UI update
+
                     const res = await fetch(
                         `${identity.home_server}/api/search?q=${encodeURIComponent(searchQuery)}`
                     );
 
-                    if (res.ok) {
-                        const data = await res.json();
+                    const data = await res.json();
 
-                        if (data.found && data.user) {
-                            const user = {
-                                userId: data.user.user_id,
-                                username: data.user.username,
-                                displayName: data.user.display_name || 'Unknown',
-                                avatarUrl: data.user.avatar_url || '',
-                                bio: data.user.bio || '',
-                                bannerUrl: '',
-                                location: '',
-                                portfolioUrl: '',
-                                followersCount: 0,
-                                followingCount: 0,
-                                isFollowing: false,
-                            };
+                    // Show live discovery progress
+                    const status: string = data.discovery_status || '';
+                    if (status === 'auto_handshake') {
+                        setFederationStep(`New server — handshake succeeded ✓`);
+                        await new Promise(r => setTimeout(r, 600));
+                    } else if (status === 'unhealthy') {
+                        setFederationStep(`Server "${serverSuffix}" is unreachable`);
+                        setSelectedUser(null);
+                        return;
+                    } else if (status === 'not_found') {
+                        setFederationStep(`Server "${serverSuffix}" is not known`);
+                        setSelectedUser(null);
+                        return;
+                    }
 
-                            setSelectedUser(user);
-                        } else {
-                            setSelectedUser(null);
-                        }
+                    if (data.found && data.user) {
+                        setFederationStep(`Fetching identity from "${serverSuffix}"…`);
+                        await new Promise(r => setTimeout(r, 200));
+
+                        const user: UserProfile = {
+                            userId: data.user.user_id,
+                            username: data.user.username,
+                            displayName: data.user.display_name || 'Unknown',
+                            avatarUrl: data.user.avatar_url || '',
+                            bio: data.user.bio || '',
+                            bannerUrl: '',
+                            location: '',
+                            portfolioUrl: '',
+                            followersCount: 0,
+                            followingCount: 0,
+                            isFollowing: false,
+                            isFederated: true,
+                            remoteServer: serverSuffix,
+                            discoveryStatus: status,
+                        };
+                        setSelectedUser(user);
                     } else {
                         setSelectedUser(null);
                     }
+                    setFederationStep('');
                 }
             } else {
-                // Use local search API
+                // Plain username — local search
+                setFederationStep('Searching…');
                 const res = await fetch(
                     `${identity.home_server}/user/search?user_id=${encodeURIComponent(searchQuery)}&viewer_id=${encodeURIComponent(identity.user_id)}`
                 );
 
                 if (res.ok) {
                     const data = await res.json();
-
                     if (data.identity && data.profile) {
-
                         const [followersRes, followingRes] = await Promise.all([
                             fetch(`${identity.home_server}/followers?user_id=${encodeURIComponent(data.identity.user_id)}`),
                             fetch(`${identity.home_server}/following?user_id=${encodeURIComponent(data.identity.user_id)}`)
                         ]);
 
-                        let followersCount = 0;
-                        let followingCount = 0;
+                        const followersCount = followersRes.ok ? ((await followersRes.json()).followers?.length || 0) : 0;
+                        const followingCount = followingRes.ok ? ((await followingRes.json()).following?.length || 0) : 0;
 
-                        if (followersRes.ok) {
-                            const followersData = await followersRes.json();
-                            followersCount = followersData.followers?.length || 0;
-                        }
-
-                        if (followingRes.ok) {
-                            const followingData = await followingRes.json();
-                            followingCount = followingData.following?.length || 0;
-                        }
-
-                        const user = {
+                        const user: UserProfile = {
                             userId: data.identity.user_id,
                             username: data.identity.user_id.split('@')[0],
                             displayName: data.profile.display_name || 'Unknown',
@@ -176,12 +177,9 @@ export default function SearchPage() {
                             followersCount,
                             followingCount,
                             isFollowing: data.is_following,
+                            isFederated: false,
                         };
-
-
                         setSelectedUser(user);
-
-
                         fetchUserPosts(user.userId);
                     } else {
                         setSelectedUser(null);
@@ -189,10 +187,12 @@ export default function SearchPage() {
                 } else {
                     setSelectedUser(null);
                 }
+                setFederationStep('');
             }
         } catch (err) {
             console.error('Search error:', err);
             setSelectedUser(null);
+            setFederationStep('');
         } finally {
             setSearching(false);
         }
@@ -236,17 +236,13 @@ export default function SearchPage() {
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-white mb-6">Search Users</h1>
 
-                <div className="flex gap-4 mb-6">
+                <div className="flex gap-4 mb-2">
                     <input
                         type="text"
-                        placeholder="Search by username or federated ID (e.g., 'alice' or 'alice@server-b')"
+                        placeholder="username  or  alice@server_b  for cross-server"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                handleSearch();
-                            }
-                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
                         className="flex-1 px-4 py-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:border-yellow-500 focus:outline-none"
                     />
                     <button
@@ -254,20 +250,50 @@ export default function SearchPage() {
                         disabled={searching || !searchQuery.trim()}
                         className="px-6 py-3 rounded-lg bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-600 disabled:cursor-not-allowed text-black font-semibold transition"
                     >
-                        {searching ? 'Searching...' : 'Search'}
+                        {searching ? 'Searching…' : 'Search'}
                     </button>
                 </div>
+
+                {/* Live federation status */}
+                {(searching && federationStep) && (
+                    <div className="flex items-center gap-2 text-sm text-yellow-400 mt-2 px-1">
+                        <span className="inline-block animate-spin rounded-full h-3 w-3 border-b-2 border-yellow-400" />
+                        {federationStep}
+                    </div>
+                )}
             </div>
 
             {hasSearched && (
                 <div>
                     {searching ? (
-                        <div className="text-center text-gray-400">
-                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mb-4"></div>
-                            <p>Searching...</p>
+                        <div className="text-center text-gray-400 py-12">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mb-4" />
+                            <p>{federationStep || 'Searching…'}</p>
                         </div>
                     ) : selectedUser ? (
-                        <div className="space-y-6">
+                        <div className="space-y-4">
+                            {/* Remote-server badge */}
+                            {selectedUser.isFederated && selectedUser.remoteServer && (
+                                <div className="flex items-center gap-2">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-blue-900/40 border border-blue-500/40 text-blue-300">
+                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M10 2a8 8 0 100 16A8 8 0 0010 2zm0 1.5a6.5 6.5 0 110 13A6.5 6.5 0 0110 3.5zm-.75 3v3.5H6.5l3.5 5 3.5-5h-2.75V6.5h-1.5z" />
+                                        </svg>
+                                        @{selectedUser.remoteServer}
+                                    </span>
+                                    {selectedUser.discoveryStatus === 'auto_handshake' && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-green-900/30 border border-green-500/30 text-green-400">
+                                            ✓ auto-connected
+                                        </span>
+                                    )}
+                                    {selectedUser.discoveryStatus === 'already_trusted' && (
+                                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-800 border border-gray-600 text-gray-400">
+                                            trusted server
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+
                             <ProfileCard
                                 profile={{
                                     user_id: selectedUser.userId,
