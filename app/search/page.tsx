@@ -43,6 +43,7 @@ export default function SearchPage() {
         setSearching(true);
         setHasSearched(true);
         setSelectedUser(null);
+        setUserPosts([]);
         setFederationStep('');
 
         try {
@@ -142,6 +143,7 @@ export default function SearchPage() {
                             discoveryStatus: status,
                         };
                         setSelectedUser(user);
+                        fetchUserPosts(user.userId, true);
                     } else {
                         setSelectedUser(null);
                     }
@@ -198,14 +200,15 @@ export default function SearchPage() {
         }
     };
 
-    const fetchUserPosts = async (userId: string) => {
+    const fetchUserPosts = async (userId: string, isFederated = false) => {
         if (!identity) return;
 
         setLoadingPosts(true);
         try {
-            const res = await fetch(
-                `${identity.home_server}/posts?author=${encodeURIComponent(userId)}`
-            );
+            const url = isFederated
+                ? `${identity.home_server}/api/posts/federated?user_id=${encodeURIComponent(userId)}&viewer_id=${encodeURIComponent(identity.user_id)}`
+                : `${identity.home_server}/posts/user?user_id=${encodeURIComponent(userId)}&viewer_id=${encodeURIComponent(identity.user_id)}`;
+            const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
                 setUserPosts(data.posts || []);
@@ -312,6 +315,25 @@ export default function SearchPage() {
                                 followingCount={selectedUser.followingCount}
                                 isFollowing={selectedUser.isFollowing}
                             />
+
+                            {/* Posts section */}
+                            {loadingPosts && (
+                                <div className="flex items-center gap-2 text-sm text-gray-400 py-4">
+                                    <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500" />
+                                    Loading posts…
+                                </div>
+                            )}
+                            {!loadingPosts && userPosts.length > 0 && (
+                                <div className="space-y-4">
+                                    <h2 className="text-xl font-bold text-white pt-2">Posts</h2>
+                                    {userPosts.map(post => (
+                                        <PostCard key={post.id} post={post} />
+                                    ))}
+                                </div>
+                            )}
+                            {!loadingPosts && userPosts.length === 0 && (
+                                <p className="text-gray-500 text-sm pt-2">No posts yet.</p>
+                            )}
                         </div>
                     ) : (
                         <div className="text-center py-12 bg-gray-800 rounded-lg">

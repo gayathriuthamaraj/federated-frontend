@@ -31,28 +31,43 @@ export default function FollowersPage() {
         }
     }, [identity, authLoading, router]);
 
-    useEffect(() => {
-        async function fetchFollowers() {
-            if (!identity) return;
-
-            try {
-                const res = await fetch(
-                    `${identity.home_server}/followers?user_id=${encodeURIComponent(identity.user_id)}`
-                );
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setFollowers(data.followers || []);
-                }
-            } catch (err) {
-                console.error('Failed to fetch followers:', err);
-            } finally {
-                setLoading(false);
+    const fetchFollowers = async () => {
+        if (!identity) return;
+        try {
+            const res = await fetch(
+                `${identity.home_server}/followers?user_id=${encodeURIComponent(identity.user_id)}`
+            );
+            if (res.ok) {
+                const data = await res.json();
+                setFollowers(data.followers || []);
             }
+        } catch (err) {
+            console.error('Failed to fetch followers:', err);
+        } finally {
+            setLoading(false);
         }
+    };
 
+    // Fetch on mount / manual refresh
+    useEffect(() => {
         if (identity) fetchFollowers();
-    }, [identity, refreshKey]); 
+    }, [identity, refreshKey]);
+
+    // Poll every 15 seconds
+    useEffect(() => {
+        if (!identity) return;
+        const interval = setInterval(fetchFollowers, 15000);
+        return () => clearInterval(interval);
+    }, [identity]);
+
+    // Re-fetch when the tab becomes visible again
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible' && identity) fetchFollowers();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, [identity]);
 
     const handleRemoveFollower = async (userId: string) => {
         if (!identity) return;
