@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiPost } from '../utils/api';
 import { generateClientKeyPair, storeClientKeyPair, storeSessionKey } from '../utils/crypto';
+import { KNOWN_SERVERS, findServerById, pinServer, getPinnedServer } from '../utils/servers';
 
 export default function RegisterPage() {
     const { loginWithoutRedirect } = useAuth();
@@ -15,17 +16,9 @@ export default function RegisterPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [inviteCode, setInviteCode] = useState('');
-    const [serverName, setServerName] = useState<string>(() => {
-        try {
-            const pinned = typeof window !== 'undefined' ? localStorage.getItem('trusted_server') : null;
-            if (pinned) {
-                const parsed = JSON.parse(pinned);
-                return parsed.server_name || '';
-            }
-        } catch (e) {
-            // ignore
-        }
-        return '';
+    const [serverId, setServerId] = useState<string>(() => {
+        const pinned = getPinnedServer();
+        return pinned?.server_id ?? '';
     });
 
     const [isSuccess, setIsSuccess] = useState(false);
@@ -65,6 +58,15 @@ export default function RegisterPage() {
         setIsSubmitting(true);
 
         try {
+            // Pin the chosen server so getApiBaseUrl() routes to the right host
+            const chosenServer = findServerById(serverId);
+            if (!chosenServer) {
+                setError('Please select a server before registering.');
+                setIsSubmitting(false);
+                return;
+            }
+            pinServer(chosenServer);
+
             // Generate client Ed25519 key pair
             console.log('Generating client key pair...');
             const clientKeyPair = await generateClientKeyPair();
@@ -76,8 +78,9 @@ export default function RegisterPage() {
                 email: email,
                 password: password,
                 invite_code: inviteCode,
-                home_server: serverName,
-                client_public_key: clientKeyPair.publicKey, // Send client's public key
+                home_server: chosenServer.name,
+                server_id: chosenServer.id,
+                client_public_key: clientKeyPair.publicKey,
             }, false);
 
             const data = await res.json();
@@ -125,7 +128,7 @@ export default function RegisterPage() {
 
     const handleContinue = () => {
         sessionStorage.removeItem('showing_recovery_key');
-        window.location.href = '/profile';
+        window.location.href = '/profile/setup';
     };
 
     // Success Screen
@@ -312,36 +315,28 @@ export default function RegisterPage() {
                     </div>
 
                     <div>
-                        <label htmlFor="serverName" className="block text-sm font-medium text-bat-gray mb-2">
+                        <label htmlFor="serverId" className="block text-sm font-medium text-bat-gray mb-2">
                             Select Server
                         </label>
                         <select
-                            id="serverName"
-                            value={serverName}
+                            id="serverId"
+                            value={serverId}
                             onChange={(e) => {
-                                const newName = e.target.value;
-                                setServerName(newName);
-
-                                // Logic to map name to URL for localStorage
-                                let serverUrl = 'http://localhost:8082'; // fallback
-                                if (newName.toLowerCase() === 'server a') {
-                                    serverUrl = 'http://localhost:8082';
-                                } else if (newName.toLowerCase() === 'server b') {
-                                    serverUrl = 'http://localhost:9082';
-                                }
-
-                                localStorage.setItem('trusted_server', JSON.stringify({
-                                    server_name: newName,
-                                    server_url: serverUrl
-                                }));
+                                const id = e.target.value;
+                                setServerId(id);
+                                const srv = findServerById(id);
+                                if (srv) pinServer(srv);
                             }}
                             className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200"
                             required
                             disabled={isSubmitting}
                         >
                             <option value="">-- Choose a Server --</option>
-                            <option value="Server A">Server A (Port 8082)</option>
-                            <option value="Server B">Server B (Port 9082)</option>
+                            {KNOWN_SERVERS.map((srv) => (
+                                <option key={srv.id} value={srv.id}>
+                                    {srv.name} &mdash; {srv.id} (:{srv.port})
+                                </option>
+                            ))}
                         </select>
                         <p className="mt-1 text-xs text-gray-500">Select which backend server to register with</p>
                     </div>

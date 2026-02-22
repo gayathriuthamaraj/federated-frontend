@@ -83,9 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             router.push("/login");
         } else if (identity && isUnauthenticatedOnly && !showingRecoveryKey) {
-
-
-            router.push("/profile");
+            
+            
+            router.push("/feed");
         }
     }, [identity, isLoading, pathname, router]);
 
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("local_identity", JSON.stringify(newIdentity));
         localStorage.setItem("access_token", accessToken);
         localStorage.setItem("refresh_token", refreshToken);
-        router.push("/profile");
+        router.push("/feed");
     };
 
     const loginWithoutRedirect = (userId: string, homeServer: string, accessToken: string, refreshToken: string) => {

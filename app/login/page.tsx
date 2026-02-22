@@ -1,26 +1,23 @@
 "use client";
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { KNOWN_SERVERS, findServerById, pinServer, getPinnedServer } from '../utils/servers';
 
 export default function LoginPage() {
     const { login } = useAuth();
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [serverName, setServerName] = useState<string>(() => {
-        try {
-            const pinned = typeof window !== 'undefined' ? localStorage.getItem('trusted_server') : null;
-            if (pinned) {
-                const parsed = JSON.parse(pinned);
-                return parsed.server_name || '';
-            }
-        } catch (e) {
-            // ignore
-        }
-        return '';
-    });
+    const [serverId, setServerId] = useState<string>('');
+
+    // Populate from localStorage only after mount (avoids SSR/hydration mismatch)
+    useEffect(() => {
+        const pinned = getPinnedServer();
+        if (pinned?.server_id) setServerId(pinned.server_id);
+        else if (KNOWN_SERVERS.length > 0) setServerId(KNOWN_SERVERS[0].id);
+    }, []);
 
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,15 +27,16 @@ export default function LoginPage() {
         setError('');
         setIsSubmitting(true);
 
-        // Set the trusted server based on selection to route API calls correctly
-        const serverUrl = serverName === 'server-b' ? 'http://localhost:9082' : 'http://localhost:8082';
-        localStorage.setItem('trusted_server', JSON.stringify({
-            server_name: serverName,
-            server_url: serverUrl
-        }));
+        const chosenServer = findServerById(serverId);
+        if (!chosenServer) {
+            setError('Please select a server.');
+            setIsSubmitting(false);
+            return;
+        }
+        pinServer(chosenServer);
 
         try {
-            const response = await fetch(`${serverUrl}/login`, {
+            const response = await fetch(`${chosenServer.url}/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -114,8 +112,13 @@ export default function LoginPage() {
                         </label>
                         <select
                             id="server"
-                            value={serverName}
-                            onChange={(e) => setServerName(e.target.value)}
+                            value={serverId}
+                            onChange={(e) => {
+                                const id = e.target.value;
+                                setServerId(id);
+                                const srv = findServerById(id);
+                                if (srv) pinServer(srv);
+                            }}
                             className="
                 w-full px-4 py-3 rounded-md
                 bg-bat-black text-white
@@ -127,8 +130,11 @@ export default function LoginPage() {
                             disabled={isSubmitting}
                         >
                             <option value="">Select a server</option>
-                            <option value="server-a">Server A (localhost:8082)</option>
-                            <option value="server-b">Server B (localhost:8083)</option>
+                            {KNOWN_SERVERS.map((srv) => (
+                                <option key={srv.id} value={srv.id}>
+                                    {srv.name} &mdash; {srv.id} (:{srv.port})
+                                </option>
+                            ))}
                         </select>
                     </div>
 

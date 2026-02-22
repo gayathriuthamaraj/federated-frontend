@@ -31,28 +31,43 @@ export default function FollowingPage() {
         }
     }, [identity, authLoading, router]);
 
-    useEffect(() => {
-        async function fetchFollowing() {
-            if (!identity) return;
-
-            try {
-                const res = await fetch(
-                    `${identity.home_server}/following?user_id=${encodeURIComponent(identity.user_id)}`
-                );
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setFollowing(data.following || []);
-                }
-            } catch (err) {
-                console.error('Failed to fetch following:', err);
-            } finally {
-                setLoading(false);
+    const fetchFollowing = async () => {
+        if (!identity) return;
+        try {
+            const res = await fetch(
+                `${identity.home_server}/following?user_id=${encodeURIComponent(identity.user_id)}`
+            );
+            if (res.ok) {
+                const data = await res.json();
+                setFollowing(data.following || []);
             }
+        } catch (err) {
+            console.error('Failed to fetch following:', err);
+        } finally {
+            setLoading(false);
         }
+    };
 
+    // Fetch on mount / manual refresh
+    useEffect(() => {
         if (identity) fetchFollowing();
     }, [identity, refreshKey]);
+
+    // Poll every 15 seconds
+    useEffect(() => {
+        if (!identity) return;
+        const interval = setInterval(fetchFollowing, 15000);
+        return () => clearInterval(interval);
+    }, [identity]);
+
+    // Re-fetch when the tab becomes visible again
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible' && identity) fetchFollowing();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, [identity]);
 
     const handleUnfollow = async (userId: string) => {
         if (!identity) return;
