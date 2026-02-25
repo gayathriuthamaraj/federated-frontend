@@ -20,18 +20,18 @@ interface ServerInfo {
 }
 
 function getApiBaseUrl(): string {
-    if (typeof window === 'undefined') return 'http://localhost:8082';
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
     const trusted = localStorage.getItem('trusted_server');
     if (trusted) {
         try {
             const data = JSON.parse(trusted);
-            return data.server_url || 'http://localhost:8082';
+            return data.server_url || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
         } catch (e) {
-            return 'http://localhost:8082';
+            return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
         }
     }
-    return 'http://localhost:8082';
+    return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 }
 
 export default function TrustedServersPage() {
@@ -126,8 +126,10 @@ export default function TrustedServersPage() {
             if (response.ok) {
                 alert(`✅ Successfully connected to ${serverId}!`);
             } else {
-                const data = await response.json();
-                alert(`⚠️ Helper connected but remote server returned error: ${data.error || response.statusText}`);
+                const text = await response.text();
+                let errorMsg = response.statusText;
+                try { errorMsg = JSON.parse(text).error || response.statusText; } catch { errorMsg = text || response.statusText; }
+                alert(`⚠️ Helper connected but remote server returned error: ${errorMsg}`);
             }
         } catch (err) {
             alert(`❌ Failed to connect to ${serverId}: ${err instanceof Error ? err.message : 'Timeout'}`);
@@ -154,8 +156,10 @@ export default function TrustedServersPage() {
             });
 
             if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to add server');
+                const text = await response.text();
+                let errorMsg = 'Failed to add server';
+                try { errorMsg = JSON.parse(text).error || text || 'Failed to add server'; } catch { errorMsg = text || 'Failed to add server'; }
+                throw new Error(errorMsg);
             }
 
             // Reset form and refresh list

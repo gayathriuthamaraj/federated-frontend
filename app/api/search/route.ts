@@ -11,7 +11,7 @@ export async function GET(req: Request) {
         )
     }
 
-    const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+    const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
     const res = await fetch(
         `${API_BASE}/user/search?user_id=${encodeURIComponent(userId)}`
     )

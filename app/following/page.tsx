@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import UserCard from '../components/UserCard';
@@ -24,6 +24,7 @@ export default function FollowingPage() {
     const [following, setFollowing] = useState<UserDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
+    const abortRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         if (!authLoading && !identity) {
@@ -31,34 +32,41 @@ export default function FollowingPage() {
         }
     }, [identity, authLoading, router]);
 
-    const fetchFollowing = async () => {
+    const fetchFollowing = useCallback(async () => {
         if (!identity) return;
+        // Cancel any in-flight request
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+        const url = `${identity.home_server}/following?user_id=${encodeURIComponent(identity.user_id)}`;
         try {
-            const res = await fetch(
-                `${identity.home_server}/following?user_id=${encodeURIComponent(identity.user_id)}`
-            );
+            const res = await fetch(url, { signal: controller.signal });
             if (res.ok) {
                 const data = await res.json();
                 setFollowing(data.following || []);
             }
-        } catch (err) {
-            console.error('Failed to fetch following:', err);
+        } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === 'AbortError') return;
+            console.error(`Failed to fetch following from ${url}:`, err);
         } finally {
             setLoading(false);
         }
-    };
+    }, [identity]);
 
-    // Fetch on mount / manual refresh
+    // Cleanup on unmount
+    useEffect(() => () => { abortRef.current?.abort(); }, []);
+
+    // Fetch on mount / manual refresh (guard: wait for auth to finish loading)
     useEffect(() => {
-        if (identity) fetchFollowing();
-    }, [identity, refreshKey]);
+        if (!authLoading && identity) fetchFollowing();
+    }, [identity, authLoading, refreshKey, fetchFollowing]);
 
     // Poll every 15 seconds
     useEffect(() => {
         if (!identity) return;
         const interval = setInterval(fetchFollowing, 15000);
         return () => clearInterval(interval);
-    }, [identity]);
+    }, [identity, fetchFollowing]);
 
     // Re-fetch when the tab becomes visible again
     useEffect(() => {
@@ -67,7 +75,7 @@ export default function FollowingPage() {
         };
         document.addEventListener('visibilitychange', onVisible);
         return () => document.removeEventListener('visibilitychange', onVisible);
-    }, [identity]);
+    }, [identity, fetchFollowing]);
 
     const handleUnfollow = async (userId: string) => {
         if (!identity) return;

@@ -26,8 +26,8 @@ export default function LoginPage() {
                 setServerName(data.server_name || 'Admin Panel');
 
 
-                if (data.server_url === 'http://localhost:8082') setSelectedServerKey('Server A');
-                else if (data.server_url === 'http://localhost:9082') setSelectedServerKey('Server B');
+                if (data.server_url === 'http://localhost:8080') setSelectedServerKey('Server A');
+                else if (data.server_url === 'http://localhost:9080') setSelectedServerKey('Server B');
                 else setSelectedServerKey('Custom');
             } catch (e) {
 
@@ -45,13 +45,13 @@ export default function LoginPage() {
             return;
         }
 
-        let url = 'http://localhost:8082';
+        let url = 'http://localhost:8080';
         let name = newServer;
 
         if (newServer === 'Server A') {
-            url = 'http://localhost:8082';
+            url = 'http://localhost:8080';
         } else if (newServer === 'Server B') {
-            url = 'http://localhost:9082';
+            url = 'http://localhost:9080';
         }
 
         const config = {
@@ -88,8 +88,8 @@ export default function LoginPage() {
 
                 const updatedConfig = {
                     server_name: config.server_name,
-                    server_url: (selectedServerKey === 'Server B' ? 'http://localhost:9082' :
-                        (selectedServerKey === 'Server A' ? 'http://localhost:8082' : 'http://localhost:8082')),
+                    server_url: (selectedServerKey === 'Server B' ? 'http://localhost:9080' :
+                        (selectedServerKey === 'Server A' ? 'http://localhost:8080' : 'http://localhost:8080')),
                     server_id: 'unknown',
                     public_key: '',
                     pinned_at: new Date().toISOString()

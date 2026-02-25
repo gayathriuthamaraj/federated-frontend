@@ -65,14 +65,6 @@ export default function SearchPage() {
                     if (res.ok) {
                         const data = await res.json();
                         if (data.identity && data.profile) {
-                            const [followersRes, followingRes] = await Promise.all([
-                                fetch(`${identity.home_server}/followers?user_id=${encodeURIComponent(data.identity.user_id)}`),
-                                fetch(`${identity.home_server}/following?user_id=${encodeURIComponent(data.identity.user_id)}`)
-                            ]);
-
-                            const followersCount = followersRes.ok ? ((await followersRes.json()).followers?.length || 0) : 0;
-                            const followingCount = followingRes.ok ? ((await followingRes.json()).following?.length || 0) : 0;
-
                             const user: UserProfile = {
                                 userId: data.identity.user_id,
                                 username: data.identity.user_id.split('@')[0],
@@ -82,8 +74,8 @@ export default function SearchPage() {
                                 bannerUrl: data.profile.banner_url || '',
                                 location: data.profile.location || '',
                                 portfolioUrl: data.profile.portfolio_url || '',
-                                followersCount,
-                                followingCount,
+                                followersCount: data.profile.followers_count ?? 0,
+                                followingCount: data.profile.following_count ?? 0,
                                 isFollowing: data.is_following,
                                 isFederated: false,
                             };
@@ -102,8 +94,16 @@ export default function SearchPage() {
                     await new Promise(r => setTimeout(r, 300)); // let the UI update
 
                     const res = await fetch(
-                        `${identity.home_server}/api/search?q=${encodeURIComponent(searchQuery)}`
+                        `${identity.home_server}/search?q=${encodeURIComponent(searchQuery)}`
                     );
+
+                    if (!res.ok) {
+                        const errText = await res.text();
+                        console.error('Federated search error:', errText);
+                        setSelectedUser(null);
+                        setFederationStep(`Search failed: ${res.status}`);
+                        return;
+                    }
 
                     const data = await res.json();
 
@@ -159,14 +159,6 @@ export default function SearchPage() {
                 if (res.ok) {
                     const data = await res.json();
                     if (data.identity && data.profile) {
-                        const [followersRes, followingRes] = await Promise.all([
-                            fetch(`${identity.home_server}/followers?user_id=${encodeURIComponent(data.identity.user_id)}`),
-                            fetch(`${identity.home_server}/following?user_id=${encodeURIComponent(data.identity.user_id)}`)
-                        ]);
-
-                        const followersCount = followersRes.ok ? ((await followersRes.json()).followers?.length || 0) : 0;
-                        const followingCount = followingRes.ok ? ((await followingRes.json()).following?.length || 0) : 0;
-
                         const user: UserProfile = {
                             userId: data.identity.user_id,
                             username: data.identity.user_id.split('@')[0],
@@ -176,8 +168,8 @@ export default function SearchPage() {
                             bannerUrl: data.profile.banner_url || '',
                             location: data.profile.location || '',
                             portfolioUrl: data.profile.portfolio_url || '',
-                            followersCount,
-                            followingCount,
+                            followersCount: data.profile.followers_count ?? 0,
+                            followingCount: data.profile.following_count ?? 0,
                             isFollowing: data.is_following,
                             isFederated: false,
                         };
@@ -308,32 +300,15 @@ export default function SearchPage() {
                                     portfolio_url: selectedUser.portfolioUrl,
                                     followers_visibility: 'public',
                                     following_visibility: 'public',
+                                    followers_count: selectedUser.followersCount,
+                                    following_count: selectedUser.followingCount,
                                     created_at: new Date().toISOString(),
                                     updated_at: new Date().toISOString(),
                                 }}
-                                followersCount={selectedUser.followersCount}
-                                followingCount={selectedUser.followingCount}
                                 isFollowing={selectedUser.isFollowing}
+                                posts={userPosts}
+                                loadingPosts={loadingPosts}
                             />
-
-                            {/* Posts section */}
-                            {loadingPosts && (
-                                <div className="flex items-center gap-2 text-sm text-gray-400 py-4">
-                                    <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500" />
-                                    Loading posts…
-                                </div>
-                            )}
-                            {!loadingPosts && userPosts.length > 0 && (
-                                <div className="space-y-4">
-                                    <h2 className="text-xl font-bold text-white pt-2">Posts</h2>
-                                    {userPosts.map(post => (
-                                        <PostCard key={post.id} post={post} />
-                                    ))}
-                                </div>
-                            )}
-                            {!loadingPosts && userPosts.length === 0 && (
-                                <p className="text-gray-500 text-sm pt-2">No posts yet.</p>
-                            )}
                         </div>
                     ) : (
                         <div className="text-center py-12 bg-gray-800 rounded-lg">

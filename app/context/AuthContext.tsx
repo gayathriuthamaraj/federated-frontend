@@ -29,17 +29,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
 
+        // One-time fix: correct any previously-stored wrong hostnames/ports
+        // Covers: Docker-internal container names, old wrong ports
+        ['local_identity', 'trusted_server'].forEach((key) => {
+            const raw = localStorage.getItem(key);
+            if (!raw) return;
+            const fixed = raw
+                // Docker-internal container hostnames → public localhost URLs
+                .replace(/http:\/\/server[_-]a[_-]identity:\d+/g, 'http://localhost:8080')
+                .replace(/http:\/\/server[_-]b[_-]identity:\d+/g, 'http://localhost:9080')
+                // Old wrong default port (pre-docker-compose fix)
+                .replace('localhost:8082', 'localhost:8080')
+                .replace('localhost:9082', 'localhost:9080');
+            if (fixed !== raw) localStorage.setItem(key, fixed);
+        });
+
         const storedIdentity = localStorage.getItem("local_identity");
         if (storedIdentity) {
             try {
                 const parsed = JSON.parse(storedIdentity);
-                // Migrate stale port references (8080→8082, 9080→9082)
-                if (parsed.home_server) {
-                    parsed.home_server = parsed.home_server
-                        .replace('localhost:8080', 'localhost:8082')
-                        .replace('localhost:9080', 'localhost:9082');
-                    localStorage.setItem("local_identity", JSON.stringify(parsed));
-                }
                 setIdentity(parsed);
             } catch (e) {
                 console.error("Failed to parse identity", e);
@@ -47,19 +55,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem("access_token");
                 localStorage.removeItem("refresh_token");
             }
-        }
-        // Also migrate trusted_server entry
-        const storedTrust = localStorage.getItem("trusted_server");
-        if (storedTrust) {
-            try {
-                const trust = JSON.parse(storedTrust);
-                if (trust.server_url) {
-                    trust.server_url = trust.server_url
-                        .replace('localhost:8080', 'localhost:8082')
-                        .replace('localhost:9080', 'localhost:9082');
-                    localStorage.setItem("trusted_server", JSON.stringify(trust));
-                }
-            } catch (e) { /* ignore */ }
         }
         setIsLoading(false);
     }, []);

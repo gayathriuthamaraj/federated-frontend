@@ -9,7 +9,7 @@ export default function SetupPage() {
     const [scanning, setScanning] = useState(false); 
     const [error, setError] = useState<string | null>(null);
     const [manualCode, setManualCode] = useState('');
-    const [manualServerUrl, setManualServerUrl] = useState('http://localhost:8082');
+    const [manualServerUrl, setManualServerUrl] = useState('http://localhost:8080');
 
     const handleScan = (data: string | null) => {
         if (data) {

@@ -1,17 +1,17 @@
 
 function getApiBaseUrl(): string {
-    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
     const trustedServer = localStorage.getItem('trusted_server');
     if (trustedServer) {
         try {
             const data = JSON.parse(trustedServer);
-            return data.server_url || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+            return data.server_url || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
         } catch (e) {
-            return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+            return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
         }
     }
-    return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+    return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 }
 
 export interface AdminLoginData {
@@ -124,6 +124,12 @@ export async function testDatabaseConnection(connectionString: string): Promise<
         body: JSON.stringify({ connection_string: connectionString }),
     });
 
+    if (!response.ok) {
+        const text = await response.text();
+        let errorMsg = 'Database connection test failed';
+        try { errorMsg = JSON.parse(text).error || text || errorMsg; } catch { errorMsg = text || errorMsg; }
+        throw new Error(errorMsg);
+    }
     const data = await response.json();
     return data;
 }
