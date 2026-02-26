@@ -16,7 +16,6 @@ import NotifSvg from "../icons/notif_svg";
 import Follow_svg from "../icons/follow_svg";
 import Community_svg from "../icons/community_svg";
 import Bookmark_svg from "../icons/bookmark_svg";
-import Globe_svg from "../icons/globe_svg";
 
 
 function BatLogo() {
@@ -148,15 +147,6 @@ export default function Sidebar() {
                     active={pathname.startsWith("/following")}
                 >
                     <Follow_svg />
-                </NavItem>
-
-                <NavItem
-                    label="Federation"
-                    href="/federation"
-                    expanded={expanded}
-                    active={pathname.startsWith("/federation")}
-                >
-                    <Globe_svg />
                 </NavItem>
 
                 {}

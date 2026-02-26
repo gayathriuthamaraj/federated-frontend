@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useState, useEffect } from 'react';
-import { LayoutDashboard, Server, Database, Ticket, Users, LogOut, Globe } from 'lucide-react';
+import { LayoutDashboard, Server, Ticket, Users, LogOut, Globe } from 'lucide-react';
 
 interface AdminLayoutProps {
     children: ReactNode;
@@ -69,19 +69,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         <div className="flex items-center gap-3">
                             <Server className="w-5 h-5" />
                             <span>Server Config</span>
-                        </div>
-                    </Link>
-
-                    <Link
-                        href="/database-config"
-                        className={`block px-4 py-3 rounded-lg transition-colors ${isActive('/database-config')
-                            ? 'bg-blue-600 text-white'
-                            : 'text-gray-300 hover:bg-gray-700'
-                            }`}
-                    >
-                        <div className="flex items-center gap-3">
-                            <Database className="w-5 h-5" />
-                            <span>Database Config</span>
                         </div>
                     </Link>
 
