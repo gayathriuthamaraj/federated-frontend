@@ -263,6 +263,26 @@ export async function generateInvite(data: GenerateInviteRequest): Promise<Invit
     return response.json();
 }
 
+export interface TrustedServer {
+    id: string;
+    server_id: string;
+    server_name: string;
+    public_key: string;
+    endpoint: string;
+    trusted_at: string;
+}
+
+export async function getTrustedServers(): Promise<TrustedServer[]> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const response = await fetch(`${getApiBaseUrl()}/admin/trusted-servers/list`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Failed to fetch trusted servers');
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data.servers ?? []);
+}
+
 export async function revokeInvite(inviteCode: string): Promise<void> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { apiGet } from '../utils/api';
 import PostCard from '../components/PostCard';
 import UserCard from '../components/UserCard';
+import RightPanel from '../components/RightPanel';
 
 export default function ExplorePage() {
     const { identity, isLoading: authLoading } = useAuth();
@@ -57,86 +58,86 @@ export default function ExplorePage() {
 
     if (authLoading) {
         return (
-            <div className="max-w-3xl mx-auto p-6 space-y-4">
-                {[...Array(4)].map((_, i) => (
-                    <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
-                ))}
+            <div className="flex min-h-full">
+                <div className="flex-1 min-w-0 max-w-165 border-r border-bat-dark/40 px-4 py-4 space-y-4">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
+                    ))}
+                </div>
+                <div className="hidden xl:block w-90 shrink-0 px-6 py-4">
+                    <div className="skeleton h-48 rounded-2xl" />
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="max-w-3xl mx-auto p-6">
-            {}
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold text-bat-gray mb-2">Explore</h1>
-                <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
-            </div>
+        <div className="flex min-h-full">
+            {/* â”€â”€ Center column â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            <div className="flex-1 min-w-0 max-w-165 border-r border-bat-dark/40">
+                {/* Sticky header */}
+                <div className="sticky top-0 z-10 backdrop-blur-md bg-bat-black/85 border-b border-bat-dark/50 px-4 py-3">
+                    <h1 className="font-bold text-[1.05rem] text-gray-100 tracking-tight">Explore</h1>
+                </div>
 
-            {}
-            <div className="flex gap-4 mb-6 border-b border-bat-gray/20">
-                <button
-                    onClick={() => setActiveTab('posts')}
-                    className={`pb-3 px-4 font-bold transition-all duration-200 relative ${activeTab === 'posts'
-                        ? 'text-bat-yellow'
-                        : 'text-bat-gray hover:text-bat-gray/80'
-                        }`}
-                >
-                    Posts
-                    <div className={`absolute bottom-0 left-0 right-0 h-0.75 rounded-t transition-all duration-300 ${activeTab === 'posts' ? 'bg-bat-yellow opacity-100 scale-x-100' : 'bg-bat-yellow opacity-0 scale-x-0'}`} />
-                </button>
-                <button
-                    onClick={() => setActiveTab('users')}
-                    className={`pb-3 px-4 font-bold transition-all duration-200 relative ${activeTab === 'users'
-                        ? 'text-bat-yellow'
-                        : 'text-bat-gray hover:text-bat-gray/80'
-                        }`}
-                >
-                    Users
-                    <div className={`absolute bottom-0 left-0 right-0 h-0.75 rounded-t transition-all duration-300 ${activeTab === 'users' ? 'bg-bat-yellow opacity-100 scale-x-100' : 'bg-bat-yellow opacity-0 scale-x-0'}`} />
-                </button>
-            </div>
-
-            {}
-            {loading ? (
-                <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                        <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
+                {/* Tabs */}
+                <div className="flex border-b border-bat-dark/50">
+                    {(['posts', 'users'] as const).map(tab => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors relative ${
+                                activeTab === tab ? 'text-gray-100' : 'text-bat-gray/50 hover:text-bat-gray/80'
+                            }`}
+                        >
+                            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                            {activeTab === tab && (
+                                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.75 rounded-t-full bg-bat-yellow" />
+                            )}
+                        </button>
                     ))}
                 </div>
-            ) : (
-                <div className="animate-fade-up">
-                    {activeTab === 'posts' ? (
-                        posts.length === 0 ? (
-                            <div className="text-center py-12 text-bat-gray">
-                                <p className="text-lg">No posts to explore yet</p>
-                            </div>
+
+                {/* Content */}
+                {loading ? (
+                    <div className="px-4 py-4 space-y-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="animate-fade-up">
+                        {activeTab === 'posts' ? (
+                            posts.length === 0 ? (
+                                <div className="text-center py-16 text-bat-gray/40">
+                                    <p>No posts to explore yet</p>
+                                </div>
+                            ) : (
+                                posts.map(post => <PostCard key={post.id} post={post} />)
+                            )
                         ) : (
-                            <div className="space-y-4">
-                                {posts.map(post => (
-                                    <PostCard key={post.id} post={post} />
-                                ))}
-                            </div>
-                        )
-                    ) : (
-                        users.length === 0 ? (
-                            <div className="text-center py-12 text-bat-gray">
-                                <p className="text-lg">No users to suggest yet</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {users.map(user => (
-                                    <UserCard
-                                        key={user.userId}
-                                        user={user}
-                                        showFollowButton={true}
-                                    />
-                                ))}
-                            </div>
-                        )
-                    )}
+                            users.length === 0 ? (
+                                <div className="text-center py-16 text-bat-gray/40">
+                                    <p>No users to suggest yet</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-bat-dark/40">
+                                    {users.map(user => (
+                                        <UserCard key={user.userId} user={user} showFollowButton={true} />
+                                    ))}
+                                </div>
+                            )
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* â”€â”€ Right panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            <div className="hidden xl:block w-90 shrink-0 px-6 py-4">
+                <div className="sticky top-4">
+                    <RightPanel />
                 </div>
-            )}
+            </div>
         </div>
     );
 }
