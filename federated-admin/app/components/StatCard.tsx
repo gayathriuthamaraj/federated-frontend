@@ -7,30 +7,65 @@ interface StatCardProps {
     value: string | number;
     icon: ReactNode;
     color?: string;
+    suffix?: string;
 }
 
-export default function StatCard({ title, value, icon, color = 'blue' }: StatCardProps) {
-    const colorClasses = {
-        blue: 'bg-blue-600',
-        green: 'bg-green-600',
-        purple: 'bg-purple-600',
-        orange: 'bg-orange-600',
-        red: 'bg-red-600',
-    };
+const ACCENT: Record<string, string> = {
+    blue:   'var(--cyan)',
+    green:  'var(--green)',
+    purple: '#c678dd',
+    orange: 'var(--amber)',
+    red:    'var(--red)',
+};
 
-    const bgColor = colorClasses[color as keyof typeof colorClasses] || colorClasses.blue;
+export default function StatCard({ title, value, icon, color = 'green', suffix }: StatCardProps) {
+    const accent = ACCENT[color] ?? ACCENT.green;
 
     return (
-        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-            <div className="flex items-center justify-between">
+        <div className="term-panel" style={{ borderRadius: 2, padding: '18px 20px', overflow: 'hidden' }}>
+            {/* Corner label */}
+            <div style={{
+                fontSize: '0.6rem',
+                color: 'var(--text-ghost)',
+                letterSpacing: '0.12em',
+                marginBottom: 10,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+            }}>
+                <span style={{ color: accent, opacity: 0.7 }}>◆</span>
+                <span style={{ textTransform: 'uppercase' }}>{title}</span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                {/* Big number */}
                 <div>
-                    <p className="text-gray-400 text-sm font-medium">{title}</p>
-                    <p className="text-3xl font-bold text-white mt-2">{value}</p>
+                    <div className="stat-value" style={{ color: accent, textShadow: `0 0 12px ${accent}55` }}>
+                        {value}{suffix && <span style={{ fontSize: '1rem', marginLeft: 4, opacity: 0.7 }}>{suffix}</span>}
+                    </div>
                 </div>
-                <div className={`${bgColor} w-12 h-12 rounded-lg flex items-center justify-center text-white`}>
+
+                {/* Icon */}
+                <div style={{
+                    width: 40, height: 40,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: `1px solid ${accent}44`,
+                    borderRadius: 2,
+                    color: accent,
+                    opacity: 0.85,
+                }}>
                     {icon}
                 </div>
             </div>
+
+            {/* Bottom rule with color */}
+            <div style={{
+                marginTop: 14,
+                height: 2,
+                background: `linear-gradient(90deg, ${accent}88, ${accent}11)`,
+                borderRadius: 1,
+            }} />
         </div>
     );
 }
+

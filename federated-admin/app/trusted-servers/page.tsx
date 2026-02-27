@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Server, Globe, Key, Link as LinkIcon, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import AdminLayout from '../components/AdminLayout';
+import { Server, Globe, Link as LinkIcon, Clock, AlertCircle, Plus, X, Trash2, Wifi } from 'lucide-react';
 
 interface TrustedServer {
     id: string;
@@ -194,271 +195,181 @@ export default function TrustedServersPage() {
     };
 
     if (loading && !serverInfo) return (
-        <div className="p-6 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-gray-600">Loading federation network...</span>
+        <AdminLayout>
+            <div style={{ color: 'var(--text-ghost)', display: 'flex', alignItems: 'center', gap: 10, padding: '40px 0' }}>
+                <span style={{ color: 'var(--green)' }}>⟳</span> LOADING FEDERATION NETWORK...
+            </div>
+        </AdminLayout>
+    );
+
+    const F = ({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: '0.65rem', color: 'var(--text-ghost)', letterSpacing: '0.1em' }}>{label}</label>
+            {children}
+            {hint && <span style={{ fontSize: '0.62rem', color: 'var(--text-ghost)' }}>{hint}</span>}
         </div>
     );
 
     return (
-        <div className="p-6 space-y-6 max-w-7xl mx-auto">
-            {/* Network Info Header */}
-            {serverInfo && (
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg shadow-lg p-6 text-white">
-                    <div className="flex items-start justify-between">
-                        <div className="flex items-center space-x-4">
-                            <div className="bg-white/20 p-3 rounded-lg">
-                                <Server className="w-8 h-8" />
+        <AdminLayout>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.15em', marginBottom: 4 }}>// FEDERATION MESH</div>
+                        <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--green)', letterSpacing: '0.1em', textShadow: '0 0 8px var(--green-glow)' }}>
+                            TRUSTED NODES
+                        </h1>
+                    </div>
+                    <button onClick={() => setShowAddForm(!showAddForm)} className="term-btn solid" style={{ gap: 8 }}>
+                        {showAddForm ? <><X size={13} /> CANCEL</> : <><Plus size={13} /> ADD NODE</>}
+                    </button>
+                </div>
+
+                {/* Current node info */}
+                {serverInfo && (
+                    <div className="term-panel" style={{ padding: '14px 18px' }}>
+                        <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.12em', marginBottom: 10 }}>// LOCAL NODE</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            <div>
+                                <div style={{ fontSize: '0.62rem', color: 'var(--text-ghost)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <Globe size={10} /> SERVER ID
+                                </div>
+                                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: 'var(--cyan)' }}>{serverInfo.server_id}</div>
                             </div>
                             <div>
-                                <h1 className="text-2xl font-bold">Federation Network</h1>
-                                <p className="text-blue-100 mt-1">Current Server: {serverInfo.server_name}</p>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="flex items-center space-x-2 bg-white/20 px-3 py-1 rounded-full">
-                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                                <span className="text-sm">Online</span>
+                                <div style={{ fontSize: '0.62rem', color: 'var(--text-ghost)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                    <LinkIcon size={10} /> ENDPOINT
+                                </div>
+                                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-dim)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {serverInfo.endpoint}
+                                </div>
                             </div>
                         </div>
                     </div>
-
-                    {/* Server Details */}
-                    <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-white/10 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <Globe className="w-4 h-4" />
-                                <span className="text-sm font-medium">Server ID</span>
-                            </div>
-                            <p className="font-mono text-sm">{serverInfo.server_id}</p>
-                        </div>
-                        <div className="bg-white/10 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <LinkIcon className="w-4 h-4" />
-                                <span className="text-sm font-medium">Endpoint</span>
-                            </div>
-                            <p className="font-mono text-sm truncate">{serverInfo.endpoint}</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Trusted Servers Section */}
-            <div className="bg-white rounded-lg shadow">
-                <div className="p-6 border-b border-gray-200">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900">Trusted Federation Servers</h2>
-                            <p className="text-sm text-gray-600 mt-1">
-                                {servers.length} server{servers.length !== 1 ? 's' : ''} in federation network
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => setShowAddForm(!showAddForm)}
-                            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-                        >
-                            <Server className="w-4 h-4" />
-                            <span>{showAddForm ? 'Cancel' : 'Add Server'}</span>
-                        </button>
-                    </div>
-                </div>
+                )}
 
                 {error && (
-                    <div className="mx-6 mt-4 bg-red-50 border-l-4 border-red-500 p-4 rounded">
-                        <div className="flex items-center">
-                            <XCircle className="w-5 h-5 text-red-500 mr-2" />
-                            <p className="text-red-700">{error}</p>
-                        </div>
+                    <div style={{ padding: '8px 12px', background: 'rgba(255,23,68,0.06)', border: '1px solid var(--red-dim)', fontSize: '0.75rem', color: 'var(--red)' }}>
+                        <span style={{ opacity: 0.5 }}>ERR &gt; </span>{error}
                     </div>
                 )}
 
+                {/* Add form */}
                 {showAddForm && (
-                    <form onSubmit={handleAddServer} className="p-6 border-b border-gray-200 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Server ID *
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="server-b"
-                                    value={formData.server_id}
-                                    onChange={(e) => setFormData({ ...formData, server_id: e.target.value })}
-                                />
-                                <p className="text-xs text-gray-500 mt-1">Unique identifier for the server</p>
+                    <div className="term-panel" style={{ padding: '18px 20px' }}>
+                        <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.12em', marginBottom: 14 }}>// REGISTER TRUSTED NODE</div>
+                        <form onSubmit={handleAddServer} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                                <F label="SERVER ID  *" hint="unique identifier">
+                                    <input type="text" required className="term-input" placeholder="server-b"
+                                        value={formData.server_id} onChange={e => setFormData({ ...formData, server_id: e.target.value })} />
+                                </F>
+                                <F label="SERVER NAME  *" hint="display name">
+                                    <input type="text" required className="term-input" placeholder="Server B"
+                                        value={formData.server_name} onChange={e => setFormData({ ...formData, server_name: e.target.value })} />
+                                </F>
                             </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Server Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    placeholder="Server B"
-                                    value={formData.server_name}
-                                    onChange={(e) => setFormData({ ...formData, server_name: e.target.value })}
-                                />
-                                <p className="text-xs text-gray-500 mt-1">Display name for the server</p>
+                            <F label="ENDPOINT URL  *" hint="Docker: container name  •  Localhost: external port (e.g. http://localhost:9080)">
+                                <input type="url" required className="term-input" placeholder="http://server_b_identity:8082"
+                                    value={formData.endpoint} onChange={e => setFormData({ ...formData, endpoint: e.target.value })} />
+                            </F>
+                            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                                <button type="submit" className="term-btn solid">▶ REGISTER NODE</button>
+                                <button type="button" className="term-btn" onClick={() => setShowAddForm(false)}><X size={12} /> CANCEL</button>
                             </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Endpoint URL *
-                            </label>
-                            <input
-                                type="url"
-                                required
-                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                                placeholder="http://server_b_identity:8082 (Docker) or http://localhost:9080"
-                                value={formData.endpoint}
-                                onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Server's federation endpoint (Docker: use container name, Localhost: use external port)</p>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                type="submit"
-                                className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors"
-                            >
-                                <CheckCircle className="w-4 h-4" />
-                                <span>Add Trusted Server</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setShowAddForm(false)}
-                                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg transition-colors"
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </form>
+                        </form>
+                    </div>
                 )}
 
-                {/* Servers Table */}
-                <div className="overflow-x-auto">
-                    {servers.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <Server className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Trusted Servers</h3>
-                            <p className="text-gray-600 mb-4">Add a trusted server to enable federation.</p>
-                            <button
-                                onClick={() => setShowAddForm(true)}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-colors"
-                            >
-                                Add Your First Server
-                            </button>
-                        </div>
-                    ) : (
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-y border-gray-200">
+                {/* Servers table */}
+                <div className="term-panel" style={{ overflow: 'hidden' }}>
+                    <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-ghost)', letterSpacing: '0.12em' }}>// TRUSTED NODES</span>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-ghost)' }}>{servers.length} PEER{servers.length !== 1 ? 'S' : ''}</span>
+                    </div>
+
+                    <table className="term-table">
+                        <thead>
+                            <tr>
+                                <th>NODE</th>
+                                <th>ENDPOINT</th>
+                                <th>PUBLIC KEY</th>
+                                <th>TRUSTED SINCE</th>
+                                <th style={{ textAlign: 'right' }}>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr><td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-ghost)' }}>⟳ LOADING...</td></tr>
+                            ) : servers.length === 0 ? (
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Server
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Endpoint
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Public Key
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Added
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
+                                    <td colSpan={5} style={{ textAlign: 'center', padding: '48px 16px' }}>
+                                        <div style={{ color: 'var(--text-ghost)', fontSize: '0.8rem', marginBottom: 12 }}>no trusted nodes registered</div>
+                                        <button onClick={() => setShowAddForm(true)} className="term-btn solid">
+                                            <Plus size={12} /> ADD FIRST NODE
+                                        </button>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
-                                {servers.map((server) => (
-                                    <tr key={server.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center space-x-3">
-                                                <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                    <Server className="w-5 h-5 text-blue-600" />
-                                                </div>
-                                                <div>
-                                                    <div className="font-medium text-gray-900">{server.server_name}</div>
-                                                    <div className="text-sm text-gray-500 font-mono">{server.server_id}</div>
-                                                </div>
-                                            </div>
+                            ) : (
+                                servers.map(server => (
+                                    <tr key={server.id}>
+                                        <td>
+                                            <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.8rem' }}>{server.server_name}</div>
+                                            <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.68rem', color: 'var(--cyan)', marginTop: 2 }}>{server.server_id}</div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <a
-                                                href={server.endpoint}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-blue-600 hover:text-blue-800 font-mono text-sm flex items-center space-x-1"
-                                            >
-                                                <LinkIcon className="w-3 h-3" />
-                                                <span>{server.endpoint}</span>
+                                        <td>
+                                            <a href={server.endpoint} target="_blank" rel="noopener noreferrer"
+                                                style={{ color: 'var(--green-dim)', fontFamily: 'var(--font-mono)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                <LinkIcon size={10} />{server.endpoint}
                                             </a>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <code className="text-xs bg-gray-100 px-3 py-1 rounded-md text-gray-700">
-                                                {server.public_key.substring(0, 24)}...
+                                        <td>
+                                            <code style={{ fontSize: '0.68rem', background: 'var(--bg)', padding: '2px 8px', color: 'var(--text-ghost)', border: '1px solid var(--border)' }}>
+                                                {server.public_key ? `${server.public_key.substring(0, 20)}…` : '—'}
                                             </code>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center space-x-2 text-sm text-gray-600">
-                                                <Clock className="w-4 h-4" />
-                                                <span>{new Date(server.trusted_at).toLocaleDateString()}</span>
-                                            </div>
+                                        <td>
+                                            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                                                <Clock size={11} />{new Date(server.trusted_at).toLocaleDateString()}
+                                            </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center space-x-2">
-                                                <button
-                                                    onClick={() => testConnection(server.endpoint, server.server_id)}
+                                        <td style={{ textAlign: 'right' }}>
+                                            <span style={{ display: 'inline-flex', gap: 10, alignItems: 'center' }}>
+                                                <button onClick={() => testConnection(server.endpoint, server.server_id)}
                                                     disabled={testingConnection === server.server_id}
-                                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium disabled:opacity-50"
-                                                >
-                                                    {testingConnection === server.server_id ? 'Testing...' : 'Test'}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--cyan)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 4, opacity: testingConnection === server.server_id ? 0.5 : 1 }}>
+                                                    <Wifi size={12} /> {testingConnection === server.server_id ? 'TESTING…' : 'TEST'}
                                                 </button>
-                                                <span className="text-gray-300">|</span>
-                                                <button
-                                                    onClick={() => handleRemoveServer(server.server_id)}
-                                                    className="text-red-600 hover:text-red-800 text-sm font-medium"
-                                                >
-                                                    Remove
+                                                <button onClick={() => handleRemoveServer(server.server_id)}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                    <Trash2 size={12} /> REMOVE
                                                 </button>
-                                            </div>
+                                            </span>
                                         </td>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
-            </div>
 
-            {/* Help Section */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                <div className="flex items-start space-x-3">
-                    <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                    <div>
-                        <h3 className="font-semibold text-blue-900 mb-2">Setting Up Federation</h3>
-                        <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
-                            <li>
-                                <strong>For Docker environments:</strong> Use internal Docker network names like{' '}
-                                <code className="bg-blue-100 px-2 py-0.5 rounded">http://server_b_identity:8082</code>
-                            </li>
-                            <li>
-                                <strong>For localhost testing:</strong> Use external ports like{' '}
-                                <code className="bg-blue-100 px-2 py-0.5 rounded">http://localhost:9080</code>
-                            </li>
-                            <li>Get the remote server's public key from their admin panel</li>
-                            <li><strong>Important:</strong> Both servers must add each other to their trusted lists for bidirectional federation</li>
-                            <li>Use the "Test" button to verify connectivity after adding a server</li>
-                        </ol>
+                {/* Help */}
+                <div style={{ padding: '14px 16px', background: 'rgba(255,171,0,0.04)', border: '1px solid var(--amber)', fontSize: '0.72rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--amber)', marginBottom: 10, fontWeight: 600, letterSpacing: '0.08em' }}>
+                        <AlertCircle size={13} /> FEDERATION SETUP GUIDE
                     </div>
+                    <ol style={{ margin: 0, paddingLeft: 18, color: 'var(--text-muted)', lineHeight: 1.8, listStyle: 'decimal' }}>
+                        <li><span style={{ color: 'var(--text-dim)' }}>Docker:</span> use container names — <code style={{ color: 'var(--cyan)', background: 'var(--bg)', padding: '1px 6px' }}>http://server_b_identity:8082</code></li>
+                        <li><span style={{ color: 'var(--text-dim)' }}>Localhost:</span> use external ports — <code style={{ color: 'var(--cyan)', background: 'var(--bg)', padding: '1px 6px' }}>http://localhost:9080</code></li>
+                        <li>Obtain remote public key from their admin panel</li>
+                        <li><span style={{ color: 'var(--amber)' }}>Both servers must add each other</span> for bidirectional federation</li>
+                        <li>Use TEST button to verify after adding a node</li>
+                    </ol>
                 </div>
+
             </div>
-        </div>
+        </AdminLayout>
     );
 }

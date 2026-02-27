@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { useCache } from '../../context/CacheContext';
 import { updateProfile, getUserProfile } from '../../api/profile';
 
 export default function EditProfilePage() {
     const { identity } = useAuth();
+    const cache = useCache();
     const router = useRouter();
 
     const [formData, setFormData] = useState({
@@ -84,6 +86,11 @@ export default function EditProfilePage() {
                 followers_visibility: formData.followersVisibility,
                 following_visibility: formData.followingVisibility,
             });
+
+            // Evict own profile from the local cache so next access
+            // re-fetches the updated data (backend also broadcasts a
+            // PROFILE_UPDATE notification to all followers + message contacts).
+            cache.invalidateProfile(identity.user_id);
 
             router.push('/profile');
         } catch (err) {

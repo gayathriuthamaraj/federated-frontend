@@ -8,13 +8,26 @@ import { Profile } from '@/types/profile'
 import { Post } from '@/types/post'
 import Link from 'next/link'
 
+interface UserReply {
+    id: string;
+    post_id: string;
+    post_content: string;
+    post_author: string;
+    content: string;
+    created_at: string;
+}
+
 interface ProfileCardProps {
     profile: Profile;
     isOwnProfile?: boolean;
     isFollowing?: boolean;
     posts?: Post[];
+    replies?: UserReply[];
+    likedPosts?: Post[];
     loadingPosts?: boolean;
     did?: string;
+    /** Called after a follow/unfollow with +1 or -1 so parent can update counts & cache */
+    onFollowChange?: (delta: 1 | -1) => void;
 }
 
 export default function ProfileCard({
@@ -22,12 +35,16 @@ export default function ProfileCard({
     isOwnProfile = false,
     isFollowing = false,
     posts = [],
+    replies = [],
+    likedPosts = [],
     loadingPosts = false,
-    did
+    did,
+    onFollowChange,
 }: ProfileCardProps) {
     const [profile, setProfile] = useState(initialProfile)
     const [followingState, setFollowingState] = useState(isFollowing)
     const [activeTab, setActiveTab] = useState(0)
+    const [tabAnimKey, setTabAnimKey] = useState(0)
 
     // Touch swipe support
     const touchStartX = useRef<number | null>(null)
@@ -41,11 +58,13 @@ export default function ProfileCard({
         if (touchStartX.current === null) return
         const dx = e.changedTouches[0].clientX - touchStartX.current
         if (Math.abs(dx) > 50) {
-            setActiveTab(prev =>
-                dx < 0
-                    ? Math.min(prev + 1, TAB_COUNT - 1)  // swipe left → next
-                    : Math.max(prev - 1, 0)               // swipe right → prev
-            )
+            setActiveTab(prev => {
+                const next = dx < 0
+                    ? Math.min(prev + 1, TAB_COUNT - 1)
+                    : Math.max(prev - 1, 0);
+                setTabAnimKey(k => k + 1);
+                return next;
+            });
         }
         touchStartX.current = null
     }
@@ -57,12 +76,13 @@ export default function ProfileCard({
     }, [initialProfile, isFollowing])
 
     const handleFollowSuccess = () => {
-        
+        const delta: 1 | -1 = followingState ? -1 : 1;
         setProfile(prev => ({
             ...prev,
-            followers_count: (prev.followers_count || 0) + (followingState ? -1 : 1)
-        }))
-        setFollowingState(!followingState)
+            followers_count: Math.max(0, (prev.followers_count ?? 0) + delta),
+        }));
+        setFollowingState(prev => !prev);
+        onFollowChange?.(delta);
     }
 
     return (
@@ -77,8 +97,10 @@ export default function ProfileCard({
                         className="h-full w-full object-cover"
                     />
                 ) : (
-                    <div className="h-full w-full bg-bat-dark" />
+                    <div className="h-full w-full bg-linear-to-br from-bat-dark via-bat-dark to-bat-yellow/10" />
                 )}
+                {/* Gradient overlay for readability */}
+                <div className="absolute inset-0 bg-linear-to-t from-bat-black/60 to-transparent pointer-events-none" />
             </div>
 
             {}
@@ -86,7 +108,7 @@ export default function ProfileCard({
                 <div className="relative flex justify-between items-start">
                     {}
                     <div className="-mt-[15%] sm:-mt-16 mb-3">
-                        <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-bat-black bg-bat-black overflow-hidden">
+                        <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-bat-black bg-bat-black overflow-hidden transition-transform duration-300 hover:scale-105 shadow-lg">
                             {profile.avatar_url ? (
                                 <img
                                     src={profile.avatar_url}
@@ -197,14 +219,20 @@ export default function ProfileCard({
 
                 {}
                 <div className="mt-4 flex gap-5 text-sm">
-                    <div className="hover:underline cursor-pointer">
+                    <Link
+                        href={`/following?user_id=${encodeURIComponent(profile.user_id)}`}
+                        className="hover:underline cursor-pointer"
+                    >
                         <span className="font-bold text-bat-gray mr-1">{profile.following_count ?? 0}</span>
                         <span className="text-bat-gray/60">Following</span>
-                    </div>
-                    <div className="hover:underline cursor-pointer">
+                    </Link>
+                    <Link
+                        href={`/followers?user_id=${encodeURIComponent(profile.user_id)}`}
+                        className="hover:underline cursor-pointer"
+                    >
                         <span className="font-bold text-bat-gray mr-1">{profile.followers_count ?? 0}</span>
                         <span className="text-bat-gray/60">Followers</span>
-                    </div>
+                    </Link>
                 </div>
             </div>
 
@@ -217,12 +245,12 @@ export default function ProfileCard({
                 {TABS.map((tab, i) => (
                     <button
                         key={tab}
-                        onClick={() => setActiveTab(i)}
+                        onClick={() => { setActiveTab(i); setTabAnimKey(k => k + 1); }}
                         className={`
-                            flex-1 py-4 text-center text-sm sm:text-base font-medium transition-colors hover:bg-bat-dark/30
+                            flex-1 py-4 text-center text-sm sm:text-base font-medium transition-all duration-200 hover:bg-bat-dark/30
                             ${i === activeTab
                                 ? 'text-bat-yellow border-b-[3px] border-bat-yellow'
-                                : 'text-bat-gray/60 hover:text-bat-gray'
+                                : 'text-bat-gray/60 hover:text-bat-gray border-b-[3px] border-transparent'
                             }
                         `}
                     >
@@ -233,7 +261,8 @@ export default function ProfileCard({
 
             {}
             <div
-                className="flex-1"
+                key={tabAnimKey}
+                className="flex-1 animate-fade-up"
                 onTouchStart={handleTouchStart}
                 onTouchEnd={handleTouchEnd}
             >
@@ -255,11 +284,73 @@ export default function ProfileCard({
                         </div>
                     )
                 )}
-                {activeTab !== 0 && (
+
+                {/* Replies tab */}
+                {activeTab === 1 && (
+                    loadingPosts ? (
+                        <div className="text-center text-bat-gray py-8">Loading replies...</div>
+                    ) : replies.length === 0 ? (
+                        <div className="p-8 text-center border-t border-bat-dark/50">
+                            <div className="text-bat-gray/40 text-lg font-medium">No replies yet</div>
+                            <div className="text-bat-gray/20 text-sm mt-1">
+                                {isOwnProfile ? "Join a conversation!" : "Nothing here yet."}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-t border-bat-dark/50 divide-y divide-bat-dark/40">
+                            {replies.map((rep) => (
+                                <div key={rep.id} className="px-4 pt-3 pb-1 hover:bg-bat-dark/10 transition-colors">
+                                    {rep.post_content && (
+                                        <div className="mb-1.5 pl-3 border-l-2 border-bat-gray/20 text-xs text-bat-gray/40 line-clamp-2">
+                                            <span className="font-semibold text-bat-gray/50">
+                                                @{rep.post_author.split('@')[0]}:&nbsp;
+                                            </span>
+                                            {rep.post_content}
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2 items-start">
+                                        <div className="flex-shrink-0 h-7 w-7 rounded-full bg-bat-dark flex items-center justify-center text-bat-yellow font-bold text-xs select-none">
+                                            {(profile.display_name || profile.user_id)[0]?.toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-bat-gray/70 text-xs mr-2">
+                                                {new Date(rep.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                            </span>
+                                            <p className="text-bat-gray text-[14px] leading-normal whitespace-pre-wrap">{rep.content}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )
+                )}
+
+                {/* Highlights & Media — placeholder */}
+                {(activeTab === 2 || activeTab === 3) && (
                     <div className="p-10 text-center border-t border-bat-dark/50">
                         <div className="text-bat-gray/40 text-lg font-medium">{TABS[activeTab]}</div>
                         <div className="text-bat-gray/20 text-sm mt-1">Nothing here yet.</div>
                     </div>
+                )}
+
+                {/* Likes tab */}
+                {activeTab === 4 && (
+                    loadingPosts ? (
+                        <div className="text-center text-bat-gray py-8">Loading likes...</div>
+                    ) : likedPosts.length === 0 ? (
+                        <div className="p-8 text-center border-t border-bat-dark/50">
+                            <div className="text-bat-gray/40 text-lg font-medium">No likes yet</div>
+                            <div className="text-bat-gray/20 text-sm mt-1">
+                                {isOwnProfile ? "Like posts to see them here." : "Nothing here yet."}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-t border-bat-dark/50">
+                            {likedPosts.map((post) => (
+                                <PostCard key={post.id} post={post} />
+                            ))}
+                        </div>
+                    )
                 )}
             </div>
         </div>

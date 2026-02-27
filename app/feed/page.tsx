@@ -98,22 +98,20 @@ export default function FeedPage() {
 
     if (authLoading || !identity) {
         return (
-            <div className="max-w-3xl mx-auto p-6">
-                <div className="text-center text-bat-gray">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
-                    <p className="mt-2">Loading...</p>
-                </div>
+            <div className="max-w-3xl mx-auto p-6 space-y-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
+                ))}
             </div>
         );
     }
 
     if (loading) {
         return (
-            <div className="max-w-3xl mx-auto p-6">
-                <div className="text-center text-bat-gray">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
-                    <p className="mt-2">Loading feed...</p>
-                </div>
+            <div className="max-w-3xl mx-auto p-6 space-y-4">
+                {[...Array(5)].map((_, i) => (
+                    <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
+                ))}
             </div>
         );
     }
@@ -176,12 +174,12 @@ export default function FeedPage() {
 
             {}
             {posts.length === 0 ? (
-                <div className="text-center py-12 text-bat-gray">
+                <div className="text-center py-12 text-bat-gray animate-fade-up">
                     <p className="text-lg">No posts yet</p>
                     <p className="text-sm mt-2">Follow some users to see their posts here!</p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 animate-fade-up">
                     {posts.map(post => (
                         <PostCard key={post.id} post={post} />
                     ))}

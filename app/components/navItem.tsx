@@ -18,7 +18,7 @@ export function NavItem({
   children,
 }: NavItemProps) {
   const base =
-    "relative flex items-center h-10 w-full px-3 gap-3 rounded-md group cursor-pointer transition-all duration-200";
+    "relative flex items-center h-10 w-full px-3 gap-3 rounded-md group cursor-pointer transition-all duration-200 overflow-hidden";
 
   const defaultStyle = active
     ? `
@@ -31,6 +31,7 @@ export function NavItem({
         text-bat-gray
         hover:text-bat-yellow
         hover:bg-bat-yellow/10
+        border-l-2 border-transparent
       `;
 
   const postStyle = `
@@ -45,24 +46,32 @@ export function NavItem({
 
   return (
     <Link href={href} className={`${base} ${variant === "post" ? postStyle : defaultStyle}`}>
-      {}
+      {/* Ripple / glow layer on hover (default only) */}
+      {variant === "default" && !active && (
+        <span
+          aria-hidden="true"
+          className="absolute inset-0 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-bat-yellow/5 pointer-events-none"
+        />
+      )}
+
+      {/* Icon wrapper */}
       <div
         className={`
-            transition-all duration-200
+            relative z-10 transition-transform duration-200
             ${variant === "post"
             ? "scale-110"
             : active
               ? "scale-105"
-              : "group-hover:scale-105"}
+              : "group-hover:scale-110"}
         `}
       >
         {children}
       </div>
 
-      {}
+      {/* Label */}
       <span
         className={`
-          text-sm tracking-wide whitespace-nowrap
+          relative z-10 text-sm tracking-wide whitespace-nowrap
           transition-all duration-300
           ${expanded
             ? "opacity-100 translate-x-0"

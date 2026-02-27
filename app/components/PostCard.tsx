@@ -3,6 +3,7 @@
 import { Post } from '@/types/post';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import Link from 'next/link';
 
 interface PostCardProps {
     post: Post;
@@ -24,6 +25,7 @@ export default function PostCard({ post }: PostCardProps) {
     
     const [isLiked, setIsLiked] = useState(post.has_liked || false);
     const [likeCount, setLikeCount] = useState(post.like_count || 0);
+    const [likePopKey, setLikePopKey] = useState(0);
     const [isReposted, setIsReposted] = useState(post.has_reposted || false);
     const [repostCount, setRepostCount] = useState(post.repost_count || 0);
     const [showComments, setShowComments] = useState(false);
@@ -93,6 +95,7 @@ export default function PostCard({ post }: PostCardProps) {
 
         const newLikedState = !isLiked;
         setIsLiked(newLikedState);
+        if (newLikedState) setLikePopKey((k) => k + 1);
         setLikeCount((prev: number) => newLikedState ? prev + 1 : prev - 1);
 
         try {
@@ -252,22 +255,28 @@ export default function PostCard({ post }: PostCardProps) {
     };
 
     return (
-        <article className="border-b border-bat-dark hover:bg-bat-dark/20 transition-colors">
+        <article className="border-b border-bat-dark hover:bg-bat-dark/30 transition-colors duration-200 animate-fade-up">
             <div className="flex gap-3 px-4 py-3">
                 {}
                 <div className="flex-shrink-0">
-                    <div className="h-10 w-10 rounded-full bg-bat-dark border border-bat-dark flex items-center justify-center text-bat-yellow font-bold text-lg select-none">
+                    <Link
+                        href={`/profile?user_id=${encodeURIComponent(post.author)}`}
+                        className="flex h-10 w-10 rounded-full bg-bat-dark border border-bat-dark items-center justify-center text-bat-yellow font-bold text-lg select-none transition-transform duration-200 hover:scale-110"
+                    >
                         {displayName[0].toUpperCase()}
-                    </div>
+                    </Link>
                 </div>
 
                 {}
                 <div className="flex-1 min-w-0">
                     {}
                     <div className="flex items-baseline gap-1.5 text-[15px] leading-5">
-                        <span className="font-bold text-gray-200 truncate">
+                        <Link
+                            href={`/profile?user_id=${encodeURIComponent(post.author)}`}
+                            className="font-bold text-gray-200 truncate hover:underline"
+                        >
                             {displayName}
-                        </span>
+                        </Link>
                         <span className="text-bat-gray/60 truncate">
                             {handle}
                         </span>
@@ -322,7 +331,7 @@ export default function PostCard({ post }: PostCardProps) {
                             className={`group flex items-center gap-1.5 transition-colors ${isLiked ? 'text-pink-600' : 'hover:text-pink-600'}`}
                         >
                             <div className="p-1.5 rounded-full group-hover:bg-pink-600/10 transition-colors">
-                                <svg viewBox="0 0 24 24" aria-hidden="true" className={`h-[1.15rem] w-[1.15rem] transition-all ${isLiked ? 'fill-current scale-110' : 'fill-current'}`}>
+                                <svg key={likePopKey} viewBox="0 0 24 24" aria-hidden="true" className={`h-[1.15rem] w-[1.15rem] transition-all ${isLiked ? 'fill-current animate-like-pop' : 'fill-current'}`}>
                                     {isLiked ? (
                                         <path d="M20.884 13.19c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"></path>
                                     ) : (
@@ -347,7 +356,7 @@ export default function PostCard({ post }: PostCardProps) {
 
             {}
             {showComments && (
-                <div className="border-t border-bat-dark/50 bg-bat-dark/10">
+                <div className="border-t border-bat-dark/50 bg-bat-dark/10 animate-slide-up">
                     {}
                     <div className="flex gap-3 px-4 py-3">
                         <div className="h-8 w-8 rounded-full bg-bat-yellow/20 flex items-center justify-center text-bat-yellow font-bold text-sm">

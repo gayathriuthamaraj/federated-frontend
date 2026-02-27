@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { getInvites, generateInvite, revokeInvite, fetchInviteQR, Invite } from '../api/admin';
-import { QrCode, Trash2 } from 'lucide-react';
+import { QrCode, Trash2, Plus, X } from 'lucide-react';
 
 export default function InvitesPage() {
     const router = useRouter();
@@ -13,16 +13,13 @@ export default function InvitesPage() {
     const [error, setError] = useState('');
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [selectedInvite, setSelectedInvite] = useState<Invite | null>(null);
-
-
     const [inviteType, setInviteType] = useState<'user' | 'admin'>('user');
     const [maxUses, setMaxUses] = useState(0);
     const [expiresIn, setExpiresIn] = useState(24);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [showForm, setShowForm] = useState(false);
 
-    useEffect(() => {
-        loadInvites();
-    }, []);
+    useEffect(() => { loadInvites(); }, []);
 
     const loadInvites = async () => {
         setIsLoading(true);
@@ -41,16 +38,10 @@ export default function InvitesPage() {
         setIsGenerating(true);
         setError('');
         try {
-            await generateInvite({
-                invite_type: inviteType,
-                max_uses: maxUses,
-                expires_in: expiresIn
-            });
+            await generateInvite({ invite_type: inviteType, max_uses: maxUses, expires_in: expiresIn });
             await loadInvites();
-
-            setInviteType('user');
-            setMaxUses(0);
-            setExpiresIn(24);
+            setShowForm(false);
+            setInviteType('user'); setMaxUses(0); setExpiresIn(24);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to generate invite');
         } finally {
@@ -59,141 +50,118 @@ export default function InvitesPage() {
     };
 
     const handleRevoke = async (code: string) => {
-        if (!confirm('Are you sure you want to revoke this invite?')) return;
-        try {
-            await revokeInvite(code);
-            await loadInvites();
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to revoke invite');
-        }
+        if (!confirm('Revoke this invite code?')) return;
+        try { await revokeInvite(code); await loadInvites(); }
+        catch (err) { setError(err instanceof Error ? err.message : 'Failed to revoke invite'); }
     };
 
     const handleShowQR = async (invite: Invite) => {
-        try {
-            const url = await fetchInviteQR(invite.invite_code);
-            setQrCode(url);
-            setSelectedInvite(invite);
-        } catch (err) {
-            setError("Failed to load QR code");
-        }
+        try { setQrCode(await fetchInviteQR(invite.invite_code)); setSelectedInvite(invite); }
+        catch { setError('Failed to load QR code'); }
     };
 
-    const closeQR = () => {
-        setQrCode(null);
-        setSelectedInvite(null);
-    };
+    const F = ({ label, children }: { label: string; children: React.ReactNode }) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: '0.65rem', color: 'var(--text-ghost)', letterSpacing: '0.1em' }}>{label}</label>
+            {children}
+        </div>
+    );
 
     return (
         <AdminLayout>
-            <div className="space-y-6">
-                <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Invite Management</h1>
-                    <p className="text-gray-400">Manage access to your server</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                        <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.15em', marginBottom: 4 }}>// ACCESS CONTROL</div>
+                        <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--green)', letterSpacing: '0.1em', textShadow: '0 0 8px var(--green-glow)' }}>INVITES</h1>
+                    </div>
+                    <button onClick={() => setShowForm(!showForm)} className="term-btn solid" style={{ gap: 8 }}>
+                        {showForm ? <><X size={13} /> CANCEL</> : <><Plus size={13} /> GENERATE</>}
+                    </button>
                 </div>
 
                 {error && (
-                    <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-lg">
-                        <p className="text-red-400">{error}</p>
+                    <div style={{ padding: '8px 12px', background: 'rgba(255,23,68,0.06)', border: '1px solid var(--red-dim)', fontSize: '0.75rem', color: 'var(--red)' }}>
+                        <span style={{ opacity: 0.5 }}>ERR &gt; </span>{error}
                     </div>
                 )}
 
-                { }
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-                    <h2 className="text-xl font-bold text-white mb-4">Generate New Invite</h2>
-                    <form onSubmit={handleGenerate} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                {/* Generate form */}
+                {showForm && (
+                    <div className="term-panel" style={{ padding: '18px 20px' }}>
+                        <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.12em', marginBottom: 14 }}>// NEW INVITE TOKEN</div>
+                        <form onSubmit={handleGenerate} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+                            <F label="ACCESS LEVEL">
+                                <select value={inviteType} onChange={e => setInviteType(e.target.value as 'user' | 'admin')} className="term-input">
+                                    <option value="user">user</option>
+                                    <option value="admin">admin</option>
+                                </select>
+                            </F>
+                            <F label="MAX USES  (0 = unlimited)">
+                                <input type="number" min="0" value={maxUses} onChange={e => setMaxUses(parseInt(e.target.value) || 0)} className="term-input" />
+                            </F>
+                            <F label="EXPIRES IN (hours)">
+                                <input type="number" value={expiresIn} onChange={e => setExpiresIn(parseInt(e.target.value))} className="term-input" />
+                            </F>
+                            <button type="submit" disabled={isGenerating} className="term-btn solid" style={{ alignSelf: 'end', whiteSpace: 'nowrap' }}>
+                                {isGenerating ? '...' : '▶ ISSUE TOKEN'}
+                            </button>
+                        </form>
+                    </div>
+                )}
 
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300">Max Uses (0 for unlimited)</label>
-                            <input
-                                type="number"
-                                min="0"
-                                value={maxUses}
-                                onChange={(e) => setMaxUses(parseInt(e.target.value) || 0)}
-                                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-gray-300">Expires In (Hours)</label>
-                            <input
-                                type="number"
-                                value={expiresIn}
-                                onChange={(e) => setExpiresIn(parseInt(e.target.value))}
-                                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
-                            />
-                        </div>
-                        <button
-                            type="submit"
-                            disabled={isGenerating}
-                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-                        >
-                            {isGenerating ? 'Generating...' : 'Generate Invite'}
-                        </button>
-                    </form>
-                </div>
-
-                { }
-                <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-700/50 text-gray-400 text-sm">
+                {/* Table */}
+                <div className="term-panel" style={{ overflow: 'hidden' }}>
+                    <table className="term-table">
+                        <thead>
                             <tr>
-                                <th className="p-4">Code</th>
-                                <th className="p-4">Type</th>
-                                <th className="p-4">Uses</th>
-                                <th className="p-4">Expires At</th>
-                                <th className="p-4">Status</th>
-                                <th className="p-4 text-right">Actions</th>
+                                <th>TOKEN CODE</th>
+                                <th>TYPE</th>
+                                <th>USES</th>
+                                <th>EXPIRES</th>
+                                <th>STATUS</th>
+                                <th style={{ textAlign: 'right' }}>ACTIONS</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-700">
+                        <tbody>
                             {isLoading ? (
-                                <tr>
-                                    <td colSpan={6} className="p-8 text-center text-gray-400">Loading invites...</td>
-                                </tr>
+                                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: 'var(--text-ghost)' }}>⟳ LOADING...</td></tr>
                             ) : invites.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="p-8 text-center text-gray-400">No invites found.</td>
-                                </tr>
+                                <tr><td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-ghost)' }}>no invite tokens found</td></tr>
                             ) : (
-                                invites.map((invite) => (
-                                    <tr key={invite.id} className="hover:bg-gray-700/30 transition-colors">
-                                        <td className="p-4 font-mono text-white">{invite.invite_code}</td>
-                                        <td className="p-4">
-                                            <span className={`px-2 py-1 rounded text-xs ${invite.invite_type === 'admin' ? 'bg-purple-900/30 text-purple-400' : 'bg-green-900/30 text-green-400'
-                                                }`}>
+                                invites.map(invite => (
+                                    <tr key={invite.id}>
+                                        <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text)', fontSize: '0.78rem' }}>{invite.invite_code}</td>
+                                        <td>
+                                            <span className={`term-badge ${invite.invite_type === 'admin' ? 'warn' : 'ok'}`}>
                                                 {invite.invite_type.toUpperCase()}
                                             </span>
                                         </td>
-                                        <td className="p-4 text-gray-300">
+                                        <td style={{ color: 'var(--text-dim)' }}>
                                             {invite.current_uses} / {invite.max_uses === -1 || invite.max_uses === 0 ? '∞' : invite.max_uses}
                                         </td>
-                                        <td className="p-4 text-gray-300">
-                                            {invite.expires_at ? new Date(invite.expires_at).toLocaleString() : 'Never'}
+                                        <td style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>
+                                            {invite.expires_at ? new Date(invite.expires_at).toLocaleString() : 'never'}
                                         </td>
-                                        <td className="p-4">
-                                            {invite.revoked ? (
-                                                <span className="text-red-400 text-sm">Revoked</span>
-                                            ) : (
-                                                <span className="text-green-400 text-sm">Active</span>
-                                            )}
+                                        <td>
+                                            <span className={`term-badge ${invite.revoked ? 'error' : 'ok'}`}>
+                                                {invite.revoked ? 'REVOKED' : 'ACTIVE'}
+                                            </span>
                                         </td>
-                                        <td className="p-4 text-right space-x-2">
+                                        <td style={{ textAlign: 'right' }}>
                                             {!invite.revoked && (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleShowQR(invite)}
-                                                        className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1"
-                                                    >
-                                                        <QrCode className="w-4 h-4" />
-                                                        Show QR
+                                                <span style={{ display: 'inline-flex', gap: 10 }}>
+                                                    <button onClick={() => handleShowQR(invite)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--cyan)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <QrCode size={13} /> QR
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleRevoke(invite.invite_code)}
-                                                        className="text-red-400 hover:text-red-300 text-sm flex items-center gap-1"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                        Revoke
+                                                    <button onClick={() => handleRevoke(invite.invite_code)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--red)', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <Trash2 size={13} /> REVOKE
                                                     </button>
-                                                </>
+                                                </span>
                                             )}
                                         </td>
                                     </tr>
@@ -202,33 +170,30 @@ export default function InvitesPage() {
                         </tbody>
                     </table>
                 </div>
-
-                { }
-                {qrCode && selectedInvite && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={closeQR}>
-                        <div className="bg-white rounded-xl p-8 max-w-sm w-full space-y-4 text-center" onClick={e => e.stopPropagation()}>
-                            <h3 className="text-xl font-bold text-gray-900">
-                                {selectedInvite.invite_type === 'admin' ? 'Admin Invite' : 'User Invite'}
-                            </h3>
-                            <div className="bg-white p-2 rounded-lg inline-block border-2 border-gray-100">
-                                <img src={qrCode} alt="Invite QR Code" className="w-64 h-64" />
-                            </div>
-                            <p className="font-mono text-lg font-bold text-gray-800 tracking-wider">
-                                {selectedInvite.invite_code}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                                Scan this code with the mobile app or admin panel setup page to join this server.
-                            </p>
-                            <button
-                                onClick={closeQR}
-                                className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg font-medium transition-colors"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                )}
             </div>
+
+            {/* QR Modal */}
+            {qrCode && selectedInvite && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 100, backdropFilter: 'blur(4px)',
+                }}>
+                    <div className="term-panel" style={{ padding: '28px', maxWidth: 360, width: '100%', textAlign: 'center' }}>
+                        <div style={{ marginBottom: 16, fontSize: '0.65rem', color: 'var(--text-ghost)', letterSpacing: '0.12em' }}>
+                            // INVITE QR CODE
+                        </div>
+                        <img src={qrCode} alt="QR" style={{ width: '100%', imageRendering: 'pixelated', border: '4px solid var(--bg-raised)' }} />
+                        <div style={{ margin: '14px 0 6px', fontSize: '0.75rem', color: 'var(--green)', fontFamily: 'var(--font-mono)' }}>
+                            {selectedInvite.invite_code}
+                        </div>
+                        <button onClick={() => { setQrCode(null); setSelectedInvite(null); }} className="term-btn" style={{ width: '100%', marginTop: 10 }}>
+                            <X size={12} /> CLOSE
+                        </button>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 }
+

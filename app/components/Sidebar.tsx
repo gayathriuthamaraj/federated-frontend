@@ -166,6 +166,57 @@ export default function Sidebar() {
 
             {}
             <div className="p-4 border-t border-bat-gray/10 bg-bat-dark/20">
+
+                {/* Social / fediverse quick-links */}
+                <div className={`flex mb-4 gap-2 ${expanded ? "justify-start px-1" : "justify-center"}`}>
+                    {/* Fediverse / ActivityPub */}
+                    <a
+                        href="https://joinmastodon.org"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Fediverse / Mastodon"
+                        className="p-1.5 rounded-md text-bat-gray/50 hover:text-bat-yellow hover:bg-bat-yellow/10 transition-all duration-200"
+                    >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                            <path d="M23.193 7.88c-.33-2.335-2.45-4.18-4.93-4.56-2.12-.33-4.25-.5-6.37-.5-2.12 0-4.25.17-6.37.5C3.04 3.71.92 5.55.6 7.88c-.26 1.84-.4 3.69-.4 5.54 0 1.85.14 3.7.4 5.54.33 2.35 2.45 4.18 4.93 4.56 2.12.33 4.25.5 6.37.5 2.12 0 4.25-.17 6.37-.5 2.48-.38 4.6-2.21 4.93-4.56.26-1.84.4-3.69.4-5.54 0-1.85-.14-3.7-.4-5.54zM12 16.97c-1.12 0-2.21-.08-3.27-.24-1.04-.16-1.97-.52-2.7-1.06-.73-.54-1.19-1.28-1.19-2.12 0-.83.46-1.58 1.19-2.12.73-.54 1.66-.9 2.7-1.06 1.06-.16 2.15-.24 3.27-.24 1.12 0 2.21.08 3.27.24 1.04.16 1.97.52 2.7 1.06.73.54 1.19 1.29 1.19 2.12 0 .84-.46 1.58-1.19 2.12-.73.54-1.66.9-2.7 1.06-1.06.16-2.15.24-3.27.24z"/>
+                        </svg>
+                    </a>
+                    {/* GitHub */}
+                    <a
+                        href="https://github.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="GitHub"
+                        className="p-1.5 rounded-md text-bat-gray/50 hover:text-bat-yellow hover:bg-bat-yellow/10 transition-all duration-200"
+                    >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                        </svg>
+                    </a>
+                    {/* X / Twitter */}
+                    <a
+                        href="https://x.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="X (Twitter)"
+                        className="p-1.5 rounded-md text-bat-gray/50 hover:text-bat-yellow hover:bg-bat-yellow/10 transition-all duration-200"
+                    >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                    </a>
+                    {/* RSS / Feed */}
+                    <a
+                        href="/feed"
+                        title="Your feed"
+                        className="p-1.5 rounded-md text-bat-gray/50 hover:text-bat-yellow hover:bg-bat-yellow/10 transition-all duration-200"
+                    >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                            <path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19.01 7.38 20 6.18 20C4.98 20 4 19.01 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1z"/>
+                        </svg>
+                    </a>
+                </div>
+
                 {!identity ? (
                     <div className={`flex flex-col gap-3 ${!expanded ? "items-center" : ""}`}>
                         <Link
