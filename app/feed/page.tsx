@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import PostCard from '../components/PostCard';
+import RightPanel from '../components/RightPanel';
 
 export default function FeedPage() {
     const { identity, isLoading: authLoading } = useAuth();
@@ -96,110 +97,91 @@ export default function FeedPage() {
         }
     };
 
-    if (authLoading || !identity) {
-        return (
-            <div className="max-w-3xl mx-auto p-6 space-y-4">
-                {[...Array(4)].map((_, i) => (
-                    <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
-                ))}
-            </div>
-        );
-    }
-
-    if (loading) {
-        return (
-            <div className="max-w-3xl mx-auto p-6 space-y-4">
+    const Skeleton = () => (
+        <div className="flex min-h-full">
+            <div className="flex-1 min-w-0 max-w-165 border-r border-bat-dark/40 px-4 py-4 space-y-4">
                 {[...Array(5)].map((_, i) => (
                     <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
                 ))}
             </div>
-        );
-    }
+            <div className="hidden xl:block w-90 shrink-0 px-6 py-4">
+                <div className="skeleton h-48 rounded-2xl" />
+            </div>
+        </div>
+    );
+
+    if (authLoading || !identity) return <Skeleton />;
+    if (loading) return <Skeleton />;
 
     if (error) {
         return (
-            <div className="max-w-3xl mx-auto p-6">
-                <div className="bg-red-900/20 border border-red-500/50 rounded-lg p-4 text-red-400">
-                    <p className="font-bold">Error loading feed</p>
-                    <p className="text-sm mt-1">{error}</p>
+            <div className="flex min-h-full">
+                <div className="flex-1 min-w-0 max-w-165 border-r border-bat-dark/40 px-4 py-6">
+                    <div className="bg-red-900/20 border border-red-500/40 rounded-xl p-4 text-red-400">
+                        <p className="font-bold">Error loading feed</p>
+                        <p className="text-sm mt-1">{error}</p>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="max-w-3xl mx-auto p-6">
-            {}
-            <div className="mb-6">
-                <h1 className="text-3xl font-bold text-bat-gray mb-2">Feed</h1>
-                <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
+        <div className="flex min-h-full">
+            {/* â”€â”€ Center column â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            <div className="flex-1 min-w-0 max-w-165 border-r border-bat-dark/40">
+                {/* Sticky header */}
+                <div className="sticky top-0 z-10 backdrop-blur-md bg-bat-black/85 border-b border-bat-dark/50 px-4 py-3">
+                    <h1 className="font-bold text-[1.05rem] text-gray-100 tracking-tight">Home</h1>
+                </div>
+
+                {/* Compose box */}
+                <div className="px-4 py-3 border-b border-bat-dark/40">
+                    <div className="flex gap-3">
+                        <div className="w-10 h-10 rounded-full bg-bat-yellow/15 border border-bat-yellow/20 flex items-center justify-center text-bat-yellow font-bold text-lg shrink-0">
+                            {identity.user_id.split('@')[0][0].toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                            <textarea
+                                placeholder="What's happening in Gotham?"
+                                className="w-full bg-transparent text-gray-100 text-[16px] placeholder-bat-gray/25 outline-none resize-none py-1 leading-relaxed"
+                                rows={2}
+                                value={newPostContent}
+                                onChange={e => setNewPostContent(e.target.value)}
+                                disabled={posting}
+                            />
+                            <div className="flex justify-end mt-1">
+                                <button
+                                    onClick={handleCreatePost}
+                                    disabled={posting || !newPostContent.trim()}
+                                    className="px-5 py-1.5 rounded-full font-bold bg-bat-yellow text-bat-black text-sm hover:bg-yellow-400 active:scale-95 transition-all duration-150 disabled:opacity-40 shadow-[0_0_12px_rgba(245,197,24,0.2)]"
+                                >
+                                    {posting ? 'Posting...' : 'Post'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Feed posts */}
+                {posts.length === 0 ? (
+                    <div className="text-center py-16 text-bat-gray/40 animate-fade-up">
+                        <p className="text-base">No posts yet</p>
+                        <p className="text-sm mt-1">Follow some users to see their posts here.</p>
+                    </div>
+                ) : (
+                    <div className="animate-fade-up">
+                        {posts.map(post => <PostCard key={post.id} post={post} />)}
+                    </div>
+                )}
             </div>
 
-            {}
-            <div className="mb-6 p-4 bg-bat-dark rounded-lg border border-bat-gray/10">
-                <textarea
-                    placeholder="What's happening in Gotham?"
-                    className="
-              w-full px-4 py-3 rounded-lg
-              bg-bat-black text-white
-              border border-bat-gray/20
-              focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
-              outline-none transition-all duration-200
-              placeholder-gray-600
-              resize-none
-            "
-                    rows={3}
-                    value={newPostContent}
-                    onChange={(e) => setNewPostContent(e.target.value)}
-                    disabled={posting}
-                />
-                <div className="flex justify-end mt-3">
-                    <button
-                        className="
-              px-6 py-2 rounded-full font-bold
-              bg-bat-yellow text-bat-black
-              hover:bg-yellow-400
-              transform active:scale-95
-              transition-all duration-200
-              shadow-[0_0_15px_rgba(245,197,24,0.3)]
-              disabled:opacity-50 disabled:cursor-not-allowed
-            "
-                        onClick={handleCreatePost}
-                        disabled={posting || !newPostContent.trim()}
-                    >
-                        {posting ? 'Posting...' : 'Post'}
-                    </button>
+            {/* â”€â”€ Right panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            <div className="hidden xl:block w-90 shrink-0 px-6 py-4">
+                <div className="sticky top-4">
+                    <RightPanel />
                 </div>
             </div>
-
-            {}
-            {posts.length === 0 ? (
-                <div className="text-center py-12 text-bat-gray animate-fade-up">
-                    <p className="text-lg">No posts yet</p>
-                    <p className="text-sm mt-2">Follow some users to see their posts here!</p>
-                </div>
-            ) : (
-                <div className="space-y-4 animate-fade-up">
-                    {posts.map(post => (
-                        <PostCard key={post.id} post={post} />
-                    ))}
-                </div>
-            )}
-
-            {}
-            {posts.length >= 20 && (
-                <div className="mt-6 text-center">
-                    <button className="
-            px-6 py-3 rounded-full font-bold
-            bg-bat-dark text-bat-gray
-            border border-bat-gray/20
-            hover:border-bat-yellow/50
-            transition-all duration-200
-          ">
-                        Load More Posts
-                    </button>
-                </div>
-            )}
         </div>
     );
 }
