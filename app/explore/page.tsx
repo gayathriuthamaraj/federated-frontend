@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { apiGet } from '../utils/api';
 import PostCard from '../components/PostCard';
 import UserCard from '../components/UserCard';
 
@@ -10,8 +11,8 @@ export default function ExplorePage() {
     const { identity, isLoading: authLoading } = useAuth();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'posts' | 'users'>('posts');
-    const [posts, setPosts] = useState([]);
-    const [users, setUsers] = useState([]);
+    const [posts, setPosts] = useState<any[]>([]);
+    const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -28,20 +29,16 @@ export default function ExplorePage() {
                 setLoading(true);
 
                 if (activeTab === 'posts') {
-                    // Fetch recent posts from all users
-                    const res = await fetch(
-                        `${identity.home_server}/posts/recent?limit=20`
-                    );
+                    
+                    const res = await apiGet('/posts/recent?limit=20');
 
                     if (res.ok) {
                         const data = await res.json();
                         setPosts(data.posts || []);
                     }
                 } else {
-                    // Fetch suggested users
-                    const res = await fetch(
-                        `${identity.home_server}/users/suggested?user_id=${encodeURIComponent(identity.user_id)}&limit=20`
-                    );
+                    
+                    const res = await apiGet('/users/suggested?limit=20');
 
                     if (res.ok) {
                         const data = await res.json();
@@ -60,59 +57,55 @@ export default function ExplorePage() {
 
     if (authLoading) {
         return (
-            <div className="max-w-3xl mx-auto p-6">
-                <div className="text-center text-bat-gray">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
-                    <p className="mt-2">Loading...</p>
-                </div>
+            <div className="max-w-3xl mx-auto p-6 space-y-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
+                ))}
             </div>
         );
     }
 
     return (
         <div className="max-w-3xl mx-auto p-6">
-            {/* Header */}
+            {}
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-bat-gray mb-2">Explore</h1>
                 <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
             </div>
 
-            {/* Tabs */}
+            {}
             <div className="flex gap-4 mb-6 border-b border-bat-gray/20">
                 <button
                     onClick={() => setActiveTab('posts')}
-                    className={`pb-3 px-4 font-bold transition-colors relative ${activeTab === 'posts'
-                            ? 'text-bat-yellow'
-                            : 'text-bat-gray hover:text-bat-gray/80'
+                    className={`pb-3 px-4 font-bold transition-all duration-200 relative ${activeTab === 'posts'
+                        ? 'text-bat-yellow'
+                        : 'text-bat-gray hover:text-bat-gray/80'
                         }`}
                 >
                     Posts
-                    {activeTab === 'posts' && (
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-bat-yellow rounded-t"></div>
-                    )}
+                    <div className={`absolute bottom-0 left-0 right-0 h-0.75 rounded-t transition-all duration-300 ${activeTab === 'posts' ? 'bg-bat-yellow opacity-100 scale-x-100' : 'bg-bat-yellow opacity-0 scale-x-0'}`} />
                 </button>
                 <button
                     onClick={() => setActiveTab('users')}
-                    className={`pb-3 px-4 font-bold transition-colors relative ${activeTab === 'users'
-                            ? 'text-bat-yellow'
-                            : 'text-bat-gray hover:text-bat-gray/80'
+                    className={`pb-3 px-4 font-bold transition-all duration-200 relative ${activeTab === 'users'
+                        ? 'text-bat-yellow'
+                        : 'text-bat-gray hover:text-bat-gray/80'
                         }`}
                 >
                     Users
-                    {activeTab === 'users' && (
-                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-bat-yellow rounded-t"></div>
-                    )}
+                    <div className={`absolute bottom-0 left-0 right-0 h-0.75 rounded-t transition-all duration-300 ${activeTab === 'users' ? 'bg-bat-yellow opacity-100 scale-x-100' : 'bg-bat-yellow opacity-0 scale-x-0'}`} />
                 </button>
             </div>
 
-            {/* Content */}
+            {}
             {loading ? (
-                <div className="text-center py-12 text-bat-gray">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
-                    <p className="mt-2">Loading...</p>
+                <div className="space-y-4">
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
+                    ))}
                 </div>
             ) : (
-                <>
+                <div className="animate-fade-up">
                     {activeTab === 'posts' ? (
                         posts.length === 0 ? (
                             <div className="text-center py-12 text-bat-gray">
@@ -142,7 +135,7 @@ export default function ExplorePage() {
                             </div>
                         )
                     )}
-                </>
+                </div>
             )}
         </div>
     );

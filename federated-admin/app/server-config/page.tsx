@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { getServerConfig, updateServerName, ServerConfig } from '../api/admin';
-import { AlertTriangle } from 'lucide-react';
+import { Save, AlertTriangle, X } from 'lucide-react';
 
 export default function ServerConfigPage() {
     const router = useRouter();
@@ -18,11 +18,7 @@ export default function ServerConfigPage() {
 
     useEffect(() => {
         const token = localStorage.getItem('admin_token');
-        if (!token) {
-            router.push('/login');
-            return;
-        }
-
+        if (!token) { router.push('/login'); return; }
         loadConfig();
     }, [router]);
 
@@ -33,167 +29,140 @@ export default function ServerConfigPage() {
             setNewServerName(data.server_name);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load config');
-            if (err instanceof Error && err.message.includes('authenticated')) {
-                router.push('/login');
-            }
+            if (err instanceof Error && err.message.includes('authenticated')) router.push('/login');
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleSave = async () => {
-        if (!newServerName.trim()) {
-            setError('Server name cannot be empty');
-            return;
-        }
-
-        setIsSaving(true);
-        setError('');
-        setSuccess('');
-
+        if (!newServerName.trim()) { setError('Server name cannot be empty'); return; }
+        setIsSaving(true); setError(''); setSuccess('');
         try {
             await updateServerName(newServerName);
-            setSuccess('Server name updated successfully! All users have been notified.');
+            setSuccess('Server name updated — all users notified.');
             setShowConfirmation(false);
             loadConfig();
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update server name');
-        } finally {
-            setIsSaving(false);
-        }
+            setError(err instanceof Error ? err.message : 'Failed to update');
+        } finally { setIsSaving(false); }
     };
 
-    if (isLoading) {
-        return (
-            <AdminLayout>
-                <div className="flex items-center justify-center h-64">
-                    <div className="text-gray-400">Loading configuration...</div>
-                </div>
-            </AdminLayout>
-        );
-    }
+    const ROW = ({ label, value }: { label: string; value: string }) => (
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ color: 'var(--text-ghost)', fontSize: '0.7rem', letterSpacing: '0.08em' }}>{label}</span>
+            <span style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', fontSize: '0.75rem' }}>{value}</span>
+        </div>
+    );
+
+    if (isLoading) return (
+        <AdminLayout>
+            <div style={{ color: 'var(--text-ghost)', display: 'flex', gap: 10, padding: '40px 0' }}>
+                <span style={{ color: 'var(--green)' }}>⟳</span> LOADING CONFIG...
+            </div>
+        </AdminLayout>
+    );
 
     return (
         <AdminLayout>
-            <div className="max-w-3xl space-y-6">
+            <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* Header */}
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Server Configuration</h1>
-                    <p className="text-gray-400">Manage your server name and notify all users</p>
+                    <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.15em', marginBottom: 4 }}>// NODE CONFIGURATION</div>
+                    <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--green)', letterSpacing: '0.1em', textShadow: '0 0 8px var(--green-glow)' }}>SERVER CONFIG</h1>
                 </div>
 
                 {error && (
-                    <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-lg">
-                        <p className="text-red-400">{error}</p>
+                    <div style={{ padding: '8px 12px', background: 'rgba(255,23,68,0.06)', border: '1px solid var(--red-dim)', fontSize: '0.75rem', color: 'var(--red)' }}>
+                        <span style={{ opacity: 0.5 }}>ERR &gt; </span>{error}
                     </div>
                 )}
-
                 {success && (
-                    <div className="p-4 bg-green-900/20 border border-green-500/50 rounded-lg">
-                        <p className="text-green-400">{success}</p>
+                    <div style={{ padding: '8px 12px', background: 'var(--green-faint)', border: '1px solid var(--green-dim)', fontSize: '0.75rem', color: 'var(--green)' }}>
+                        <span style={{ opacity: 0.5 }}>OK &gt; </span>{success}
                     </div>
                 )}
 
                 {config && (
-                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-6">
-                        <div>
-                            <h2 className="text-xl font-bold text-white mb-4">Current Configuration</h2>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center pb-3 border-b border-gray-700">
-                                    <span className="text-gray-400">Server Name:</span>
-                                    <span className="text-white font-mono">{config.server_name}</span>
-                                </div>
-                                <div className="flex justify-between items-center pb-3 border-b border-gray-700">
-                                    <span className="text-gray-400">Last Updated:</span>
-                                    <span className="text-white">{new Date(config.updated_at).toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between items-center">
-                                    <span className="text-gray-400">Updated By:</span>
-                                    <span className="text-white">{config.updated_by}</span>
-                                </div>
-                            </div>
+                    <>
+                        {/* Current config */}
+                        <div className="term-panel" style={{ padding: '18px 20px' }}>
+                            <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.12em', marginBottom: 12 }}>// CURRENT STATE</div>
+                            <ROW label="SERVER NAME" value={config.server_name} />
+                            <ROW label="LAST UPDATED" value={new Date(config.updated_at).toLocaleString()} />
+                            <ROW label="UPDATED BY" value={config.updated_by} />
                         </div>
 
-                        <div className="border-t border-gray-700 pt-6">
-                            <h2 className="text-xl font-bold text-white mb-4">Update Server Name</h2>
+                        {/* Update section */}
+                        <div className="term-panel" style={{ padding: '18px 20px' }}>
+                            <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.12em', marginBottom: 14 }}>// RENAME NODE</div>
 
-                            <div className="space-y-4">
-                                <div>
-                                    <label htmlFor="serverName" className="block text-sm font-medium text-gray-300 mb-2">
-                                        New Server Name
-                                    </label>
+                            <div style={{ marginBottom: 12 }}>
+                                <label style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-ghost)', letterSpacing: '0.1em', marginBottom: 6 }}>NEW SERVER NAME</label>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <span style={{ position: 'absolute', left: 10, color: 'var(--green)', fontSize: '0.8rem', pointerEvents: 'none' }}>$</span>
                                     <input
-                                        type="text"
-                                        id="serverName"
+                                        id="serverName" type="text"
                                         value={newServerName}
-                                        onChange={(e) => setNewServerName(e.target.value)}
-                                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-colors"
-                                        placeholder="e.g., myserver.com or localhost"
+                                        onChange={e => setNewServerName(e.target.value)}
+                                        className="term-input" style={{ paddingLeft: 26 }}
+                                        placeholder="e.g. myserver.example.com"
                                     />
                                 </div>
-
-                                <div className="bg-blue-900/20 border border-blue-500/50 rounded-lg p-4">
-                                    <h3 className="text-sm font-bold text-blue-400 mb-2">Preview</h3>
-                                    <p className="text-gray-300">Usernames will be displayed as:</p>
-                                    <p className="text-white font-mono mt-1">
-                                        username@{newServerName || '...'}
-                                    </p>
-                                </div>
-
-                                <div className="bg-yellow-900/20 border border-yellow-500/50 rounded-lg p-4">
-                                    <div className="flex items-center gap-2 text-yellow-400 font-bold mb-2">
-                                        <AlertTriangle className="w-5 h-5" />
-                                        <span>Important</span>
-                                    </div>
-                                    <p className="text-yellow-300 text-sm">
-                                        All users will receive a notification about this change.
-                                    </p>
-                                </div>
-
-                                <button
-                                    onClick={() => setShowConfirmation(true)}
-                                    disabled={isSaving || newServerName === config.server_name}
-                                    className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-colors"
-                                >
-                                    {isSaving ? 'Saving...' : 'Update Server Name'}
-                                </button>
                             </div>
-                        </div>
-                    </div>
-                )}
 
-                {/* Confirmation Modal */}
-                {showConfirmation && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 max-w-md w-full">
-                            <h3 className="text-xl font-bold text-white mb-4">Confirm Server Name Change</h3>
-                            <p className="text-gray-300 mb-2">
-                                Are you sure you want to change the server name to:
-                            </p>
-                            <p className="text-white font-mono text-lg mb-4 p-3 bg-gray-700 rounded">
-                                {newServerName}
-                            </p>
-                            <p className="text-yellow-400 text-sm mb-6">
-                                All users will be notified of this change.
-                            </p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setShowConfirmation(false)}
-                                    className="flex-1 py-2 px-4 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={isSaving}
-                                    className="flex-1 py-2 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold rounded-lg transition-colors"
-                                >
-                                    {isSaving ? 'Updating...' : 'Confirm'}
-                                </button>
+                            {/* Preview */}
+                            <div style={{ padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--border-lit)', marginBottom: 12, fontSize: '0.75rem' }}>
+                                <span style={{ color: 'var(--text-ghost)', fontSize: '0.65rem' }}>PREVIEW &gt; </span>
+                                <span style={{ color: 'var(--cyan)', fontFamily: 'var(--font-mono)' }}>username@{newServerName || '...'}</span>
                             </div>
+
+                            {/* Warning */}
+                            <div style={{ display: 'flex', gap: 8, padding: '8px 12px', background: 'rgba(255,171,0,0.06)', border: '1px solid var(--amber)', marginBottom: 14, fontSize: '0.72rem', color: 'var(--amber)' }}>
+                                <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 1 }} />
+                                All users will receive a notification about this name change.
+                            </div>
+
+                            <button
+                                onClick={() => setShowConfirmation(true)}
+                                disabled={isSaving || newServerName === config.server_name}
+                                className="term-btn solid"
+                                style={{ width: '100%', padding: '10px', letterSpacing: '0.08em' }}
+                            >
+                                <Save size={13} />
+                                {isSaving ? 'SAVING...' : 'APPLY CHANGES'}
+                            </button>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
+
+            {/* Confirm modal */}
+            {showConfirmation && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 100, backdropFilter: 'blur(4px)',
+                }}>
+                    <div className="term-panel" style={{ padding: '28px', maxWidth: 420, width: '100%' }}>
+                        <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.12em', marginBottom: 16 }}>// CONFIRM RENAME</div>
+                        <div style={{ marginBottom: 12, fontSize: '0.8rem', color: 'var(--text-dim)' }}>Rename node to:</div>
+                        <div style={{ padding: '10px 14px', background: 'var(--bg)', border: '1px solid var(--green-dim)', marginBottom: 14, fontFamily: 'var(--font-mono)', color: 'var(--green)', fontSize: '0.9rem' }}>
+                            {newServerName}
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--amber)', marginBottom: 20 }}>All users will be notified of this change.</div>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button onClick={() => setShowConfirmation(false)} className="term-btn" style={{ flex: 1 }}>
+                                <X size={12} /> CANCEL
+                            </button>
+                            <button onClick={handleSave} disabled={isSaving} className="term-btn solid" style={{ flex: 1 }}>
+                                {isSaving ? '...' : '▶ CONFIRM'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 }

@@ -11,8 +11,9 @@ export async function GET(req: Request) {
         )
     }
 
+    const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
     const res = await fetch(
-        `http://localhost:8082/user/search?user_id=${encodeURIComponent(userId)}`
+        `${API_BASE}/user/search?user_id=${encodeURIComponent(userId)}`
     )
 
     if (!res.ok) {
@@ -24,7 +25,6 @@ export async function GET(req: Request) {
 
     const userDocument = await res.json()
 
-    // 🛑 Hard safety check
     if (!userDocument.profile) {
         return NextResponse.json(
             { error: 'profile missing' },
@@ -32,13 +32,7 @@ export async function GET(req: Request) {
         )
     }
 
-    /**
-     * IMPORTANT:
-     * Identity is intentionally NOT exposed to UI components.
-     * It will be used later for encryption / verification only.
-     */
     return NextResponse.json({
         profile: userDocument.profile,
     })
 }
-

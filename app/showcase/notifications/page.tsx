@@ -51,13 +51,13 @@ export default function NotificationsPage() {
 
     return (
         <div className=" max-w-3xl mx-auto p-6">
-                {/* Header */}
+                {}
                 <div className="mb-6">
                     <h1 className="text-3xl font-bold text-bat-gray mb-2">Notifications</h1>
                     <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
                 </div>
 
-                {/* Notifications List */}
+                {}
                 <div className="space-y-2">
                     {mockNotifications.map(notification => (
                         <div
@@ -72,19 +72,19 @@ export default function NotificationsPage() {
                 hover:border-bat-yellow/50 cursor-pointer
               `}
                         >
-                            {/* Icon */}
+                            {}
                             <div className="flex-shrink-0 mt-1">
                                 {getNotificationIcon(notification.type)}
                             </div>
 
-                            {/* Avatar */}
+                            {}
                             <img
                                 src={notification.user.avatarUrl}
                                 alt={notification.user.displayName}
                                 className="w-10 h-10 rounded-full border-2 border-bat-yellow/50"
                             />
 
-                            {/* Content */}
+                            {}
                             <div className="flex-1 min-w-0">
                                 <p className="text-bat-gray">
                                     <span className="font-bold">{notification.user.displayName}</span>
@@ -99,7 +99,7 @@ export default function NotificationsPage() {
                                 )}
                             </div>
 
-                            {/* Unread Indicator */}
+                            {}
                             {!notification.isRead && (
                                 <div className="w-2 h-2 bg-bat-yellow rounded-full flex-shrink-0 mt-2"></div>
                             )}
@@ -107,7 +107,7 @@ export default function NotificationsPage() {
                     ))}
                 </div>
 
-                {/* Empty State */}
+                {}
                 {mockNotifications.length === 0 && (
                     <div className="text-center py-12">
                         <p className="text-gray-500 text-lg">No notifications yet</p>

@@ -1,17 +1,17 @@
-// Helper to get API base URL from pinned server
+
 function getApiBaseUrl(): string {
-    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
     const trustedServer = localStorage.getItem('trusted_server');
     if (trustedServer) {
         try {
             const data = JSON.parse(trustedServer);
-            return data.server_url || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+            return data.server_url || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
         } catch (e) {
-            return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+            return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
         }
     }
-    return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8082';
+    return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 }
 
 export interface AdminLoginData {
@@ -46,13 +46,13 @@ export interface ServerStats {
     uptime: string;
 }
 
-// Get authentication token from localStorage
+
 function getAuthToken(): string | null {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('admin_token');
 }
 
-// Admin login
+
 export async function adminLogin(data: AdminLoginData): Promise<{ token: string; message: string }> {
     const response = await fetch(`${getApiBaseUrl()}/admin/login`, {
         method: 'POST',
@@ -70,7 +70,7 @@ export async function adminLogin(data: AdminLoginData): Promise<{ token: string;
     return response.json();
 }
 
-// Get server configuration
+
 export async function getServerConfig(): Promise<ServerConfig> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
@@ -88,7 +88,7 @@ export async function getServerConfig(): Promise<ServerConfig> {
     return response.json();
 }
 
-// Update server name
+
 export async function updateServerName(serverName: string): Promise<{ message: string; server_name: string }> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
@@ -110,7 +110,7 @@ export async function updateServerName(serverName: string): Promise<{ message: s
     return response.json();
 }
 
-// Test database connection
+
 export async function testDatabaseConnection(connectionString: string): Promise<{ status: string; message: string }> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
@@ -124,11 +124,17 @@ export async function testDatabaseConnection(connectionString: string): Promise<
         body: JSON.stringify({ connection_string: connectionString }),
     });
 
+    if (!response.ok) {
+        const text = await response.text();
+        let errorMsg = 'Database connection test failed';
+        try { errorMsg = JSON.parse(text).error || text || errorMsg; } catch { errorMsg = text || errorMsg; }
+        throw new Error(errorMsg);
+    }
     const data = await response.json();
     return data;
 }
 
-// Start database migration
+
 export async function startDatabaseMigration(connectionString: string): Promise<{ migration_id: string; status: string; message: string }> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
@@ -150,7 +156,7 @@ export async function startDatabaseMigration(connectionString: string): Promise<
     return response.json();
 }
 
-// Get migration status
+
 export async function getMigrationStatus(migrationId: string): Promise<MigrationStatus> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
@@ -168,7 +174,7 @@ export async function getMigrationStatus(migrationId: string): Promise<Migration
     return response.json();
 }
 
-// Get all users
+
 export async function getAllUsers(): Promise<{ users: any[]; count: number }> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
@@ -186,7 +192,7 @@ export async function getAllUsers(): Promise<{ users: any[]; count: number }> {
     return response.json();
 }
 
-// Get server statistics
+
 export async function getServerStats(): Promise<ServerStats> {
     const token = getAuthToken();
     if (!token) throw new Error('Not authenticated');
@@ -204,9 +210,9 @@ export async function getServerStats(): Promise<ServerStats> {
     return response.json();
 }
 
-// ============================================================================
-// Invite Management
-// ============================================================================
+
+
+
 
 export interface Invite {
     id: string;

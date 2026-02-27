@@ -1,4 +1,4 @@
-// icons/menu_svg.tsx
+
 export default function MenuSvg() {
   return (
     <svg

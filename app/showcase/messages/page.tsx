@@ -10,7 +10,7 @@ export default function MessagesPage() {
 
     return (
         <div className="flex h-full">
-            {/* Chat List */}
+            {}
             <div className="w-80 border-r border-bat-gray/10 bg-bat-dark">
                 <div className="p-4 border-b border-bat-gray/10">
                     <h1 className="text-2xl font-bold text-bat-gray">Messages</h1>
@@ -54,11 +54,11 @@ export default function MessagesPage() {
                 </div>
             </div>
 
-            {/* Chat Area */}
+            {}
             <div className="flex-1 flex flex-col">
                 {selectedMessage ? (
                     <>
-                        {/* Chat Header */}
+                        {}
                         <div className="p-4 border-b border-bat-gray/10 bg-bat-dark flex items-center gap-3">
                             <img
                                 src={selectedMessage.user.avatarUrl}
@@ -71,10 +71,10 @@ export default function MessagesPage() {
                             </div>
                         </div>
 
-                        {/* Messages */}
+                        {}
                         <div className="flex-1 p-6 overflow-y-auto">
                             <div className="space-y-4">
-                                {/* Sample messages */}
+                                {}
                                 <div className="flex justify-end">
                                     <div className="bg-bat-yellow text-bat-black px-4 py-2 rounded-lg max-w-xs">
                                         Hey! How's it going?
@@ -88,7 +88,7 @@ export default function MessagesPage() {
                             </div>
                         </div>
 
-                        {/* Input */}
+                        {}
                         <div className="p-4 border-t border-bat-gray/10 bg-bat-dark">
                             <div className="flex gap-2">
                                 <input

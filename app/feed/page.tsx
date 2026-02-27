@@ -14,14 +14,14 @@ export default function FeedPage() {
     const [newPostContent, setNewPostContent] = useState('');
     const [posting, setPosting] = useState(false);
 
-    // Redirect to login if not authenticated
+    
     useEffect(() => {
         if (!authLoading && !identity) {
             router.push('/login');
         }
     }, [identity, authLoading, router]);
 
-    // Fetch feed
+    
     useEffect(() => {
         async function fetchFeed() {
             if (!identity) {
@@ -51,7 +51,7 @@ export default function FeedPage() {
         if (identity) fetchFeed();
     }, [identity]);
 
-    // Handle post creation
+    
     const handleCreatePost = async () => {
         if (!newPostContent.trim() || !identity) return;
 
@@ -72,7 +72,7 @@ export default function FeedPage() {
 
             const data = await res.json();
 
-            // Add new post to the top of the feed
+            
             const newPost = {
                 id: data.post_id,
                 author: identity.user_id,
@@ -98,22 +98,20 @@ export default function FeedPage() {
 
     if (authLoading || !identity) {
         return (
-            <div className="max-w-3xl mx-auto p-6">
-                <div className="text-center text-bat-gray">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
-                    <p className="mt-2">Loading...</p>
-                </div>
+            <div className="max-w-3xl mx-auto p-6 space-y-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
+                ))}
             </div>
         );
     }
 
     if (loading) {
         return (
-            <div className="max-w-3xl mx-auto p-6">
-                <div className="text-center text-bat-gray">
-                    <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-bat-yellow"></div>
-                    <p className="mt-2">Loading feed...</p>
-                </div>
+            <div className="max-w-3xl mx-auto p-6 space-y-4">
+                {[...Array(5)].map((_, i) => (
+                    <div key={i} className="skeleton h-24 rounded-xl" style={{ animationDelay: `${i * 80}ms` }} />
+                ))}
             </div>
         );
     }
@@ -131,13 +129,13 @@ export default function FeedPage() {
 
     return (
         <div className="max-w-3xl mx-auto p-6">
-            {/* Header */}
+            {}
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-bat-gray mb-2">Feed</h1>
                 <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
             </div>
 
-            {/* Compose Box */}
+            {}
             <div className="mb-6 p-4 bg-bat-dark rounded-lg border border-bat-gray/10">
                 <textarea
                     placeholder="What's happening in Gotham?"
@@ -174,21 +172,21 @@ export default function FeedPage() {
                 </div>
             </div>
 
-            {/* Posts Feed */}
+            {}
             {posts.length === 0 ? (
-                <div className="text-center py-12 text-bat-gray">
+                <div className="text-center py-12 text-bat-gray animate-fade-up">
                     <p className="text-lg">No posts yet</p>
                     <p className="text-sm mt-2">Follow some users to see their posts here!</p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 animate-fade-up">
                     {posts.map(post => (
                         <PostCard key={post.id} post={post} />
                     ))}
                 </div>
             )}
 
-            {/* Load More */}
+            {}
             {posts.length >= 20 && (
                 <div className="mt-6 text-center">
                     <button className="

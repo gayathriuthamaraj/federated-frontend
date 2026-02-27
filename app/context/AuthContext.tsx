@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { apiPost } from '../utils/api';
 import { useRouter, usePathname } from "next/navigation";
 
 export interface LocalIdentity {
@@ -11,9 +12,11 @@ export interface LocalIdentity {
 interface AuthContextType {
     identity: LocalIdentity | null;
     isLoading: boolean;
-    login: (userId: string, homeServer: string) => void;
-    loginWithoutRedirect: (userId: string, homeServer: string) => void;
-    logout: () => void;
+    login: (userId: string, homeServer: string, accessToken: string, refreshToken: string) => void;
+    loginWithoutRedirect: (userId: string, homeServer: string, accessToken: string, refreshToken: string) => void;
+    logout: () => Promise<void>;
+    getAuthHeaders: () => HeadersInit;
+    refreshAccessToken: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,20 +28,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
 
     useEffect(() => {
-        // Load identity from localStorage
+
+        // One-time fix: correct any previously-stored wrong hostnames/ports
+        // Covers: Docker-internal container names, old wrong ports
+        ['local_identity', 'trusted_server'].forEach((key) => {
+            const raw = localStorage.getItem(key);
+            if (!raw) return;
+            const fixed = raw
+                // Docker-internal container hostnames → public localhost URLs
+                .replace(/http:\/\/server[_-]a[_-]identity:\d+/g, 'http://localhost:8080')
+                .replace(/http:\/\/server[_-]b[_-]identity:\d+/g, 'http://localhost:9080')
+                // Old wrong default port (pre-docker-compose fix)
+                .replace('localhost:8082', 'localhost:8080')
+                .replace('localhost:9082', 'localhost:9080');
+            if (fixed !== raw) localStorage.setItem(key, fixed);
+        });
+
         const storedIdentity = localStorage.getItem("local_identity");
         if (storedIdentity) {
             try {
                 const parsed = JSON.parse(storedIdentity);
-                // Auto-fix legacy port 8080
-                if (parsed.home_server && parsed.home_server.includes(":8080")) {
-                    parsed.home_server = parsed.home_server.replace(":8080", ":8082");
-                    localStorage.setItem("local_identity", JSON.stringify(parsed));
-                }
                 setIdentity(parsed);
             } catch (e) {
                 console.error("Failed to parse identity", e);
                 localStorage.removeItem("local_identity");
+                localStorage.removeItem("access_token");
+                localStorage.removeItem("refresh_token");
             }
         }
         setIsLoading(false);
@@ -56,51 +71,106 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const isPublicShowcase = publicShowcaseRoutes.includes(pathname) || pathname.startsWith("/showcase");
         const isPublicRoute = isUnauthenticatedOnly || isAuthenticatedRoute || isPublicShowcase;
 
-        // Check if we're showing recovery key (don't redirect)
+
         const showingRecoveryKey = sessionStorage.getItem('showing_recovery_key') === 'true';
 
         if (!identity && !isPublicRoute) {
-            // Not logged in and trying to access protected route -> go to login
+
             router.push("/login");
         } else if (identity && isUnauthenticatedOnly && !showingRecoveryKey) {
-            // Logged in and visiting login/register -> go to profile
-            // BUT: don't redirect if we're showing the recovery key
-            router.push("/profile");
+            
+            
+            router.push("/feed");
         }
     }, [identity, isLoading, pathname, router]);
 
+    const login = (userId: string, homeServer: string, accessToken: string, refreshToken: string) => {
 
-
-    const login = (userId: string, homeServer: string) => {
-        // Auto-fix legacy port 8080 coming from backend
-        if (homeServer && homeServer.includes(":8080")) {
-            homeServer = homeServer.replace(":8080", ":8082");
-        }
         const newIdentity = { user_id: userId, home_server: homeServer };
         setIdentity(newIdentity);
         localStorage.setItem("local_identity", JSON.stringify(newIdentity));
-        router.push("/profile");
+        localStorage.setItem("access_token", accessToken);
+        localStorage.setItem("refresh_token", refreshToken);
+        router.push("/feed");
     };
 
-    const loginWithoutRedirect = (userId: string, homeServer: string) => {
-        // Auto-fix legacy port 8080 coming from backend
-        if (homeServer && homeServer.includes(":8080")) {
-            homeServer = homeServer.replace(":8080", ":8082");
-        }
+    const loginWithoutRedirect = (userId: string, homeServer: string, accessToken: string, refreshToken: string) => {
+
         const newIdentity = { user_id: userId, home_server: homeServer };
         setIdentity(newIdentity);
         localStorage.setItem("local_identity", JSON.stringify(newIdentity));
-        // No redirect - used during registration to show recovery key
+        localStorage.setItem("access_token", accessToken);
+        localStorage.setItem("refresh_token", refreshToken);
+
     };
 
-    const logout = () => {
+    const logout = async () => {
+        const refreshToken = localStorage.getItem("refresh_token");
+
+
+        if (refreshToken) {
+            try {
+                await apiPost('/logout', { refresh_token: refreshToken }, false);
+            } catch (error) {
+                console.error('Logout error:', error);
+
+            }
+        }
+
         setIdentity(null);
         localStorage.removeItem("local_identity");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
         router.push("/login");
     };
 
+    const getAuthHeaders = (): HeadersInit => {
+        const accessToken = localStorage.getItem("access_token");
+        if (accessToken) {
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`,
+            };
+        }
+        return {
+            'Content-Type': 'application/json',
+        };
+    };
+
+    const refreshAccessToken = async (): Promise<boolean> => {
+        const refreshToken = localStorage.getItem("refresh_token");
+        if (!refreshToken) {
+            return false;
+        }
+
+        try {
+            const res = await apiPost('/refresh-token', { refresh_token: refreshToken }, false);
+
+            if (!res.ok) {
+
+                await logout();
+                return false;
+            }
+
+            const data = await res.json();
+            localStorage.setItem("access_token", data.access_token);
+            return true;
+        } catch (error) {
+            console.error('Token refresh error:', error);
+            return false;
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ identity, isLoading, login, loginWithoutRedirect, logout }}>
+        <AuthContext.Provider value={{
+            identity,
+            isLoading,
+            login,
+            loginWithoutRedirect,
+            logout,
+            getAuthHeaders,
+            refreshAccessToken
+        }}>
             {!isLoading && children}
         </AuthContext.Provider>
     );

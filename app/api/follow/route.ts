@@ -3,7 +3,8 @@ import { NextResponse } from 'next/server'
 export async function POST(req: Request) {
     const body = await req.json()
 
-    await fetch('http://localhost:8082/follow', {
+    const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+    await fetch(`${API_BASE}/follow`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

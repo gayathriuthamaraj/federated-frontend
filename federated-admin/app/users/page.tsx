@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import { getAllUsers } from '../api/admin';
-import { MapPin } from 'lucide-react';
+import { Users, Search, MapPin } from 'lucide-react';
 
 interface UserData {
     identity: {
@@ -33,25 +33,19 @@ export default function UsersPage() {
 
     useEffect(() => {
         const token = localStorage.getItem('admin_token');
-        if (!token) {
-            router.push('/login');
-            return;
-        }
-
+        if (!token) { router.push('/login'); return; }
         loadUsers();
     }, [router]);
 
     useEffect(() => {
-        if (searchTerm) {
-            setFilteredUsers(
-                users.filter(user =>
-                    user.profile.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    user.identity.user_id.toLowerCase().includes(searchTerm.toLowerCase())
+        setFilteredUsers(
+            searchTerm
+                ? users.filter(u =>
+                    u.profile.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    u.identity.user_id.toLowerCase().includes(searchTerm.toLowerCase())
                 )
-            );
-        } else {
-            setFilteredUsers(users);
-        }
+                : users
+        );
     }, [searchTerm, users]);
 
     const loadUsers = async () => {
@@ -61,9 +55,7 @@ export default function UsersPage() {
             setFilteredUsers(data.users || []);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to load users');
-            if (err instanceof Error && err.message.includes('authenticated')) {
-                router.push('/login');
-            }
+            if (err instanceof Error && err.message.includes('authenticated')) router.push('/login');
         } finally {
             setIsLoading(false);
         }
@@ -72,8 +64,8 @@ export default function UsersPage() {
     if (isLoading) {
         return (
             <AdminLayout>
-                <div className="flex items-center justify-center h-64">
-                    <div className="text-gray-400">Loading users...</div>
+                <div style={{ color: 'var(--text-ghost)', display: 'flex', alignItems: 'center', gap: 10, padding: '40px 0' }}>
+                    <span style={{ color: 'var(--green)' }}>⟳</span> LOADING USER REGISTRY...
                 </div>
             </AdminLayout>
         );
@@ -81,73 +73,101 @@ export default function UsersPage() {
 
     return (
         <AdminLayout>
-            <div className="space-y-6">
-                <div className="flex justify-between items-center">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-2">Users</h1>
-                        <p className="text-gray-400">Manage all users on your server</p>
+                        <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.15em', marginBottom: 4 }}>
+                            // USER REGISTRY
+                        </div>
+                        <h1 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: 'var(--green)', letterSpacing: '0.1em', textShadow: '0 0 8px var(--green-glow)' }}>
+                            USERS
+                        </h1>
                     </div>
-                    <div className="text-right">
-                        <p className="text-3xl font-bold text-white">{users.length}</p>
-                        <p className="text-sm text-gray-400">Total Users</p>
+                    <div style={{
+                        padding: '10px 20px', background: 'var(--bg-panel)',
+                        border: '1px solid var(--border-lit)', textAlign: 'center',
+                    }}>
+                        <div style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--cyan)', lineHeight: 1 }}>
+                            {users.length}
+                        </div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-ghost)', letterSpacing: '0.1em', marginTop: 4 }}>REGISTERED</div>
                     </div>
                 </div>
 
                 {error && (
-                    <div className="p-4 bg-red-900/20 border border-red-500/50 rounded-lg">
-                        <p className="text-red-400">{error}</p>
+                    <div style={{ padding: '8px 12px', background: 'rgba(255,23,68,0.06)', border: '1px solid var(--red-dim)', fontSize: '0.75rem', color: 'var(--red)' }}>
+                        <span style={{ opacity: 0.5 }}>ERR &gt; </span>{error}
                     </div>
                 )}
 
                 {/* Search */}
-                <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                <div className="term-panel" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Search size={14} style={{ color: 'var(--text-ghost)', flexShrink: 0 }} />
                     <input
                         type="text"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder="Search users by name or username..."
-                        className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-colors"
+                        placeholder="filter by name or user_id..."
+                        className="term-input"
+                        style={{ border: 'none', background: 'transparent', padding: '0', boxShadow: 'none' }}
                     />
+                    {searchTerm && (
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-ghost)', whiteSpace: 'nowrap' }}>
+                            {filteredUsers.length} match{filteredUsers.length !== 1 ? 'es' : ''}
+                        </span>
+                    )}
                 </div>
 
-                {/* Users List */}
-                <div className="bg-gray-800 border border-gray-700 rounded-lg divide-y divide-gray-700">
+                {/* User list */}
+                <div className="term-panel" style={{ overflow: 'hidden' }}>
+                    <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', fontSize: '0.6rem', color: 'var(--text-ghost)', letterSpacing: '0.12em', display: 'flex', gap: 24 }}>
+                        <span style={{ flex: '0 0 180px' }}>IDENTIFIER</span>
+                        <span style={{ flex: '0 0 140px' }}>DISPLAY NAME</span>
+                        <span style={{ flex: 1 }}>BIO / LOCATION</span>
+                        <span style={{ flex: '0 0 100px', textAlign: 'right' }}>JOINED</span>
+                        <span style={{ flex: '0 0 90px', textAlign: 'right' }}>STATUS</span>
+                    </div>
+
                     {filteredUsers.length === 0 ? (
-                        <div className="p-8 text-center text-gray-400">
-                            {searchTerm ? 'No users found matching your search' : 'No users yet'}
+                        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-ghost)', fontSize: '0.8rem' }}>
+                            {searchTerm ? `no results for "${searchTerm}"` : 'no users registered'}
                         </div>
                     ) : (
-                        filteredUsers.map((user) => (
-                            <div key={user.identity.id} className="p-6 hover:bg-gray-750 transition-colors">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <h3 className="text-lg font-bold text-white">
-                                                {user.profile.display_name}
-                                            </h3>
-                                            <span className={`px-2 py-1 rounded-full text-xs ${user.identity.allow_discovery
-                                                ? 'bg-green-900/30 text-green-400'
-                                                : 'bg-gray-900/30 text-gray-400'
-                                                }`}>
-                                                {user.identity.allow_discovery ? 'Discoverable' : 'Private'}
-                                            </span>
-                                        </div>
-                                        <p className="text-gray-400 text-sm font-mono mb-2">
-                                            {user.identity.user_id}@{user.identity.home_server}
-                                        </p>
-                                        {user.profile.bio && (
-                                            <p className="text-gray-300 text-sm mb-2">{user.profile.bio}</p>
-                                        )}
-                                        {user.profile.location && (
-                                            <p className="text-gray-400 text-sm flex items-center gap-1">
-                                                <MapPin className="w-3 h-3" />
-                                                {user.profile.location}
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div className="text-right text-sm text-gray-400">
-                                        <p>Joined: {new Date(user.profile.created_at).toLocaleDateString()}</p>
-                                    </div>
+                        filteredUsers.map((user, i) => (
+                            <div key={user.identity.id} style={{
+                                display: 'flex', gap: 24, alignItems: 'center',
+                                padding: '12px 16px',
+                                borderBottom: i < filteredUsers.length - 1 ? '1px solid var(--border)' : 'none',
+                                transition: 'background 0.1s',
+                            }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)'}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = ''}
+                            >
+                                <div style={{ flex: '0 0 180px', fontSize: '0.75rem', color: 'var(--cyan)', fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {user.identity.user_id}
+                                </div>
+                                <div style={{ flex: '0 0 140px', fontSize: '0.8rem', color: 'var(--text)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {user.profile.display_name}
+                                </div>
+                                <div style={{ flex: 1, fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden' }}>
+                                    {user.profile.bio && <span style={{ marginRight: 10 }}>{user.profile.bio}</span>}
+                                    {user.profile.location && (
+                                        <span style={{ color: 'var(--text-ghost)', fontSize: '0.68rem' }}>
+                                            <MapPin size={10} style={{ display: 'inline', marginRight: 3 }} />
+                                            {user.profile.location}
+                                        </span>
+                                    )}
+                                </div>
+                                <div style={{ flex: '0 0 100px', textAlign: 'right', fontSize: '0.68rem', color: 'var(--text-ghost)' }}>
+                                    {new Date(user.profile.created_at).toLocaleDateString()}
+                                </div>
+                                <div style={{ flex: '0 0 90px', textAlign: 'right' }}>
+                                    <span className={`term-badge ${user.identity.allow_discovery ? 'ok' : ''}`}
+                                        style={!user.identity.allow_discovery ? { background: 'var(--bg)', color: 'var(--text-ghost)', border: '1px solid var(--border-lit)' } : {}}>
+                                        {user.identity.allow_discovery ? 'PUBLIC' : 'PRIVATE'}
+                                    </span>
                                 </div>
                             </div>
                         ))

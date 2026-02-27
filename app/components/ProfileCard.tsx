@@ -1,20 +1,33 @@
 'use client'
 
-// ProfileCard.tsx
-import { useState, useEffect } from 'react'
+
+import { useState, useEffect, useRef } from 'react'
 import FollowButton from './FollowButton'
 import PostCard from './PostCard'
 import { Profile } from '@/types/profile'
 import { Post } from '@/types/post'
 import Link from 'next/link'
 
+interface UserReply {
+    id: string;
+    post_id: string;
+    post_content: string;
+    post_author: string;
+    content: string;
+    created_at: string;
+}
+
 interface ProfileCardProps {
     profile: Profile;
     isOwnProfile?: boolean;
     isFollowing?: boolean;
     posts?: Post[];
+    replies?: UserReply[];
+    likedPosts?: Post[];
     loadingPosts?: boolean;
     did?: string;
+    /** Called after a follow/unfollow with +1 or -1 so parent can update counts & cache */
+    onFollowChange?: (delta: 1 | -1) => void;
 }
 
 export default function ProfileCard({
@@ -22,31 +35,60 @@ export default function ProfileCard({
     isOwnProfile = false,
     isFollowing = false,
     posts = [],
+    replies = [],
+    likedPosts = [],
     loadingPosts = false,
-    did
+    did,
+    onFollowChange,
 }: ProfileCardProps) {
     const [profile, setProfile] = useState(initialProfile)
     const [followingState, setFollowingState] = useState(isFollowing)
+    const [activeTab, setActiveTab] = useState(0)
+    const [tabAnimKey, setTabAnimKey] = useState(0)
 
-    // Sync state if prop changes
+    // Touch swipe support
+    const touchStartX = useRef<number | null>(null)
+    const TABS = ['Posts', 'Replies', 'Highlights', 'Media', 'Likes'] as const
+    const TAB_COUNT = TABS.length
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX
+    }
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        if (touchStartX.current === null) return
+        const dx = e.changedTouches[0].clientX - touchStartX.current
+        if (Math.abs(dx) > 50) {
+            setActiveTab(prev => {
+                const next = dx < 0
+                    ? Math.min(prev + 1, TAB_COUNT - 1)
+                    : Math.max(prev - 1, 0);
+                setTabAnimKey(k => k + 1);
+                return next;
+            });
+        }
+        touchStartX.current = null
+    }
+
+    
     useEffect(() => {
         setProfile(initialProfile)
         setFollowingState(isFollowing)
     }, [initialProfile, isFollowing])
 
     const handleFollowSuccess = () => {
-        // Optimistically update follower count
+        const delta: 1 | -1 = followingState ? -1 : 1;
         setProfile(prev => ({
             ...prev,
-            followers_count: (prev.followers_count || 0) + (followingState ? -1 : 1)
-        }))
-        setFollowingState(!followingState)
+            followers_count: Math.max(0, (prev.followers_count ?? 0) + delta),
+        }));
+        setFollowingState(prev => !prev);
+        onFollowChange?.(delta);
     }
 
     return (
         <div className="w-full bg-bat-black flex flex-col">
 
-            {/* Banner */}
+            {}
             <div className="relative h-48 sm:h-64 w-full bg-bat-dark">
                 {profile.banner_url ? (
                     <img
@@ -55,16 +97,18 @@ export default function ProfileCard({
                         className="h-full w-full object-cover"
                     />
                 ) : (
-                    <div className="h-full w-full bg-bat-dark" />
+                    <div className="h-full w-full bg-linear-to-br from-bat-dark via-bat-dark to-bat-yellow/10" />
                 )}
+                {/* Gradient overlay for readability */}
+                <div className="absolute inset-0 bg-linear-to-t from-bat-black/60 to-transparent pointer-events-none" />
             </div>
 
-            {/* Top Section */}
+            {}
             <div className="px-4 pb-4">
                 <div className="relative flex justify-between items-start">
-                    {/* Avatar - Negative margin to pull it up */}
+                    {}
                     <div className="-mt-[15%] sm:-mt-16 mb-3">
-                        <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-bat-black bg-bat-black overflow-hidden">
+                        <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-bat-black bg-bat-black overflow-hidden transition-transform duration-300 hover:scale-105 shadow-lg">
                             {profile.avatar_url ? (
                                 <img
                                     src={profile.avatar_url}
@@ -79,7 +123,7 @@ export default function ProfileCard({
                         </div>
                     </div>
 
-                    {/* Edit Profile or Follow/Message Buttons */}
+                    {}
                     <div className="pt-3 flex gap-2">
                         {isOwnProfile ? (
                             <Link
@@ -118,7 +162,7 @@ export default function ProfileCard({
                     </div>
                 </div>
 
-                {/* Identity Block */}
+                {}
                 <div className="mt-2">
                     <h1 className="text-xl sm:text-2xl font-bold text-bat-gray leading-tight">
                         {profile.display_name}
@@ -133,14 +177,14 @@ export default function ProfileCard({
                     )}
                 </div>
 
-                {/* Bio */}
+                {}
                 {profile.bio && (
                     <p className="mt-4 text-bat-gray text-[15px] leading-normal whitespace-pre-wrap">
                         {profile.bio}
                     </p>
                 )}
 
-                {/* Metadata Row */}
+                {}
                 <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-bat-gray/60">
                     {profile.location && (
                         <span className="flex items-center gap-1.5">
@@ -173,54 +217,140 @@ export default function ProfileCard({
                     </span>
                 </div>
 
-                {/* Stats Row */}
+                {}
                 <div className="mt-4 flex gap-5 text-sm">
-                    <div className="hover:underline cursor-pointer">
+                    <Link
+                        href={`/following?user_id=${encodeURIComponent(profile.user_id)}`}
+                        className="hover:underline cursor-pointer"
+                    >
                         <span className="font-bold text-bat-gray mr-1">{profile.following_count ?? 0}</span>
                         <span className="text-bat-gray/60">Following</span>
-                    </div>
-                    <div className="hover:underline cursor-pointer">
+                    </Link>
+                    <Link
+                        href={`/followers?user_id=${encodeURIComponent(profile.user_id)}`}
+                        className="hover:underline cursor-pointer"
+                    >
                         <span className="font-bold text-bat-gray mr-1">{profile.followers_count ?? 0}</span>
                         <span className="text-bat-gray/60">Followers</span>
-                    </div>
+                    </Link>
                 </div>
             </div>
 
-            {/* Tabs Navigation */}
-            <div className="mt-2 flex border-b border-bat-dark">
-                {['Posts', 'Replies', 'Highlights', 'Media', 'Likes'].map((tab, i) => (
-                    <div
+            {}
+            <div
+                className="mt-2 flex border-b border-bat-dark"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+                {TABS.map((tab, i) => (
+                    <button
                         key={tab}
+                        onClick={() => { setActiveTab(i); setTabAnimKey(k => k + 1); }}
                         className={`
-                            flex-1 py-4 text-center text-sm sm:text-base font-medium transition-colors cursor-pointer hover:bg-bat-dark/30
-                            ${i === 0
+                            flex-1 py-4 text-center text-sm sm:text-base font-medium transition-all duration-200 hover:bg-bat-dark/30
+                            ${i === activeTab
                                 ? 'text-bat-yellow border-b-[3px] border-bat-yellow'
-                                : 'text-bat-gray/60 hover:text-bat-gray'
+                                : 'text-bat-gray/60 hover:text-bat-gray border-b-[3px] border-transparent'
                             }
                         `}
                     >
                         {tab}
-                    </div>
+                    </button>
                 ))}
             </div>
 
-            {/* Feed - Posts Display */}
-            <div className="flex-1">
-                {loadingPosts ? (
-                    <div className="text-center text-bat-gray py-8">Loading posts...</div>
-                ) : posts.length === 0 ? (
-                    <div className="p-8 text-center border-t border-bat-dark/50">
-                        <div className="text-bat-gray/40 text-lg font-medium">No posts yet</div>
-                        <div className="text-bat-gray/20 text-sm mt-1">
-                            {isOwnProfile ? "Start sharing your thoughts!" : `${profile.display_name} hasn't posted anything yet.`}
+            {}
+            <div
+                key={tabAnimKey}
+                className="flex-1 animate-fade-up"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+            >
+                {activeTab === 0 && (
+                    loadingPosts ? (
+                        <div className="text-center text-bat-gray py-8">Loading posts...</div>
+                    ) : posts.length === 0 ? (
+                        <div className="p-8 text-center border-t border-bat-dark/50">
+                            <div className="text-bat-gray/40 text-lg font-medium">No posts yet</div>
+                            <div className="text-bat-gray/20 text-sm mt-1">
+                                {isOwnProfile ? "Start sharing your thoughts!" : `${profile.display_name} hasn't posted anything yet.`}
+                            </div>
                         </div>
+                    ) : (
+                        <div className="border-t border-bat-dark/50">
+                            {posts.map((post) => (
+                                <PostCard key={post.id} post={post} />
+                            ))}
+                        </div>
+                    )
+                )}
+
+                {/* Replies tab */}
+                {activeTab === 1 && (
+                    loadingPosts ? (
+                        <div className="text-center text-bat-gray py-8">Loading replies...</div>
+                    ) : replies.length === 0 ? (
+                        <div className="p-8 text-center border-t border-bat-dark/50">
+                            <div className="text-bat-gray/40 text-lg font-medium">No replies yet</div>
+                            <div className="text-bat-gray/20 text-sm mt-1">
+                                {isOwnProfile ? "Join a conversation!" : "Nothing here yet."}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-t border-bat-dark/50 divide-y divide-bat-dark/40">
+                            {replies.map((rep) => (
+                                <div key={rep.id} className="px-4 pt-3 pb-1 hover:bg-bat-dark/10 transition-colors">
+                                    {rep.post_content && (
+                                        <div className="mb-1.5 pl-3 border-l-2 border-bat-gray/20 text-xs text-bat-gray/40 line-clamp-2">
+                                            <span className="font-semibold text-bat-gray/50">
+                                                @{rep.post_author.split('@')[0]}:&nbsp;
+                                            </span>
+                                            {rep.post_content}
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2 items-start">
+                                        <div className="flex-shrink-0 h-7 w-7 rounded-full bg-bat-dark flex items-center justify-center text-bat-yellow font-bold text-xs select-none">
+                                            {(profile.display_name || profile.user_id)[0]?.toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <span className="text-bat-gray/70 text-xs mr-2">
+                                                {new Date(rep.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                            </span>
+                                            <p className="text-bat-gray text-[14px] leading-normal whitespace-pre-wrap">{rep.content}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )
+                )}
+
+                {/* Highlights & Media — placeholder */}
+                {(activeTab === 2 || activeTab === 3) && (
+                    <div className="p-10 text-center border-t border-bat-dark/50">
+                        <div className="text-bat-gray/40 text-lg font-medium">{TABS[activeTab]}</div>
+                        <div className="text-bat-gray/20 text-sm mt-1">Nothing here yet.</div>
                     </div>
-                ) : (
-                    <div className="border-t border-bat-dark/50">
-                        {posts.map((post) => (
-                            <PostCard key={post.id} post={post} />
-                        ))}
-                    </div>
+                )}
+
+                {/* Likes tab */}
+                {activeTab === 4 && (
+                    loadingPosts ? (
+                        <div className="text-center text-bat-gray py-8">Loading likes...</div>
+                    ) : likedPosts.length === 0 ? (
+                        <div className="p-8 text-center border-t border-bat-dark/50">
+                            <div className="text-bat-gray/40 text-lg font-medium">No likes yet</div>
+                            <div className="text-bat-gray/20 text-sm mt-1">
+                                {isOwnProfile ? "Like posts to see them here." : "Nothing here yet."}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-t border-bat-dark/50">
+                            {likedPosts.map((post) => (
+                                <PostCard key={post.id} post={post} />
+                            ))}
+                        </div>
+                    )
                 )}
             </div>
         </div>

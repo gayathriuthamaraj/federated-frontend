@@ -34,7 +34,7 @@ export default function Following({ following }: FollowingProps) {
                         href={`/profile?user_id=${encodeURIComponent(followedUser.user_id)}`}
                         className="flex items-center gap-3 flex-1 min-w-0"
                     >
-                        {/* Avatar */}
+                        {}
                         <div className="flex-shrink-0">
                             <div className="h-10 w-10 rounded-full bg-bat-black border border-bat-dark overflow-hidden flex items-center justify-center">
                                 {followedUser.avatar_url ? (
@@ -51,7 +51,7 @@ export default function Following({ following }: FollowingProps) {
                             </div>
                         </div>
 
-                        {/* Name & Handle */}
+                        {}
                         <div className="flex flex-col min-w-0">
                             <div className="font-bold text-bat-gray truncate text-[15px] group-hover:underline decoration-bat-gray/50">
                                 {followedUser.display_name}
@@ -62,9 +62,9 @@ export default function Following({ following }: FollowingProps) {
                         </div>
                     </Link>
 
-                    {/* Action */}
+                    {}
                     <div className="ml-4 flex-shrink-0">
-                        {/* Reusing FollowButton to allow Unfollowing or checking status */}
+                        {}
                         <FollowButton targetUser={followedUser.user_id} />
                     </div>
                 </div>

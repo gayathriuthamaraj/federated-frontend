@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8082';
+import { apiGet, apiPost } from '../utils/api';
 
 export interface UpdateProfileData {
     user_id: string;
@@ -14,13 +14,7 @@ export interface UpdateProfileData {
 }
 
 export async function updateProfile(data: UpdateProfileData): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/profile/update`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-    });
+    const response = await apiPost('/profile/update', data, true);
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -31,7 +25,7 @@ export async function updateProfile(data: UpdateProfileData): Promise<void> {
 }
 
 export async function getUserProfile(userId: string) {
-    const response = await fetch(`${API_BASE_URL}/user/me?user_id=${userId}`);
+    const response = await apiGet(`/user/me?user_id=${encodeURIComponent(userId)}`, false);
 
     if (!response.ok) {
         throw new Error('Failed to fetch profile');

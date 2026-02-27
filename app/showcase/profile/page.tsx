@@ -6,9 +6,9 @@ import { Profile } from '@/types/profile';
 import { Post } from '@/types/post';
 
 export default function ShowcaseProfilePage() {
-    const user = mockUsers[0]; // Batman
+    const user = mockUsers[0]; 
 
-    // Convert MockUser to Profile type
+    
     const profile: Profile = {
         user_id: user.username,
         display_name: user.displayName,
@@ -19,11 +19,11 @@ export default function ShowcaseProfilePage() {
         portfolio_url: '',
         followers_count: user.followersCount,
         following_count: user.followingCount,
-        created_at: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year ago
+        created_at: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(), 
         updated_at: new Date().toISOString(),
     };
 
-    // Filter posts by this user and convert to Post type
+    
     const userPosts: Post[] = mockPosts
         .filter(post => post.author === `${user.username}@gotham.social`)
         .map(post => ({

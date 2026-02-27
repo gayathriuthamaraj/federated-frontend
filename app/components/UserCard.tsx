@@ -3,7 +3,7 @@
 import { MockUser } from '../data/mockData';
 import FollowButton from './FollowButton';
 
-// Flexible user type that works with both mock and real data
+
 interface UserCardProps {
     user: MockUser | {
         userId: string;
@@ -31,7 +31,7 @@ export default function UserCard({ user, showFollowButton = true, onClick }: Use
                 ${onClick ? 'cursor-pointer' : 'cursor-default'}
             `}
         >
-            {/* Left: Avatar */}
+            {}
             <div className="flex-shrink-0">
                 {user.avatarUrl ? (
                     <img
@@ -46,9 +46,9 @@ export default function UserCard({ user, showFollowButton = true, onClick }: Use
                 )}
             </div>
 
-            {/* Middle: User Info */}
+            {}
             <div className="flex-1 min-w-0">
-                {/* Name and Handle */}
+                {}
                 <div className="flex items-baseline gap-1.5 text-[15px] leading-5">
                     <span className="font-bold text-gray-200 truncate">
                         {user.displayName}
@@ -58,14 +58,14 @@ export default function UserCard({ user, showFollowButton = true, onClick }: Use
                     </span>
                 </div>
 
-                {/* Bio */}
+                {}
                 {user.bio && (
                     <div className="mt-1 text-[15px] text-bat-gray leading-normal line-clamp-2">
                         {user.bio}
                     </div>
                 )}
 
-                {/* Stats - Only show on larger screens */}
+                {}
                 {((followersCount || 0) > 0 || (followingCount || 0) > 0) && (
                     <div className="mt-2 flex gap-4 text-sm">
                         <div>
@@ -84,7 +84,7 @@ export default function UserCard({ user, showFollowButton = true, onClick }: Use
                 )}
             </div>
 
-            {/* Right: Follow Button */}
+            {}
             {showFollowButton && (
                 <div
                     className="flex-shrink-0 flex items-start pt-1"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import UserCard from '../components/UserCard';
@@ -24,6 +24,7 @@ export default function FollowersPage() {
     const [followers, setFollowers] = useState<UserDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
+    const abortRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         if (!authLoading && !identity) {
@@ -31,28 +32,50 @@ export default function FollowersPage() {
         }
     }, [identity, authLoading, router]);
 
-    useEffect(() => {
-        async function fetchFollowers() {
-            if (!identity) return;
-
-            try {
-                const res = await fetch(
-                    `${identity.home_server}/followers?user_id=${encodeURIComponent(identity.user_id)}`
-                );
-
-                if (res.ok) {
-                    const data = await res.json();
-                    setFollowers(data.followers || []);
-                }
-            } catch (err) {
-                console.error('Failed to fetch followers:', err);
-            } finally {
-                setLoading(false);
+    const fetchFollowers = useCallback(async () => {
+        if (!identity) return;
+        // Cancel any in-flight request
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+        const url = `${identity.home_server}/followers?user_id=${encodeURIComponent(identity.user_id)}`;
+        try {
+            const res = await fetch(url, { signal: controller.signal });
+            if (res.ok) {
+                const data = await res.json();
+                setFollowers(data.followers || []);
             }
+        } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === 'AbortError') return;
+            console.error(`Failed to fetch followers from ${url}:`, err);
+        } finally {
+            setLoading(false);
         }
+    }, [identity]);
 
-        if (identity) fetchFollowers();
-    }, [identity, refreshKey]); // Refetch when refreshKey changes
+    // Cleanup on unmount
+    useEffect(() => () => { abortRef.current?.abort(); }, []);
+
+    // Fetch on mount / manual refresh (guard: wait for auth to finish loading)
+    useEffect(() => {
+        if (!authLoading && identity) fetchFollowers();
+    }, [identity, authLoading, refreshKey, fetchFollowers]);
+
+    // Poll every 15 seconds
+    useEffect(() => {
+        if (!identity) return;
+        const interval = setInterval(fetchFollowers, 15000);
+        return () => clearInterval(interval);
+    }, [identity, fetchFollowers]);
+
+    // Re-fetch when the tab becomes visible again
+    useEffect(() => {
+        const onVisible = () => {
+            if (document.visibilityState === 'visible' && identity) fetchFollowers();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+        return () => document.removeEventListener('visibilitychange', onVisible);
+    }, [identity, fetchFollowers]);
 
     const handleRemoveFollower = async (userId: string) => {
         if (!identity) return;
@@ -60,7 +83,7 @@ export default function FollowersPage() {
         if (!confirm(`Remove ${userId} from followers?`)) return;
 
         try {
-            // Note: You'll need to implement a backend endpoint for this
+            
             const res = await fetch(`${identity.home_server}/follower/remove`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -71,7 +94,7 @@ export default function FollowersPage() {
             });
 
             if (res.ok) {
-                // Refresh the list
+                
                 setRefreshKey(prev => prev + 1);
             }
         } catch (err) {
