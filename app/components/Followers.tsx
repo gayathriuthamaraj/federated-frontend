@@ -31,7 +31,7 @@ export default function Followers({ followers }: FollowersProps) {
                     "
                 >
                     <Link
-                        href={`/profile?user_id=${encodeURIComponent(follower.user_id)}`}
+                        href={`/search?user_id=${encodeURIComponent(follower.user_id)}`}
                         className="flex items-center gap-3 flex-1 min-w-0"
                     >
                         {}

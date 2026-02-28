@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import UserCard from '../components/UserCard';
 
 interface UserDocument {
@@ -18,13 +18,17 @@ interface UserDocument {
     };
 }
 
-export default function FollowersPage() {
+function FollowersContent() {
     const { identity, isLoading: authLoading } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [followers, setFollowers] = useState<UserDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshKey, setRefreshKey] = useState(0);
     const abortRef = useRef<AbortController | null>(null);
+
+    // user_id from URL param — if provided, show that user's followers (read-only)
+    const paramUserId = searchParams.get('user_id');
 
     useEffect(() => {
         if (!authLoading && !identity) {
@@ -34,11 +38,12 @@ export default function FollowersPage() {
 
     const fetchFollowers = useCallback(async () => {
         if (!identity) return;
+        const targetUserId = paramUserId || identity.user_id;
         // Cancel any in-flight request
         abortRef.current?.abort();
         const controller = new AbortController();
         abortRef.current = controller;
-        const url = `${identity.home_server}/followers?user_id=${encodeURIComponent(identity.user_id)}`;
+        const url = `${identity.home_server}/followers?user_id=${encodeURIComponent(targetUserId)}`;
         try {
             const res = await fetch(url, { signal: controller.signal });
             if (res.ok) {
@@ -51,7 +56,7 @@ export default function FollowersPage() {
         } finally {
             setLoading(false);
         }
-    }, [identity]);
+    }, [identity, paramUserId]);
 
     // Cleanup on unmount
     useEffect(() => () => { abortRef.current?.abort(); }, []);
@@ -77,8 +82,10 @@ export default function FollowersPage() {
         return () => document.removeEventListener('visibilitychange', onVisible);
     }, [identity, fetchFollowers]);
 
+    const isOwnProfile = !paramUserId || paramUserId === identity?.user_id;
+
     const handleRemoveFollower = async (userId: string) => {
-        if (!identity) return;
+        if (!identity || !isOwnProfile) return;
 
         if (!confirm(`Remove ${userId} from followers?`)) return;
 
@@ -116,7 +123,9 @@ export default function FollowersPage() {
     return (
         <div className="max-w-3xl mx-auto p-6">
             <div className="mb-6">
-                <h1 className="text-3xl font-bold text-bat-gray mb-2">Followers</h1>
+                <h1 className="text-3xl font-bold text-bat-gray mb-2">
+                    {isOwnProfile ? 'Followers' : `${(paramUserId || '').split('@')[0]}'s Followers`}
+                </h1>
                 <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
                 <p className="text-bat-gray/60 mt-2">{followers.length} {followers.length === 1 ? 'follower' : 'followers'}</p>
             </div>
@@ -141,22 +150,32 @@ export default function FollowersPage() {
                                     showFollowButton={false}
                                 />
                             </div>
-                            <button
-                                onClick={() => handleRemoveFollower(follower.identity.user_id)}
-                                className="
-                                    px-4 py-2 rounded-md font-medium text-sm
-                                    bg-bat-black text-bat-gray
-                                    border border-bat-gray/30
-                                    hover:border-red-500 hover:text-red-500
-                                    transition-all duration-200
-                                "
-                            >
-                                Remove
-                            </button>
+                            {isOwnProfile && (
+                                <button
+                                    onClick={() => handleRemoveFollower(follower.identity.user_id)}
+                                    className="
+                                        px-4 py-2 rounded-md font-medium text-sm
+                                        bg-bat-black text-bat-gray
+                                        border border-bat-gray/30
+                                        hover:border-red-500 hover:text-red-500
+                                        transition-all duration-200
+                                    "
+                                >
+                                    Remove
+                                </button>
+                            )}
                         </div>
                     ))}
                 </div>
             )}
         </div>
+    );
+}
+
+export default function FollowersPage() {
+    return (
+        <Suspense fallback={<div className="max-w-3xl mx-auto p-6 text-bat-gray">Loading...</div>}>
+            <FollowersContent />
+        </Suspense>
     );
 }

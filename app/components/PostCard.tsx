@@ -1,12 +1,15 @@
 ﻿"use client";
 
 import { Post } from '@/types/post';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
+import BlockButton from './BlockButton';
 
 interface PostCardProps {
     post: Post;
+    /** Base path for author profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
+    linkBase?: string;
 }
 
 interface Reply {
@@ -19,7 +22,7 @@ interface Reply {
     replies?: Reply[];
 }
 
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, linkBase = '/search' }: PostCardProps) {
     const { identity } = useAuth();
 
     const [isLiked, setIsLiked] = useState(post.has_liked || false);
@@ -33,11 +36,26 @@ export default function PostCard({ post }: PostCardProps) {
     const [loadingComments, setLoadingComments] = useState(false);
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [replyText, setReplyText] = useState('');
+    const [showMenu, setShowMenu] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     const displayName = post.author.split('@')[0];
     const handle = `@${post.author}`;
     const date = new Date(post.created_at);
     const timeAgo = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const isOwnPost = identity?.user_id === post.author;
+
+    // Close overflow menu when clicking outside
+    useEffect(() => {
+        if (!showMenu) return;
+        const handler = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setShowMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showMenu]);
 
     useEffect(() => {
         if (showComments && post.id && identity) fetchReplies();
@@ -219,7 +237,7 @@ export default function PostCard({ post }: PostCardProps) {
                 {/* ── Left column: avatar + vertical thread line ── */}
                 <div className="flex flex-col items-center shrink-0 w-10">
                     <Link
-                        href={`/profile?user_id=${encodeURIComponent(post.author)}`}
+                        href={`${linkBase}?user_id=${encodeURIComponent(post.author)}`}
                         className="flex h-10 w-10 rounded-full bg-bat-dark border border-bat-yellow/20 items-center justify-center text-bat-yellow font-bold text-lg select-none hover:scale-105 hover:border-bat-yellow/50 transition-all duration-150 shrink-0"
                     >
                         {displayName[0].toUpperCase()}
@@ -236,7 +254,7 @@ export default function PostCard({ post }: PostCardProps) {
                     {/* Post header */}
                     <div className="flex items-baseline gap-1.5 text-[15px] leading-5">
                         <Link
-                            href={`/profile?user_id=${encodeURIComponent(post.author)}`}
+                            href={`${linkBase}?user_id=${encodeURIComponent(post.author)}`}
                             className="font-bold text-gray-200 truncate hover:underline"
                         >
                             {displayName}
@@ -307,6 +325,33 @@ export default function PostCard({ post }: PostCardProps) {
                                 </svg>
                             </div>
                         </button>
+
+                        {/* Overflow menu (⋯) */}
+                        {!isOwnPost && (
+                            <div className="relative" ref={menuRef}>
+                                <button
+                                    onClick={() => setShowMenu(v => !v)}
+                                    className="group flex items-center p-1.5 rounded-full hover:bg-white/5 text-bat-gray/40 hover:text-bat-gray transition-colors"
+                                    aria-label="More options"
+                                >
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[1.1rem] w-[1.1rem] fill-current">
+                                        <circle cx="5" cy="12" r="2" />
+                                        <circle cx="12" cy="12" r="2" />
+                                        <circle cx="19" cy="12" r="2" />
+                                    </svg>
+                                </button>
+
+                                {showMenu && (
+                                    <div className="absolute right-0 bottom-full mb-1 w-52 rounded-xl border border-bat-dark/60 bg-bat-black shadow-lg z-50 overflow-hidden">
+                                        <BlockButton
+                                            targetUser={post.author}
+                                            variant="menuitem"
+                                            onSuccess={() => setShowMenu(false)}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {/* ── Inline reply section (inside same right column) ── */}
