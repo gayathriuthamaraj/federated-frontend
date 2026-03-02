@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import FollowButton from './FollowButton'
+import BlockButton from './BlockButton'
 import PostCard from './PostCard'
 import { Profile } from '@/types/profile'
 import { Post } from '@/types/post'
@@ -26,6 +27,8 @@ interface ProfileCardProps {
     likedPosts?: Post[];
     loadingPosts?: boolean;
     did?: string;
+    /** Base path for user-profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
+    linkBase?: string;
     /** Called after a follow/unfollow with +1 or -1 so parent can update counts & cache */
     onFollowChange?: (delta: 1 | -1) => void;
 }
@@ -39,6 +42,7 @@ export default function ProfileCard({
     likedPosts = [],
     loadingPosts = false,
     did,
+    linkBase = '/search',
     onFollowChange,
 }: ProfileCardProps) {
     const [profile, setProfile] = useState(initialProfile)
@@ -70,10 +74,14 @@ export default function ProfileCard({
     }
 
     
+    // Only hard-reset local state when we switch to a different user.
+    // Using the inline profile object reference as a dep would fire on every
+    // parent render (new object each time), wiping out optimistic updates.
     useEffect(() => {
         setProfile(initialProfile)
         setFollowingState(isFollowing)
-    }, [initialProfile, isFollowing])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialProfile.user_id, isFollowing])
 
     const handleFollowSuccess = () => {
         const delta: 1 | -1 = followingState ? -1 : 1;
@@ -157,6 +165,9 @@ export default function ProfileCard({
                                 >
                                     Message
                                 </Link>
+                                <BlockButton
+                                    targetUser={profile.user_id}
+                                />
                             </>
                         )}
                     </div>
@@ -279,7 +290,7 @@ export default function ProfileCard({
                     ) : (
                         <div className="border-t border-bat-dark/50">
                             {posts.map((post) => (
-                                <PostCard key={post.id} post={post} />
+                                <PostCard key={post.id} post={post} linkBase={linkBase} />
                             ))}
                         </div>
                     )
@@ -347,7 +358,7 @@ export default function ProfileCard({
                     ) : (
                         <div className="border-t border-bat-dark/50">
                             {likedPosts.map((post) => (
-                                <PostCard key={post.id} post={post} />
+                                <PostCard key={post.id} post={post} linkBase={linkBase} />
                             ))}
                         </div>
                     )

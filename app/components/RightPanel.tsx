@@ -47,7 +47,7 @@ export default function RightPanel() {
                             return (
                                 <Link
                                     key={userId}
-                                    href={`/profile?user_id=${encodeURIComponent(userId)}`}
+                                    href={`/search?user_id=${encodeURIComponent(userId)}`}
                                     className="flex items-center gap-3 px-4 py-2.5 hover:bg-bat-dark/60 transition-colors group"
                                 >
                                     <div className="w-9 h-9 rounded-full bg-bat-yellow/15 border border-bat-yellow/20 flex items-center justify-center text-bat-yellow font-bold text-sm shrink-0 group-hover:border-bat-yellow/40 transition-colors">

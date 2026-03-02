@@ -121,7 +121,13 @@ function MessagesContent() {
                 );
                 if (res.ok) {
                     const data = await res.json();
-                    const convs: Conversation[] = data.conversations || [];
+                    // Backend returns {sender, receiver, ...} – compute other_user
+                    const convs: Conversation[] = (data.conversations || []).map((c: any) => ({
+                        id: c.id,
+                        other_user: c.sender === identity.user_id ? c.receiver : c.sender,
+                        content: c.content,
+                        created_at: c.created_at,
+                    }));
                     setConversations(convs);
                     setFetchError(null);
                     cache.setConversations(identity.user_id, convs);
@@ -399,7 +405,7 @@ function MessagesContent() {
                                             )}
                                         </div>
                                         <Link
-                                            href={`/profile?user_id=${encodeURIComponent(conv.other_user)}`}
+                                            href={`/search?user_id=${encodeURIComponent(conv.other_user)}`}
                                             onClick={e => e.stopPropagation()}
                                             className="text-bat-yellow/50 text-xs hover:text-bat-yellow hover:underline truncate block leading-tight"
                                         >
@@ -428,7 +434,7 @@ function MessagesContent() {
                                     {getDisplayName(selectedUserId)}
                                 </p>
                                 <Link
-                                    href={`/profile?user_id=${encodeURIComponent(selectedUserId)}`}
+                                    href={`/search?user_id=${encodeURIComponent(selectedUserId)}`}
                                     className="text-bat-yellow/70 text-xs hover:text-bat-yellow hover:underline"
                                 >
                                     {selectedUserId}
@@ -559,14 +565,14 @@ function MessagesContent() {
 
                         {/* Clickable user_id → profile */}
                         <Link
-                            href={`/profile?user_id=${encodeURIComponent(selectedUserId)}`}
+                            href={`/search?user_id=${encodeURIComponent(selectedUserId)}`}
                             className="text-bat-yellow/80 text-sm hover:text-bat-yellow hover:underline text-center break-all"
                         >
                             {selectedUserId}
                         </Link>
 
                         <Link
-                            href={`/profile?user_id=${encodeURIComponent(selectedUserId)}`}
+                            href={`/search?user_id=${encodeURIComponent(selectedUserId)}`}
                             className="mt-1 px-4 py-2 rounded-lg border border-bat-yellow/40 text-bat-yellow text-sm hover:bg-bat-yellow/10 transition-colors"
                         >
                             View Profile

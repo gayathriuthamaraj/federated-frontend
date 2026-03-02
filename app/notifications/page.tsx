@@ -115,7 +115,7 @@ export default function NotificationsPage() {
                             key={n.id}
                             onClick={() => {
                                 if (n.type === 'FOLLOW') {
-                                    router.push(`/profile?user_id=${encodeURIComponent(n.actor_id)}`);
+                                    router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);
                                 } else if (n.entity_id) {
                                     router.push(`/post/${n.entity_id}`);
                                 }
@@ -145,7 +145,7 @@ export default function NotificationsPage() {
                                                 className="font-bold text-white hover:underline cursor-pointer"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    router.push(`/profile?user_id=${encodeURIComponent(n.actor_id)}`);
+                                                    router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);
                                                 }}
                                             >
                                                 {n.actor_name || n.actor_id.split('@')[0]}
