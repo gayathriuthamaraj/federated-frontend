@@ -313,3 +313,124 @@ export async function fetchInviteQR(code: string): Promise<string> {
     const blob = await response.blob();
     return URL.createObjectURL(blob);
 }
+
+/** Exposed so dashboard and other pages can resolve the current base URL */
+export function getAdminApiBaseUrl(): string { return getApiBaseUrl(); }
+
+// ── Account Link Graph ────────────────────────────────────────────────────────
+
+export interface AdminAccountLink {
+    id: string;
+    requester_id: string;
+    target_id: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+}
+
+/** Fetch account links for a specific user (or all links if userId is empty) */
+export async function getAdminAccountLinks(userId: string): Promise<{ user_id: string; links: AdminAccountLink[]; count: number }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const url = userId
+        ? `${getApiBaseUrl()}/admin/account/links?user_id=${encodeURIComponent(userId)}`
+        : `${getApiBaseUrl()}/admin/account/links`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+/** Test peer connectivity via the backend (avoids browser CORS / Docker-network issues) */
+export async function testPeerConnection(endpoint: string): Promise<boolean> {
+    const token = getAuthToken();
+    if (!token) return false;
+    try {
+        const res = await fetch(`${getApiBaseUrl()}/admin/trusted-servers/test`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ endpoint }),
+        });
+        return res.ok;
+    } catch {
+        return false;
+    }
+}
+
+export interface AdminSnapshot {
+    ts: number;
+    users: number;
+    posts: number;
+    activities: number;
+    follows: number;
+}
+
+export async function getAdminSnapshots(): Promise<AdminSnapshot[]> {
+    const token = getAuthToken();
+    if (!token) return [];
+    try {
+        const res = await fetch(`${getApiBaseUrl()}/admin/snapshots`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data.snapshots) ? data.snapshots : [];
+    } catch {
+        return [];
+    }
+}
+
+export async function saveAdminSnapshot(snap: AdminSnapshot): Promise<void> {
+    const token = getAuthToken();
+    if (!token) return;
+    try {
+        await fetch(`${getApiBaseUrl()}/admin/snapshots`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(snap),
+        });
+    } catch { /* non-critical */ }
+}
+
+// ── Moderator Management ──────────────────────────────────────────────────────
+
+export interface ModeratorRecord {
+    user_id: string;
+    username: string;
+    assigned_by: string;
+    assigned_at: string;
+}
+
+export async function listModerators(): Promise<{ moderators: ModeratorRecord[]; count: number }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getApiBaseUrl()}/admin/moderators/list`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to list moderators');
+    return res.json();
+}
+
+export async function assignModerator(username: string): Promise<{ message: string }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getApiBaseUrl()}/admin/moderators/assign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ username }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+export async function removeModerator(username: string): Promise<{ message: string }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getApiBaseUrl()}/admin/moderators/remove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ username }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+

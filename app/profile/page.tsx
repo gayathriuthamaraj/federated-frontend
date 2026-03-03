@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ProfileCard from '../components/ProfileCard';
+import type { LinkedAccountInfo } from '../components/ProfileCard';
 import { useAuth } from '../context/AuthContext';
 import { Profile } from '../types/profile';
 import { useCache } from '../context/CacheContext';
@@ -31,6 +32,7 @@ function ProfileContent() {
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFollowingTarget, setIsFollowingTarget] = useState(false);
+  const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccountInfo[]>([]);
 
   // Support viewing other users via ?user_id= query param
   const queryUserId = searchParams.get('user_id');
@@ -187,8 +189,30 @@ function ProfileContent() {
       }
     };
 
+    const fetchLinkedAccounts = async () => {
+      try {
+        const res = await fetch(
+          `${identity.home_server}/account/links?user_id=${encodeURIComponent(targetUserId)}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const confirmed = (data.links || [])
+          .filter((l: any) => l.status === 'confirmed')
+          .map((l: any) => ({
+            id: l.id,
+            peer_id: l.is_inbound ? l.requester_id : l.target_id,
+            peer_name: l.is_inbound ? l.requester_name : l.target_name,
+            peer_avatar: l.is_inbound ? l.requester_avatar : l.target_avatar,
+          }));
+        setLinkedAccounts(confirmed);
+      } catch {
+        /* non-critical — profile still loads without linked accounts */
+      }
+    };
+
     fetchProfile();
     fetchPosts();
+    if (isOwnProfile && !isCrossServer) fetchLinkedAccounts();
   }, [authLoading, identity, targetUserId]);
 
 
@@ -230,6 +254,7 @@ function ProfileContent() {
         likedPosts={likedPosts}
         loadingPosts={loadingPosts}
         did={did || undefined}
+        linkedAccounts={linkedAccounts}
         onFollowChange={(delta) => {
           setProfileState(prev => {
             if (!prev) return prev;

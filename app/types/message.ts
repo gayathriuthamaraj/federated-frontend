@@ -3,5 +3,6 @@ export interface Message {
     sender: string
     receiver: string
     content: string
+    image_url?: string | null
     created_at: string
 }

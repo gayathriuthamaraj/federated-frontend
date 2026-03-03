@@ -31,7 +31,7 @@ export default function Following({ following }: FollowingProps) {
                     "
                 >
                     <Link
-                        href={`/profile?user_id=${encodeURIComponent(followedUser.user_id)}`}
+                        href={`/search?user_id=${encodeURIComponent(followedUser.user_id)}`}
                         className="flex items-center gap-3 flex-1 min-w-0"
                     >
                         {}
