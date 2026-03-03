@@ -13,6 +13,7 @@ interface Message {
     sender: string;
     receiver: string;
     content: string;
+    image_url?: string | null;
     created_at: string;
 }
 
@@ -49,6 +50,24 @@ function MessagesContent() {
     const [sending, setSending] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [retryKey, setRetryKey] = useState(0);
+    const [msgImageFile, setMsgImageFile] = useState<File | null>(null);
+    const [msgImagePreview, setMsgImagePreview] = useState<string | null>(null);
+    const msgFileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleMsgImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setMsgImageFile(file);
+        const reader = new FileReader();
+        reader.onload = () => setMsgImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
+    };
+
+    const removeMsgImage = () => {
+        setMsgImageFile(null);
+        setMsgImagePreview(null);
+        if (msgFileInputRef.current) msgFileInputRef.current.value = '';
+    };
 
     // Keyed by userId: profile data from the cache
     const [profiles, setProfiles] = useState<Record<string, CachedProfile>>({});
@@ -261,10 +280,27 @@ function MessagesContent() {
 
     // ── Send message ──────────────────────────────────────────────────────────
     const handleSendMessage = async () => {
-        if (!newMessage.trim() || !identity || !selectedUserId) return;
+        if (!newMessage.trim() && !msgImageFile) return;
+        if (!identity || !selectedUserId) return;
 
         setSending(true);
         try {
+            // Upload image first if present
+            let imageURL: string | null = null;
+            if (msgImageFile) {
+                const form = new FormData();
+                form.append('file', msgImageFile);
+                const upRes = await fetch(`${identity.home_server}/upload/image`, { method: 'POST', body: form });
+                if (upRes.ok) {
+                    const upData = await upRes.json();
+                    imageURL = `${identity.home_server}${upData.url}`;
+                } else {
+                    alert('Image upload failed');
+                    setSending(false);
+                    return;
+                }
+            }
+
             const accessToken = localStorage.getItem('access_token');
             const res = await fetch(`${identity.home_server}/message`, {
                 method: 'POST',
@@ -276,6 +312,7 @@ function MessagesContent() {
                     from: identity.user_id,
                     to: selectedUserId,
                     content: newMessage,
+                    ...(imageURL ? { image_url: imageURL } : {}),
                 }),
             });
 
@@ -285,13 +322,14 @@ function MessagesContent() {
                     sender: identity.user_id,
                     receiver: selectedUserId,
                     content: newMessage,
+                    image_url: imageURL,
                     created_at: new Date().toISOString(),
                 };
                 const updated = [...messages, newMsg];
                 setMessages(updated);
-                // Persist to cache immediately so the thread is saved locally
                 cache.setMessages(identity.user_id, selectedUserId, updated);
                 setNewMessage('');
+                removeMsgImage();
             } else {
                 const errorText = await res.text();
                 console.error('Failed to send message:', errorText);
@@ -355,7 +393,7 @@ function MessagesContent() {
     return (
         <div className="flex h-full">
             {/* ── Left: conversation list ── */}
-            <div className="w-80 border-r border-bat-gray/10 bg-bat-dark flex flex-col flex-shrink-0">
+            <div className="w-80 border-r border-bat-gray/10 bg-bat-dark flex flex-col shrink-0">
                 <div className="p-4 border-b border-bat-gray/10">
                     <h1 className="text-2xl font-bold text-bat-gray">Messages</h1>
                 </div>
@@ -389,7 +427,7 @@ function MessagesContent() {
                                         'flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200',
                                         isSelected
                                             ? 'bg-bat-yellow/15 border border-bat-yellow/40 shadow-md'
-                                            : 'bg-[#0B0C10] border border-white/5 hover:border-white/15 hover:bg-[#13151a]',
+                                                : 'bg-bat-black border border-white/5 hover:border-white/15 hover:bg-[#13151a]',
                                     ].join(' ')}
                                 >
                                     <div className="shrink-0">
@@ -460,7 +498,19 @@ function MessagesContent() {
                                                 ? 'bg-bat-yellow text-bat-black rounded-br-sm'
                                                 : 'bg-bat-dark text-bat-gray rounded-bl-sm'
                                         }`}>
-                                            {msg.content}
+                                            {msg.image_url && (
+                                                <div className="mb-1 rounded-xl overflow-hidden">
+                                                    <Image
+                                                        src={msg.image_url}
+                                                        alt="Image"
+                                                        width={240}
+                                                        height={160}
+                                                        className="max-w-full rounded-xl object-contain"
+                                                        unoptimized
+                                                    />
+                                                </div>
+                                            )}
+                                            {msg.content && <p>{msg.content}</p>}
                                             <p className="text-xs opacity-50 mt-1 text-right">
                                                 {new Date(msg.created_at).toLocaleTimeString([], {
                                                     hour: '2-digit',
@@ -476,7 +526,48 @@ function MessagesContent() {
 
                         {/* Input */}
                         <div className="p-4 border-t border-bat-gray/10 bg-bat-dark">
-                            <div className="flex gap-2">
+                            {/* Image preview */}
+                            {msgImagePreview && (
+                                <div className="mb-2 relative inline-block">
+                                    <Image
+                                        src={msgImagePreview}
+                                        alt="Preview"
+                                        width={120}
+                                        height={80}
+                                        className="rounded-xl object-cover border border-bat-gray/20"
+                                        unoptimized
+                                    />
+                                    <button
+                                        onClick={removeMsgImage}
+                                        className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-bat-black/80 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                                    >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+                            <div className="flex gap-2 items-center">
+                                {/* Image attach button */}
+                                <button
+                                    type="button"
+                                    onClick={() => msgFileInputRef.current?.click()}
+                                    disabled={sending}
+                                    title="Attach image"
+                                    className="p-2 rounded-full text-bat-yellow/60 hover:text-bat-yellow hover:bg-bat-yellow/10 transition-colors disabled:opacity-40 shrink-0"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                                <input
+                                    ref={msgFileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/gif,image/webp"
+                                    className="hidden"
+                                    onChange={handleMsgImageSelect}
+                                />
                                 <input
                                     type="text"
                                     placeholder="Type a message..."
@@ -502,7 +593,7 @@ function MessagesContent() {
                                         disabled:opacity-50
                                     "
                                     onClick={handleSendMessage}
-                                    disabled={sending || !newMessage.trim()}
+                                    disabled={sending || (!newMessage.trim() && !msgImageFile)}
                                 >
                                     {sending ? 'Sending...' : 'Send'}
                                 </button>

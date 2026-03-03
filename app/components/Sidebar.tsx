@@ -1,10 +1,11 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { NavItem } from "./navItem";
 import { useAuth } from "../context/AuthContext";
+import type { AccountSession } from "../context/AuthContext";
 
 import MenuSvg from "../icons/menu_svg";
 import Home_svg from "../icons/home_svg";
@@ -28,9 +29,56 @@ function BatLogo() {
 
 export default function Sidebar() {
     const [expanded, setExpanded] = useState(false);
-    const pathname = usePathname();
+    const [showSwitcher, setShowSwitcher] = useState(false);
+    const [switchingTo, setSwitchingTo] = useState<string | null>(null);
+    const [passwordFor, setPasswordFor] = useState<string | null>(null);
+    const [switchPassword, setSwitchPassword] = useState('');
+    const [switchError, setSwitchError] = useState('');
+    const [switchLoading, setSwitchLoading] = useState(false);
 
-    const { identity, logout } = useAuth();
+    const pathname = usePathname();
+    const router = useRouter();
+    const { identity, logout, sessions, switchToLinked, loginWithoutRedirect, addSession } = useAuth();
+
+    // Try linked switch first; if no confirmed link exists, fall back to password form
+    const handleSwitchTo = async (session: AccountSession) => {
+        setSwitchingTo(session.user_id);
+        const ok = await switchToLinked(session.user_id, session.home_server);
+        setSwitchingTo(null);
+        if (ok) {
+            setShowSwitcher(false);
+            router.push('/feed');
+        } else {
+            setPasswordFor(session.user_id);
+            setSwitchPassword('');
+            setSwitchError('');
+        }
+    };
+
+    // Password-based switch when no confirmed link exists
+    const handlePasswordSwitch = async (session: AccountSession) => {
+        setSwitchLoading(true);
+        setSwitchError('');
+        try {
+            const res = await fetch(`${session.home_server}/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: session.user_id.split('@')[0], password: switchPassword }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Invalid password');
+            loginWithoutRedirect(data.user_id, data.home_server, data.access_token || '', data.refresh_token || '');
+            addSession(data.user_id, data.home_server, data.access_token || '', data.refresh_token || '');
+            setShowSwitcher(false);
+            setPasswordFor(null);
+            setSwitchPassword('');
+            router.push('/feed');
+        } catch (err: any) {
+            setSwitchError(err.message || 'Sign in failed');
+        } finally {
+            setSwitchLoading(false);
+        }
+    };
 
     return (
         <aside
@@ -149,6 +197,21 @@ export default function Sidebar() {
                     <Follow_svg />
                 </NavItem>
 
+                <NavItem
+                    label="Linked"
+                    href="/linked-accounts"
+                    expanded={expanded}
+                    active={pathname.startsWith("/linked-accounts")}
+                >
+                    {/* Chain-link icon — stroke-bat-yellow mirrors the Follow_svg pattern */}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        className="w-6 h-6 stroke-bat-yellow">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                    </svg>
+                </NavItem>
+
                 {}
                 <div className="mt-auto mb-4">
                     <NavItem
@@ -245,23 +308,130 @@ export default function Sidebar() {
                         </Link>
                     </div>
                 ) : (
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-bat-gray/20 flex items-center justify-center text-bat-yellow font-bold text-lg">
-                            {identity.user_id.substring(0, 2).toUpperCase()}
-                        </div>
-                        {expanded && (
-                            <div className="flex flex-col overflow-hidden min-w-0">
-                                <span className="text-sm font-bold text-bat-gray truncate" title={identity.user_id}>
-                                    {identity.user_id.split('@')[0]}
-                                </span>
-                                <span className="text-xs text-bat-gray/60 truncate" title={identity.home_server}>
-                                    {identity.user_id}
-                                </span>
+                    <div className="relative">
+                        {/* Current account row — click to open switcher when expanded */}
+                        <button
+                            onClick={() => { if (expanded) { setShowSwitcher(s => !s); setPasswordFor(null); setSwitchError(''); } }}
+                            className="flex items-center gap-3 w-full rounded-lg p-1 hover:bg-bat-yellow/10 transition-colors group"
+                        >
+                            <div className="w-10 h-10 shrink-0 rounded-full bg-bat-gray/20 flex items-center justify-center text-bat-yellow font-bold text-lg">
+                                {identity.user_id.substring(0, 2).toUpperCase()}
+                            </div>
+                            {expanded && (
+                                <>
+                                    <div className="flex flex-col overflow-hidden min-w-0 text-left">
+                                        <span className="text-sm font-bold text-bat-gray truncate">{identity.user_id.split('@')[0]}</span>
+                                        <span className="text-xs text-bat-gray/60 truncate">{identity.user_id}</span>
+                                    </div>
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        className={`w-4 h-4 ml-auto shrink-0 text-bat-gray/40 group-hover:text-bat-yellow transition-transform duration-200 ${showSwitcher ? 'rotate-180' : ''}`}
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </>
+                            )}
+                        </button>
+
+                        {/* Collapsed: small sign-out button */}
+                        {!expanded && (
+                            <button onClick={logout} title="Sign out"
+                                className="mt-2 w-full flex justify-center p-1 text-bat-gray/40 hover:text-bat-yellow transition-colors rounded-md hover:bg-bat-yellow/10">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                            </button>
+                        )}
+
+                        {/* Account switcher dropdown */}
+                        {expanded && showSwitcher && (
+                            <div className="absolute bottom-full left-0 right-0 mb-2 rounded-xl border border-bat-gray/20 bg-bat-dark shadow-2xl overflow-hidden z-50">
+
+                                {/* Other saved sessions */}
+                                {sessions.filter(s => s.user_id !== identity.user_id).map(session => (
+                                    <div key={session.user_id} className="border-b border-bat-gray/10 last:border-0">
+                                        {passwordFor === session.user_id ? (
+                                            /* Inline password form for non-linked accounts */
+                                            <div className="p-3">
+                                                <p className="text-xs text-bat-gray/70 mb-2">
+                                                    Password for <span className="font-semibold text-bat-gray">{session.user_id.split('@')[0]}</span>
+                                                </p>
+                                                <input
+                                                    type="password"
+                                                    value={switchPassword}
+                                                    onChange={e => setSwitchPassword(e.target.value)}
+                                                    onKeyDown={e => { if (e.key === 'Enter') handlePasswordSwitch(session); }}
+                                                    placeholder="Password"
+                                                    autoFocus
+                                                    className="w-full px-3 py-1.5 rounded-lg bg-bat-black border border-bat-gray/20 text-bat-gray text-sm focus:border-bat-yellow/50 focus:outline-none"
+                                                />
+                                                {switchError && <p className="text-red-400 text-xs mt-1">{switchError}</p>}
+                                                <div className="flex gap-2 mt-2">
+                                                    <button
+                                                        onClick={() => handlePasswordSwitch(session)}
+                                                        disabled={switchLoading || !switchPassword}
+                                                        className="flex-1 py-1.5 rounded-lg bg-bat-yellow text-bat-black text-xs font-bold disabled:opacity-40 transition-opacity"
+                                                    >
+                                                        {switchLoading ? '…' : 'Sign in'}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { setPasswordFor(null); setSwitchPassword(''); setSwitchError(''); }}
+                                                        className="flex-1 py-1.5 rounded-lg border border-bat-gray/20 text-bat-gray text-xs hover:border-bat-gray/40 transition-colors"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            /* Session row — linked accounts switch instantly */
+                                            <button
+                                                onClick={() => handleSwitchTo(session)}
+                                                disabled={switchingTo === session.user_id}
+                                                className="flex items-center gap-3 w-full px-4 py-3 hover:bg-bat-yellow/10 transition-colors disabled:opacity-60 group"
+                                            >
+                                                <div className="w-8 h-8 shrink-0 rounded-full bg-bat-gray/20 flex items-center justify-center text-bat-yellow text-sm font-bold">
+                                                    {session.user_id.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div className="flex flex-col text-left min-w-0">
+                                                    <span className="text-sm text-bat-gray font-medium truncate">{session.user_id.split('@')[0]}</span>
+                                                    <span className="text-xs text-bat-gray/50 truncate">{session.user_id}</span>
+                                                </div>
+                                                {switchingTo === session.user_id ? (
+                                                    <span className="ml-auto text-xs text-bat-yellow animate-pulse">switching…</span>
+                                                ) : (
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 ml-auto text-bat-gray/30 group-hover:text-bat-yellow transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+
+                                {/* Add another account */}
+                                <Link
+                                    href="/add-account"
+                                    onClick={() => setShowSwitcher(false)}
+                                    className="flex items-center gap-3 px-4 py-3 hover:bg-bat-yellow/10 transition-colors text-bat-yellow/70 hover:text-bat-yellow border-t border-bat-gray/10"
+                                >
+                                    <div className="w-8 h-8 shrink-0 rounded-full border border-bat-yellow/30 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                    </div>
+                                    <span className="text-sm">Add another account</span>
+                                </Link>
+
+                                {/* Sign out */}
                                 <button
                                     onClick={logout}
-                                    className="text-xs text-bat-yellow hover:underline text-left mt-1"
+                                    className="flex items-center gap-3 w-full px-4 py-3 hover:bg-red-500/10 transition-colors text-red-400/70 hover:text-red-400 border-t border-bat-gray/10"
                                 >
-                                    Sign out
+                                    <div className="w-8 h-8 shrink-0 rounded-full border border-red-400/20 flex items-center justify-center">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                        </svg>
+                                    </div>
+                                    <span className="text-sm">Sign out</span>
                                 </button>
                             </div>
                         )}

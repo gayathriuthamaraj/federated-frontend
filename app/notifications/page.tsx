@@ -15,7 +15,7 @@ interface AS2Activity {
 
 interface Notification {
     id: string;
-    type: 'FOLLOW' | 'LIKE' | 'REPLY' | 'REPOST' | 'SYSTEM' | 'SERVER_UPDATE' | 'MESSAGE' | 'UNLIKE';
+    type: 'FOLLOW' | 'LIKE' | 'REPLY' | 'REPOST' | 'SYSTEM' | 'SERVER_UPDATE' | 'MESSAGE' | 'UNLIKE' | 'LINK_REQUEST' | 'LINK_ACCEPTED';
     actor_id: string;
     actor_name?: string;
     actor_avatar?: string;
@@ -75,8 +75,10 @@ export default function NotificationsPage() {
             case 'REPLY': return 'replied to your post';
             case 'REPOST': return 'reposted your post';
             case 'MESSAGE': return 'sent you a message';
-            case 'SERVER_UPDATE': return `server updated: ${n.entity_id || ''}`;
+            case 'SERVER_UPDATE': return n.entity_id || 'Server configuration updated';
             case 'SYSTEM': return n.entity_id || n.message || 'System notification';
+            case 'LINK_REQUEST': return 'sent you an account link request';
+            case 'LINK_ACCEPTED': return 'accepted your account link request';
             default: return 'interacted with you';
         }
     };
@@ -93,6 +95,8 @@ export default function NotificationsPage() {
             case 'Announce':      case 'REPOST':        return <span className="text-purple-500">🔁</span>;
             case 'Update':        case 'SERVER_UPDATE': return <span className="text-yellow-500">⚙️</span>;
             case 'MESSAGE':       return <span className="text-sky-400">✉️</span>;
+            case 'LINK_REQUEST':  return <span className="text-bat-yellow">🔗</span>;
+            case 'LINK_ACCEPTED': return <span className="text-green-400">🔗</span>;
             default:              return <span className="text-gray-500">🔔</span>;
         }
     };
@@ -116,6 +120,8 @@ export default function NotificationsPage() {
                             onClick={() => {
                                 if (n.type === 'FOLLOW') {
                                     router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);
+                                } else if (n.type === 'LINK_REQUEST' || n.type === 'LINK_ACCEPTED') {
+                                    router.push('/linked-accounts');
                                 } else if (n.entity_id) {
                                     router.push(`/post/${n.entity_id}`);
                                 }

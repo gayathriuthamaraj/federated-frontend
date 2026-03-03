@@ -1,10 +1,11 @@
 ﻿"use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import PostCard from '../components/PostCard';
 import RightPanel from '../components/RightPanel';
+import Image from 'next/image';
 
 export default function FeedPage() {
     const { identity, isLoading: authLoading } = useAuth();
@@ -14,6 +15,24 @@ export default function FeedPage() {
     const [error, setError] = useState(null);
     const [newPostContent, setNewPostContent] = useState('');
     const [posting, setPosting] = useState(false);
+    const [feedImageFile, setFeedImageFile] = useState<File | null>(null);
+    const [feedImagePreview, setFeedImagePreview] = useState<string | null>(null);
+    const feedFileInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFeedImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setFeedImageFile(file);
+        const reader = new FileReader();
+        reader.onload = () => setFeedImagePreview(reader.result as string);
+        reader.readAsDataURL(file);
+    };
+
+    const removeFeedImage = () => {
+        setFeedImageFile(null);
+        setFeedImagePreview(null);
+        if (feedFileInputRef.current) feedFileInputRef.current.value = '';
+    };
 
     
     useEffect(() => {
@@ -54,16 +73,33 @@ export default function FeedPage() {
 
     
     const handleCreatePost = async () => {
-        if (!newPostContent.trim() || !identity) return;
+        if ((!newPostContent.trim() && !feedImageFile) || !identity) return;
 
         setPosting(true);
         try {
+            let imageURL: string | null = null;
+            if (feedImageFile) {
+                const form = new FormData();
+                form.append('file', feedImageFile);
+                const upRes = await fetch(`${identity.home_server}/upload/image`, { method: 'POST', body: form });
+                if (upRes.ok) {
+                    const upData = await upRes.json();
+                    imageURL = `${identity.home_server}${upData.url}`;
+                } else {
+                    const errText = await upRes.text().catch(() => 'Upload failed');
+                    alert(`Image upload failed: ${errText}`);
+                    setPosting(false);
+                    return;
+                }
+            }
+
             const res = await fetch(`${identity.home_server}/post/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     user_id: identity.user_id,
                     content: newPostContent,
+                    ...(imageURL ? { image_url: imageURL } : {}),
                 }),
             });
 
@@ -78,6 +114,7 @@ export default function FeedPage() {
                 id: data.post_id,
                 author: identity.user_id,
                 content: newPostContent,
+                image_url: imageURL ?? undefined,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
                 like_count: 0,
@@ -89,6 +126,7 @@ export default function FeedPage() {
 
             setPosts([newPost, ...posts]);
             setNewPostContent('');
+            removeFeedImage();
         } catch (err) {
             console.error('Post creation error:', err);
             alert('Failed to create post');
@@ -150,10 +188,50 @@ export default function FeedPage() {
                                 onChange={e => setNewPostContent(e.target.value)}
                                 disabled={posting}
                             />
-                            <div className="flex justify-end mt-1">
+                            {/* Image preview */}
+                            {feedImagePreview && (
+                                <div className="mt-2 relative rounded-xl overflow-hidden border border-bat-gray/20">
+                                    <Image
+                                        src={feedImagePreview}
+                                        alt="Preview"
+                                        width={500}
+                                        height={300}
+                                        className="w-full max-h-60 object-contain bg-bat-black"
+                                        unoptimized
+                                    />
+                                    <button
+                                        onClick={removeFeedImage}
+                                        className="absolute top-1 right-1 w-6 h-6 rounded-full bg-bat-black/80 text-white flex items-center justify-center hover:bg-red-600 transition-colors"
+                                    >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+                            <div className="flex items-center justify-between mt-1">
+                                <button
+                                    type="button"
+                                    onClick={() => feedFileInputRef.current?.click()}
+                                    disabled={posting}
+                                    title="Attach image"
+                                    className="p-1.5 rounded-full text-bat-yellow/50 hover:text-bat-yellow hover:bg-bat-yellow/10 transition-colors disabled:opacity-40"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                                <input
+                                    ref={feedFileInputRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/gif,image/webp"
+                                    className="hidden"
+                                    onChange={handleFeedImageSelect}
+                                />
                                 <button
                                     onClick={handleCreatePost}
-                                    disabled={posting || !newPostContent.trim()}
+                                    disabled={posting || (!newPostContent.trim() && !feedImageFile)}
                                     className="px-5 py-1.5 rounded-full font-bold bg-bat-yellow text-bat-black text-sm hover:bg-yellow-400 active:scale-95 transition-all duration-150 disabled:opacity-40 shadow-[0_0_12px_rgba(245,197,24,0.2)]"
                                 >
                                     {posting ? 'Posting...' : 'Post'}
