@@ -18,6 +18,13 @@ interface UserReply {
     created_at: string;
 }
 
+export interface LinkedAccountInfo {
+    id: string;
+    peer_id: string;
+    peer_name?: string;
+    peer_avatar?: string;
+}
+
 interface ProfileCardProps {
     profile: Profile;
     isOwnProfile?: boolean;
@@ -27,6 +34,7 @@ interface ProfileCardProps {
     likedPosts?: Post[];
     loadingPosts?: boolean;
     did?: string;
+    linkedAccounts?: LinkedAccountInfo[];
     /** Base path for user-profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
     linkBase?: string;
     /** Called after a follow/unfollow with +1 or -1 so parent can update counts & cache */
@@ -42,6 +50,7 @@ export default function ProfileCard({
     likedPosts = [],
     loadingPosts = false,
     did,
+    linkedAccounts = [],
     linkBase = '/search',
     onFollowChange,
 }: ProfileCardProps) {
@@ -245,6 +254,33 @@ export default function ProfileCard({
                         <span className="text-bat-gray/60">Followers</span>
                     </Link>
                 </div>
+
+                {/* Linked accounts badges — only visible on the user's own profile */}
+                {isOwnProfile && linkedAccounts.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        {linkedAccounts.map((la) => (
+                            <Link
+                                key={la.id}
+                                href="/linked-accounts"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bat-yellow/10 border border-bat-yellow/30 text-bat-yellow text-xs hover:bg-bat-yellow/20 transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                    className="w-3 h-3">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                </svg>
+                                <span>Linked with&nbsp;</span>
+                                <span className="font-semibold">
+                                    {la.peer_name || la.peer_id.split('@')[0]}
+                                </span>
+                                <span className="text-bat-yellow/60">
+                                    @{la.peer_id.split('@')[1]}
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {}

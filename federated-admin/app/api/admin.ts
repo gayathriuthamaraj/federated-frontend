@@ -317,6 +317,29 @@ export async function fetchInviteQR(code: string): Promise<string> {
 /** Exposed so dashboard and other pages can resolve the current base URL */
 export function getAdminApiBaseUrl(): string { return getApiBaseUrl(); }
 
+// ── Account Link Graph ────────────────────────────────────────────────────────
+
+export interface AdminAccountLink {
+    id: string;
+    requester_id: string;
+    target_id: string;
+    status: string;
+    created_at: string;
+    updated_at: string;
+}
+
+/** Fetch account links for a specific user (or all links if userId is empty) */
+export async function getAdminAccountLinks(userId: string): Promise<{ user_id: string; links: AdminAccountLink[]; count: number }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const url = userId
+        ? `${getApiBaseUrl()}/admin/account/links?user_id=${encodeURIComponent(userId)}`
+        : `${getApiBaseUrl()}/admin/account/links`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
 /** Test peer connectivity via the backend (avoids browser CORS / Docker-network issues) */
 export async function testPeerConnection(endpoint: string): Promise<boolean> {
     const token = getAuthToken();

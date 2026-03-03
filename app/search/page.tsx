@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProfileCard from '../components/ProfileCard';
+import type { LinkedAccountInfo } from '../components/ProfileCard';
 import { Post } from '@/types/post';
 
 interface UserProfile {
@@ -49,6 +50,7 @@ export default function SearchPage() {
     const [userReplies, setUserReplies] = useState<UserReply[]>([]);
     const [likedPosts, setLikedPosts] = useState<Post[]>([]);
     const [loadingPosts, setLoadingPosts] = useState(false);
+    const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccountInfo[]>([]);
 
     // tracks the last local user_id queried so refreshProfile knows what to hit
     const lastQueryRef = useRef<string>('');
@@ -93,6 +95,31 @@ export default function SearchPage() {
     }, [identity]);
 
     // ------------------------------------------------------------------
+    // Fetch confirmed account links for a local user
+    // ------------------------------------------------------------------
+    const fetchLinkedAccounts = useCallback(async (userId: string) => {
+        if (!identity) return;
+        try {
+            const res = await fetch(
+                `${identity.home_server}/account/links?user_id=${encodeURIComponent(userId)}`
+            );
+            if (!res.ok) return;
+            const data = await res.json();
+            const confirmed = (data.links || [])
+                .filter((l: any) => l.status === 'confirmed')
+                .map((l: any) => ({
+                    id: l.id,
+                    peer_id: l.is_inbound ? l.requester_id : l.target_id,
+                    peer_name: l.is_inbound ? l.requester_name : l.target_name,
+                    peer_avatar: l.is_inbound ? l.requester_avatar : l.target_avatar,
+                }));
+            setLinkedAccounts(confirmed);
+        } catch {
+            /* non-critical — profile still shows without linked accounts */
+        }
+    }, [identity]);
+
+    // ------------------------------------------------------------------
     // Re-fetch profile from server to get accurate counts/state
     // Called after follow/unfollow/block actions
     // ------------------------------------------------------------------
@@ -133,7 +160,7 @@ export default function SearchPage() {
     // ------------------------------------------------------------------
     // Build a UserProfile from a local /user/search response
     // ------------------------------------------------------------------
-    const buildLocalUser = (data: any): UserProfile => ({
+    const buildLocalUser = useCallback((data: any): UserProfile => ({
         userId:         data.identity.user_id,
         username:       data.identity.user_id.split('@')[0],
         displayName:    data.profile.display_name  || 'Unknown',
@@ -148,7 +175,7 @@ export default function SearchPage() {
         createdAt:      data.profile.created_at,
         updatedAt:      data.profile.updated_at,
         isFederated:    false,
-    });
+    }), []);
 
     // ------------------------------------------------------------------
     // Core search logic — extracted so it can be called from the URL param
@@ -165,6 +192,7 @@ export default function SearchPage() {
         setUserPosts([]);
         setUserReplies([]);
         setLikedPosts([]);
+        setLinkedAccounts([]);
         setFederationStep('');
 
         try {
@@ -190,6 +218,7 @@ export default function SearchPage() {
                             lastQueryRef.current = user.userId;
                             setSelectedUser(user);
                             fetchUserContent(user.userId, false);
+                            fetchLinkedAccounts(user.userId);
                         } else {
                             setSelectedUser(null);
                         }
@@ -272,6 +301,7 @@ export default function SearchPage() {
                         lastQueryRef.current = user.userId;
                         setSelectedUser(user);
                         fetchUserContent(user.userId, false);
+                        fetchLinkedAccounts(user.userId);
                     } else {
                         setSelectedUser(null);
                     }
@@ -287,7 +317,7 @@ export default function SearchPage() {
         } finally {
             setSearching(false);
         }
-    }, [identity, fetchUserContent, buildLocalUser]);
+    }, [identity, fetchUserContent, buildLocalUser, fetchLinkedAccounts]);
 
     const handleSearch = () => {
         if (!searchQuery.trim() || !identity) return;
@@ -302,8 +332,7 @@ export default function SearchPage() {
         if (authLoading || !identity) return;
         const uid = searchParams.get('user_id');
         if (uid) runSearch(uid);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchParams, identity, authLoading]);
+    }, [searchParams, identity, authLoading, runSearch]);
 
     useEffect(() => {
         if (!authLoading && !identity) {
