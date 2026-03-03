@@ -141,20 +141,38 @@ export default function ProfileCard({
                     </div>
 
                     {}
-                    <div className="pt-3 flex gap-2">
+                    <div className="pt-3 flex gap-2 flex-wrap">
                         {isOwnProfile ? (
-                            <Link
-                                href="/profile/edit"
-                                className="
-                                    px-6 py-2 rounded-md font-bold
-                                    bg-bat-black text-bat-gray
-                                    border-2 border-bat-gray/30
-                                    hover:border-bat-yellow hover:text-bat-yellow
-                                    transition-all duration-200
-                                "
-                            >
-                                Edit Profile
-                            </Link>
+                            <>
+                                <Link
+                                    href="/profile/edit"
+                                    className="
+                                        px-6 py-2 rounded-md font-bold
+                                        bg-bat-black text-bat-gray
+                                        border-2 border-bat-gray/30
+                                        hover:border-bat-yellow hover:text-bat-yellow
+                                        transition-all duration-200
+                                    "
+                                >
+                                    Edit Profile
+                                </Link>
+                                <Link
+                                    href="/settings/privacy"
+                                    className="
+                                        px-4 py-2 rounded-md font-bold
+                                        bg-bat-black text-bat-gray/60
+                                        border-2 border-bat-gray/20
+                                        hover:border-bat-yellow/60 hover:text-bat-yellow/80
+                                        transition-all duration-200 flex items-center gap-1.5
+                                    "
+                                    title="Privacy settings"
+                                >
+                                    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                                        <path d="M12 1L3 5v6c0 5.25 3.75 10.15 9 11.35C17.25 21.15 21 16.25 21 11V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+                                    </svg>
+                                    Privacy
+                                </Link>
+                            </>
                         ) : (
                             <>
                                 <FollowButton

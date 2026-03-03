@@ -409,7 +409,7 @@ export default function Sidebar() {
 
                                 {/* Add another account */}
                                 <Link
-                                    href="/login"
+                                    href="/add-account"
                                     onClick={() => setShowSwitcher(false)}
                                     className="flex items-center gap-3 px-4 py-3 hover:bg-bat-yellow/10 transition-colors text-bat-yellow/70 hover:text-bat-yellow border-t border-bat-gray/10"
                                 >
