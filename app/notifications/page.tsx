@@ -152,6 +152,7 @@ export default function NotificationsPage() {
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);
+                                                    router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);
                                                 }}
                                             >
                                                 {n.actor_name || n.actor_id.split('@')[0]}
