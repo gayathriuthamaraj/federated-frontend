@@ -5,23 +5,23 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        // Local development backend
+        // Local development backend (specific path for safety)
         protocol: 'http',
         hostname: 'localhost',
         port: '8080',
         pathname: '/uploads/**',
       },
       {
-        // Allow any https host so federated servers work without per-host config
+        // Any HTTPS host — covers CDN uploads, object storage, federation servers
         protocol: 'https',
         hostname: '**',
-        pathname: '/uploads/**',
+        pathname: '/**',
       },
       {
-        // Allow any http host for local federation testing
+        // Any HTTP host for local federation / dev servers
         protocol: 'http',
         hostname: '**',
-        pathname: '/uploads/**',
+        pathname: '/**',
       },
     ],
   },

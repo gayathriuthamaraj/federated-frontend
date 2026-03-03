@@ -313,3 +313,57 @@ export async function fetchInviteQR(code: string): Promise<string> {
     const blob = await response.blob();
     return URL.createObjectURL(blob);
 }
+
+/** Exposed so dashboard and other pages can resolve the current base URL */
+export function getAdminApiBaseUrl(): string { return getApiBaseUrl(); }
+
+/** Test peer connectivity via the backend (avoids browser CORS / Docker-network issues) */
+export async function testPeerConnection(endpoint: string): Promise<boolean> {
+    const token = getAuthToken();
+    if (!token) return false;
+    try {
+        const res = await fetch(`${getApiBaseUrl()}/admin/trusted-servers/test`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ endpoint }),
+        });
+        return res.ok;
+    } catch {
+        return false;
+    }
+}
+
+export interface AdminSnapshot {
+    ts: number;
+    users: number;
+    posts: number;
+    activities: number;
+    follows: number;
+}
+
+export async function getAdminSnapshots(): Promise<AdminSnapshot[]> {
+    const token = getAuthToken();
+    if (!token) return [];
+    try {
+        const res = await fetch(`${getApiBaseUrl()}/admin/snapshots`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data.snapshots) ? data.snapshots : [];
+    } catch {
+        return [];
+    }
+}
+
+export async function saveAdminSnapshot(snap: AdminSnapshot): Promise<void> {
+    const token = getAuthToken();
+    if (!token) return;
+    try {
+        await fetch(`${getApiBaseUrl()}/admin/snapshots`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(snap),
+        });
+    } catch { /* non-critical */ }
+}

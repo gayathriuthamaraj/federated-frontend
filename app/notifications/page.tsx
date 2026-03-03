@@ -75,7 +75,7 @@ export default function NotificationsPage() {
             case 'REPLY': return 'replied to your post';
             case 'REPOST': return 'reposted your post';
             case 'MESSAGE': return 'sent you a message';
-            case 'SERVER_UPDATE': return `server updated: ${n.entity_id || ''}`;
+            case 'SERVER_UPDATE': return n.entity_id || 'Server configuration updated';
             case 'SYSTEM': return n.entity_id || n.message || 'System notification';
             default: return 'interacted with you';
         }
