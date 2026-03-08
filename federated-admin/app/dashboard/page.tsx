@@ -54,12 +54,12 @@ function TrendChart({ snapshots, activeSeries }: { snapshots: Snapshot[]; active
     const activeKeys = activeSeries
         ? [activeSeries as keyof Omit<Snapshot, 'ts'>]
         : (['users', 'posts', 'activities', 'follows'] as (keyof Omit<Snapshot, 'ts'>)[]);
-    const maxVal = Math.max(...snapshots.flatMap(s => activeKeys.map(k => s[k])), 1);
+    const maxVal = Math.max(...snapshots.flatMap(s => activeKeys.map(k => Number(s[k]) || 0)), 1);
 
     const px = (i: number) => PAD.l + (i / (n - 1)) * cW;
     const py = (v: number) => PAD.t + cH - (v / maxVal) * cH;
     const makeLine = (key: keyof Omit<Snapshot, 'ts'>) =>
-        snapshots.map((s, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(s[key]).toFixed(1)}`).join(' ');
+        snapshots.map((s, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(Number(s[key]) || 0).toFixed(1)}`).join(' ');
     const labelIdxs = [0, Math.floor((n - 1) / 2), n - 1];
 
     const isActive = (key: string) => activeSeries === null || activeSeries === key;
@@ -111,7 +111,7 @@ function TrendChart({ snapshots, activeSeries }: { snapshots: Snapshot[]; active
                 return (
                     <circle
                         key={s.key + '-dot'}
-                        cx={px(n - 1)} cy={py(last[s.key])}
+                        cx={px(n - 1)} cy={py(Number(last[s.key]) || 0)}
                         r={isActive(s.key) ? (activeSeries ? 4 : 3) : 2}
                         fill={s.color}
                         fillOpacity={isActive(s.key) ? 1 : 0.1}

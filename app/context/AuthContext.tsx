@@ -114,6 +114,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [identity, isLoading, pathname, router]);
 
+    // Auto-populate the session switcher with confirmed linked accounts whenever
+    // the active identity changes (on login, account switch, page reload).
+    useEffect(() => {
+        if (!identity) return;
+        fetch(`${identity.home_server}/account/links?user_id=${encodeURIComponent(identity.user_id)}`)
+            .then(r => { if (r.ok) return r.json(); throw new Error(); })
+            .then(data => {
+                (data.links || [])
+                    .filter((l: { status: string }) => l.status === 'confirmed')
+                    .forEach((l: { is_inbound: boolean; requester_id: string; target_id: string }) => {
+                        const peerId = l.is_inbound ? l.requester_id : l.target_id;
+                        upsertSessionStorage({ user_id: peerId, home_server: identity.home_server, access_token: '', refresh_token: '' });
+                    });
+                setSessions(readSessionsStorage());
+            })
+            .catch(() => { /* non-critical */ });
+    }, [identity?.user_id]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     const addSession = (userId: string, homeServer: string, accessToken: string, refreshToken: string) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -38,32 +38,37 @@ export default function NotificationsPage() {
         }
     }, [identity, authLoading, router]);
 
-    useEffect(() => {
-        async function fetchNotifications() {
-            if (!identity) return;
-
-            try {
-                const res = await fetch(`${identity.home_server}/notifications?user_id=${encodeURIComponent(identity.user_id)}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setNotifications(data.notifications || []);
-
-                    
-                    await fetch(`${identity.home_server}/notifications/read`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: identity.user_id })
-                    });
-                }
-            } catch (err) {
-                console.error('Failed to fetch notifications:', err);
-            } finally {
-                setLoading(false);
+    const fetchNotifications = useCallback(async () => {
+        if (!identity) return;
+        try {
+            const res = await fetch(`${identity.home_server}/notifications?user_id=${encodeURIComponent(identity.user_id)}`);
+            if (res.ok) {
+                const data = await res.json();
+                setNotifications(data.notifications || []);
+                // Mark all as read once opened
+                await fetch(`${identity.home_server}/notifications/read`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: identity.user_id }),
+                });
             }
+        } catch (err) {
+            console.error('Failed to fetch notifications:', err);
+        } finally {
+            setLoading(false);
         }
-
-        if (identity) fetchNotifications();
     }, [identity]);
+
+    useEffect(() => {
+        if (identity) fetchNotifications();
+    }, [identity, fetchNotifications]);
+
+    // Poll every 30 s so live notifications appear without a page reload
+    useEffect(() => {
+        if (!identity) return;
+        const id = setInterval(fetchNotifications, 30_000);
+        return () => clearInterval(id);
+    }, [identity, fetchNotifications]);
 
     const getNotificationText = (n: Notification) => {
         // Prefer the richer AS2 summary when available
@@ -132,7 +137,7 @@ export default function NotificationsPage() {
                                 hover:border-bat-yellow/50 transition-colors duration-200
                             `}
                         >
-                            <div className="flex-shrink-0">
+                            <div className="shrink-0">
                                 {n.actor_avatar && n.actor_avatar !== "" ? (
                                     <img src={n.actor_avatar} alt={n.actor_name} className="w-10 h-10 rounded-full object-cover" />
                                 ) : (
@@ -151,7 +156,6 @@ export default function NotificationsPage() {
                                                 className="font-bold text-white hover:underline cursor-pointer"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);
                                                     router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);
                                                 }}
                                             >

@@ -46,7 +46,12 @@ export async function getPendingPosts(): Promise<{ posts: PendingPost[]; count: 
     const res = await fetch(`${getApiBase()}/moderation/pending`, {
         headers: { 'Authorization': `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error('Failed to fetch pending posts');
+    if (!res.ok) {
+        const body = await res.text();
+        let msg = body;
+        try { msg = JSON.parse(body).error || body; } catch { /* use raw body */ }
+        throw new Error(msg || 'Failed to fetch pending posts');
+    }
     return res.json();
 }
 

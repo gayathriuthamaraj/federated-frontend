@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -35,7 +35,7 @@ export default function ComposePage() {
     const uploadImage = async (): Promise<string | null> => {
         if (!imageFile || !identity) return null;
         const form = new FormData();
-        form.append('file', imageFile);
+        form.append('image', imageFile);
         const res = await fetch(`${identity.home_server}/upload/image`, {
             method: 'POST',
             body: form,
@@ -84,8 +84,13 @@ export default function ComposePage() {
         }
     };
 
+    useEffect(() => {
+        if (!identity) {
+            router.push('/login');
+        }
+    }, [identity, router]);
+
     if (!identity) {
-        router.push('/login');
         return null;
     }
 

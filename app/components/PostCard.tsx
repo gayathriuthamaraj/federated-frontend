@@ -10,6 +10,8 @@ interface PostCardProps {
     post: Post;
     /** Base path for author profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
     linkBase?: string;
+    /** If true, the replies section will be open on initial render. */
+    initialShowComments?: boolean;
 }
 
 interface Reply {
@@ -22,7 +24,7 @@ interface Reply {
     replies?: Reply[];
 }
 
-export default function PostCard({ post, linkBase = '/search' }: PostCardProps) {
+export default function PostCard({ post, linkBase = '/search', initialShowComments = false }: PostCardProps) {
     const { identity } = useAuth();
 
     const [isLiked, setIsLiked] = useState(post.has_liked || false);
@@ -30,7 +32,8 @@ export default function PostCard({ post, linkBase = '/search' }: PostCardProps) 
     const [likePopKey, setLikePopKey] = useState(0);
     const [isReposted, setIsReposted] = useState(post.has_reposted || false);
     const [repostCount, setRepostCount] = useState(post.repost_count || 0);
-    const [showComments, setShowComments] = useState(false);
+    const [replyCount, setReplyCount] = useState(post.reply_count || 0);
+    const [showComments, setShowComments] = useState(initialShowComments);
     const [commentText, setCommentText] = useState('');
     const [comments, setComments] = useState<Reply[]>([]);
     const [loadingComments, setLoadingComments] = useState(false);
@@ -68,7 +71,9 @@ export default function PostCard({ post, linkBase = '/search' }: PostCardProps) 
             const res = await fetch(`${identity.home_server}/post/replies?post_id=${post.id}`);
             if (res.ok) {
                 const data = await res.json();
-                setComments(buildReplyTree(data.replies || []));
+                const flat: Reply[] = data.replies || [];
+                setReplyCount(flat.length);
+                setComments(buildReplyTree(flat));
             }
         } catch (err) {
             console.error('Failed to fetch replies:', err);
@@ -144,6 +149,7 @@ export default function PostCard({ post, linkBase = '/search' }: PostCardProps) 
             });
             if (res.ok) {
                 if (parentId) { setReplyText(''); setReplyingTo(null); } else { setCommentText(''); }
+                setReplyCount(c => c + 1);
                 fetchReplies();
             }
         } catch (err) {
@@ -286,7 +292,7 @@ export default function PostCard({ post, linkBase = '/search' }: PostCardProps) 
                                 </svg>
                             </div>
                             <span className="text-xs font-medium tabular-nums">
-                                {comments.length > 0 ? comments.length : (post.reply_count || 0)}
+                                {replyCount}
                             </span>
                         </button>
 

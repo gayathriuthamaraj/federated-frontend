@@ -136,14 +136,14 @@ function MessagesContent() {
                     : {};
                 const res = await fetch(
                     `${identity.home_server}/messages?user_id=${encodeURIComponent(identity.user_id)}`,
-                    { headers, signal: controller.signal }
+                    { headers, signal: controller.signal, cache: 'no-store' }
                 );
                 if (res.ok) {
                     const data = await res.json();
-                    // Backend returns {sender, receiver, ...} – compute other_user
+                    // Backend already computes other_user; fall back to manual derivation
                     const convs: Conversation[] = (data.conversations || []).map((c: any) => ({
                         id: c.id,
-                        other_user: c.sender === identity.user_id ? c.receiver : c.sender,
+                        other_user: c.other_user || (c.sender === identity.user_id ? c.receiver : c.sender),
                         content: c.content,
                         created_at: c.created_at,
                     }));

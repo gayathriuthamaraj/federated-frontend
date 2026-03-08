@@ -8,6 +8,8 @@ import PostCard from './PostCard'
 import { Profile } from '@/types/profile'
 import { Post } from '@/types/post'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '../context/AuthContext'
 
 interface UserReply {
     id: string;
@@ -32,11 +34,10 @@ interface ProfileCardProps {
     posts?: Post[];
     replies?: UserReply[];
     likedPosts?: Post[];
+    highlights?: Post[];
     loadingPosts?: boolean;
     did?: string;
     linkedAccounts?: LinkedAccountInfo[];
-    /** Base path for user-profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
-    linkBase?: string;
     /** Base path for user-profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
     linkBase?: string;
     /** Called after a follow/unfollow with +1 or -1 so parent can update counts & cache */
@@ -50,10 +51,10 @@ export default function ProfileCard({
     posts = [],
     replies = [],
     likedPosts = [],
+    highlights = [],
     loadingPosts = false,
     did,
     linkedAccounts = [],
-    linkBase = '/search',
     linkBase = '/search',
     onFollowChange,
 }: ProfileCardProps) {
@@ -61,6 +62,8 @@ export default function ProfileCard({
     const [followingState, setFollowingState] = useState(isFollowing)
     const [activeTab, setActiveTab] = useState(0)
     const [tabAnimKey, setTabAnimKey] = useState(0)
+    const router = useRouter()
+    const { identity, switchToLinked } = useAuth()
 
     // Touch swipe support
     const touchStartX = useRef<number | null>(null)
@@ -89,14 +92,9 @@ export default function ProfileCard({
     // Only hard-reset local state when we switch to a different user.
     // Using the inline profile object reference as a dep would fire on every
     // parent render (new object each time), wiping out optimistic updates.
-    // Only hard-reset local state when we switch to a different user.
-    // Using the inline profile object reference as a dep would fire on every
-    // parent render (new object each time), wiping out optimistic updates.
     useEffect(() => {
         setProfile(initialProfile)
         setFollowingState(isFollowing)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialProfile.user_id, isFollowing])
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialProfile.user_id, isFollowing])
 
@@ -203,9 +201,6 @@ export default function ProfileCard({
                                 <BlockButton
                                     targetUser={profile.user_id}
                                 />
-                                <BlockButton
-                                    targetUser={profile.user_id}
-                                />
                             </>
                         )}
                     </div>
@@ -254,7 +249,7 @@ export default function ProfileCard({
                             <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-current">
                                 <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path>
                             </svg>
-                            <span className="truncate max-w-[200px]">{profile.portfolio_url.replace(/^https?:\/\//, '')}</span>
+                            <span className="truncate max-w-50">{profile.portfolio_url.replace(/^https?:\/\//, '')}</span>
                         </a>
                     )}
 
@@ -288,10 +283,17 @@ export default function ProfileCard({
                 {isOwnProfile && linkedAccounts.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                         {linkedAccounts.map((la) => (
-                            <Link
+                            <button
                                 key={la.id}
-                                href="/linked-accounts"
-                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bat-yellow/10 border border-bat-yellow/30 text-bat-yellow text-xs hover:bg-bat-yellow/20 transition-colors"
+                                onClick={async () => {
+                                    const ok = await switchToLinked(la.peer_id, identity?.home_server || '');
+                                    if (ok) {
+                                        router.push('/feed');
+                                    } else {
+                                        router.push('/linked-accounts');
+                                    }
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bat-yellow/10 border border-bat-yellow/30 text-bat-yellow text-xs hover:bg-bat-yellow/20 transition-colors cursor-pointer"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
@@ -299,14 +301,14 @@ export default function ProfileCard({
                                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                                     <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                                 </svg>
-                                <span>Linked with&nbsp;</span>
+                                <span>Switch to&nbsp;</span>
                                 <span className="font-semibold">
                                     {la.peer_name || la.peer_id.split('@')[0]}
                                 </span>
                                 <span className="text-bat-yellow/60">
                                     @{la.peer_id.split('@')[1]}
                                 </span>
-                            </Link>
+                            </button>
                         ))}
                     </div>
                 )}
@@ -356,7 +358,6 @@ export default function ProfileCard({
                         <div className="border-t border-bat-dark/50">
                             {posts.map((post) => (
                                 <PostCard key={post.id} post={post} linkBase={linkBase} />
-                                <PostCard key={post.id} post={post} linkBase={linkBase} />
                             ))}
                         </div>
                     )
@@ -386,7 +387,7 @@ export default function ProfileCard({
                                         </div>
                                     )}
                                     <div className="flex gap-2 items-start">
-                                        <div className="flex-shrink-0 h-7 w-7 rounded-full bg-bat-dark flex items-center justify-center text-bat-yellow font-bold text-xs select-none">
+                                        <div className="shrink-0 h-7 w-7 rounded-full bg-bat-dark flex items-center justify-center text-bat-yellow font-bold text-xs select-none">
                                             {(profile.display_name || profile.user_id)[0]?.toUpperCase()}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -402,12 +403,44 @@ export default function ProfileCard({
                     )
                 )}
 
-                {/* Highlights & Media — placeholder */}
-                {(activeTab === 2 || activeTab === 3) && (
-                    <div className="p-10 text-center border-t border-bat-dark/50">
-                        <div className="text-bat-gray/40 text-lg font-medium">{TABS[activeTab]}</div>
-                        <div className="text-bat-gray/20 text-sm mt-1">Nothing here yet.</div>
-                    </div>
+                {/* Highlights tab — posts this user has reposted */}
+                {activeTab === 2 && (
+                    loadingPosts ? (
+                        <div className="text-center text-bat-gray py-8">Loading highlights...</div>
+                    ) : highlights.length === 0 ? (
+                        <div className="p-8 text-center border-t border-bat-dark/50">
+                            <div className="text-bat-gray/40 text-lg font-medium">No highlights yet</div>
+                            <div className="text-bat-gray/20 text-sm mt-1">
+                                {isOwnProfile ? "Repost content to highlight it here." : "Nothing here yet."}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-t border-bat-dark/50">
+                            {highlights.map((post) => (
+                                <PostCard key={post.id} post={post} linkBase={linkBase} />
+                            ))}
+                        </div>
+                    )
+                )}
+
+                {/* Media tab — posts by this user that contain an image */}
+                {activeTab === 3 && (
+                    loadingPosts ? (
+                        <div className="text-center text-bat-gray py-8">Loading media...</div>
+                    ) : posts.filter(p => p.image_url).length === 0 ? (
+                        <div className="p-8 text-center border-t border-bat-dark/50">
+                            <div className="text-bat-gray/40 text-lg font-medium">No media yet</div>
+                            <div className="text-bat-gray/20 text-sm mt-1">
+                                {isOwnProfile ? "Share a post with an image to see it here." : "Nothing here yet."}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-t border-bat-dark/50">
+                            {posts.filter(p => p.image_url).map((post) => (
+                                <PostCard key={post.id} post={post} linkBase={linkBase} />
+                            ))}
+                        </div>
+                    )
                 )}
 
                 {/* Likes tab */}
@@ -424,7 +457,6 @@ export default function ProfileCard({
                     ) : (
                         <div className="border-t border-bat-dark/50">
                             {likedPosts.map((post) => (
-                                <PostCard key={post.id} post={post} linkBase={linkBase} />
                                 <PostCard key={post.id} post={post} linkBase={linkBase} />
                             ))}
                         </div>

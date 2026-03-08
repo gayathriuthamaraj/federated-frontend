@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { KNOWN_SERVERS, findServerById, pinServer, getPinnedServer } from '../utils/servers';
+import OTPInput from '../components/OTPInput';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -11,6 +12,11 @@ export default function LoginPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [serverId, setServerId] = useState<string>('');
+
+    // TOTP second-factor state
+    const [totpRequired, setTotpRequired] = useState(false);
+    const [partialToken, setPartialToken] = useState('');
+    const [chosenServerURL, setChosenServerURL] = useState('');
 
     // Populate from localStorage only after mount (avoids SSR/hydration mismatch)
     useEffect(() => {
@@ -22,6 +28,7 @@ export default function LoginPage() {
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // ── Step 1: password authentication ──────────────────────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -38,13 +45,8 @@ export default function LoginPage() {
         try {
             const response = await fetch(`${chosenServer.url}/login`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    username: username,
-                    password: password,
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password }),
             });
 
             const data = await response.json();
@@ -53,10 +55,41 @@ export default function LoginPage() {
                 throw new Error(data.error || 'Login failed');
             }
 
-            // Directly login with the credentials
+            // TOTP second factor required
+            if (data.totp_required) {
+                setPartialToken(data.partial_token);
+                setChosenServerURL(chosenServer.url);
+                setTotpRequired(true);
+                return;
+            }
+
             login(data.user_id, data.home_server, data.access_token || '', data.refresh_token || '');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Login failed');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // ── Step 2: TOTP verification ─────────────────────────────────────────────
+    const handleTOTPComplete = async (otp: string) => {
+        setError('');
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`${chosenServerURL}/login/totp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partial_token: partialToken, otp_code: otp }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Invalid authenticator code');
+            }
+
+            login(data.user_id, data.home_server, data.access_token || '', data.refresh_token || '');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Verification failed');
         } finally {
             setIsSubmitting(false);
         }
@@ -72,120 +105,142 @@ export default function LoginPage() {
                         </svg>
                         <span className="text-xl font-bold tracking-widest text-bat-yellow italic">GOTHAM</span>
                     </div>
-                    <h1 className="text-3xl font-bold text-bat-gray mb-2">Sign in</h1>
+                    <h1 className="text-3xl font-bold text-bat-gray mb-2">
+                        {totpRequired ? 'Two-Factor Auth' : 'Sign in'}
+                    </h1>
                     <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50"></div>
                 </div>
 
-                <form className="space-y-6" onSubmit={handleSubmit}>
-                    {error && (
-                        <div className="p-3 rounded-md bg-red-900/20 border border-red-500/50 text-red-400 text-sm">
-                            {error}
+                {error && (
+                    <div className="mb-4 p-3 rounded-md bg-red-900/20 border border-red-500/50 text-red-400 text-sm">
+                        {error}
+                    </div>
+                )}
+
+                {/* ── TOTP step ──────────────────────────────────────────── */}
+                {totpRequired ? (
+                    <div className="space-y-4">
+                        <p className="text-sm text-bat-gray/80 text-center">
+                            Open your authenticator app and enter the 6-digit code for{' '}
+                            <span className="text-bat-yellow font-semibold">{username}</span>.
+                        </p>
+                        <OTPInput onComplete={handleTOTPComplete} length={6} />
+                        {isSubmitting && (
+                            <p className="text-sm text-bat-gray/60 text-center">Verifying…</p>
+                        )}
+                        <button
+                            onClick={() => { setTotpRequired(false); setError(''); }}
+                            className="w-full text-sm text-bat-gray/50 hover:text-bat-yellow transition-colors"
+                        >
+                            ← Back to sign in
+                        </button>
+                    </div>
+                ) : (
+                    <form className="space-y-6" onSubmit={handleSubmit}>
+                        <div>
+                            <label
+                                htmlFor="username"
+                                className="block text-sm font-medium text-bat-gray mb-2"
+                            >
+                                Username or Email
+                            </label>
+                            <input
+                                type="text"
+                                id="username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="
+                  w-full px-4 py-3 rounded-md
+                  bg-bat-black text-white
+                  border border-bat-gray/20
+                  focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
+                  outline-none transition-all duration-200
+                  placeholder-gray-600
+                "
+                                placeholder="Enter your username"
+                                required
+                                disabled={isSubmitting}
+                            />
                         </div>
-                    )}
 
-                    <div>
-                        <label
-                            htmlFor="username"
-                            className="block text-sm font-medium text-bat-gray mb-2"
-                        >
-                            Username or Email
-                        </label>
-                        <input
-                            type="text"
-                            id="username"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            className="
-                w-full px-4 py-3 rounded-md
-                bg-bat-black text-white
-                border border-bat-gray/20
-                focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
-                outline-none transition-all duration-200
-                placeholder-gray-600
-              "
-                            placeholder="Enter your username"
-                            required
+                        <div>
+                            <label
+                                htmlFor="server"
+                                className="block text-sm font-medium text-bat-gray mb-2"
+                            >
+                                Home Server
+                            </label>
+                            <select
+                                id="server"
+                                value={serverId}
+                                onChange={(e) => {
+                                    const id = e.target.value;
+                                    setServerId(id);
+                                    const srv = findServerById(id);
+                                    if (srv) pinServer(srv);
+                                }}
+                                className="
+                  w-full px-4 py-3 rounded-md
+                  bg-bat-black text-white
+                  border border-bat-gray/20
+                  focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
+                  outline-none transition-all duration-200
+                "
+                                required
+                                disabled={isSubmitting}
+                            >
+                                <option value="">Select a server</option>
+                                {KNOWN_SERVERS.map((srv) => (
+                                    <option key={srv.id} value={srv.id}>
+                                        {srv.name} &mdash; {srv.id} (:{srv.port})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor="password"
+                                className="block text-sm font-medium text-bat-gray mb-2"
+                            >
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                id="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="
+                  w-full px-4 py-3 rounded-md
+                  bg-bat-black text-white
+                  border border-bat-gray/20
+                  focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
+                  outline-none transition-all duration-200
+                  placeholder-gray-600
+                "
+                                placeholder="••••••••"
+                                required
+                                disabled={isSubmitting}
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
                             disabled={isSubmitting}
-                        />
-                    </div>
-
-                    <div>
-                        <label
-                            htmlFor="server"
-                            className="block text-sm font-medium text-bat-gray mb-2"
-                        >
-                            Home Server
-                        </label>
-                        <select
-                            id="server"
-                            value={serverId}
-                            onChange={(e) => {
-                                const id = e.target.value;
-                                setServerId(id);
-                                const srv = findServerById(id);
-                                if (srv) pinServer(srv);
-                            }}
                             className="
-                w-full px-4 py-3 rounded-md
-                bg-bat-black text-white
-                border border-bat-gray/20
-                focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
-                outline-none transition-all duration-200
+                w-full py-3 px-4 rounded-md font-bold text-lg
+                bg-bat-yellow text-bat-black
+                hover:bg-yellow-400
+                disabled:opacity-50 disabled:cursor-not-allowed
+                transform active:scale-[0.98]
+                transition-all duration-200
+                shadow-[0_0_15px_rgba(245,197,24,0.3)]
               "
-                            required
-                            disabled={isSubmitting}
                         >
-                            <option value="">Select a server</option>
-                            {KNOWN_SERVERS.map((srv) => (
-                                <option key={srv.id} value={srv.id}>
-                                    {srv.name} &mdash; {srv.id} (:{srv.port})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label
-                            htmlFor="password"
-                            className="block text-sm font-medium text-bat-gray mb-2"
-                        >
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            id="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="
-                w-full px-4 py-3 rounded-md
-                bg-bat-black text-white
-                border border-bat-gray/20
-                focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
-                outline-none transition-all duration-200
-                placeholder-gray-600
-              "
-                            placeholder="••••••••"
-                            required
-                            disabled={isSubmitting}
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={isSubmitting}
-                        className="
-              w-full py-3 px-4 rounded-md font-bold text-lg
-              bg-bat-yellow text-bat-black
-              hover:bg-yellow-400
-              disabled:opacity-50 disabled:cursor-not-allowed
-              transform active:scale-[0.98]
-              transition-all duration-200
-              shadow-[0_0_15px_rgba(245,197,24,0.3)]
-            "
-                    >
-                        {isSubmitting ? 'Signing in...' : 'Sign In'}
-                    </button>
-                </form>
+                            {isSubmitting ? 'Signing in...' : 'Sign In'}
+                        </button>
+                    </form>
+                )}
 
                 <div className="mt-6 text-center">
                     <p className="text-sm text-gray-500">

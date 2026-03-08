@@ -32,7 +32,7 @@ export default function UserCard({ user, showFollowButton = true, onClick }: Use
             `}
         >
             {}
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
                 {user.avatarUrl ? (
                     <img
                         src={user.avatarUrl}
@@ -87,7 +87,7 @@ export default function UserCard({ user, showFollowButton = true, onClick }: Use
             {}
             {showFollowButton && (
                 <div
-                    className="flex-shrink-0 flex items-start pt-1"
+                    className="shrink-0 flex items-start pt-1"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <FollowButton

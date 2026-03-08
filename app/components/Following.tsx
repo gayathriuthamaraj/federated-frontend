@@ -35,7 +35,7 @@ export default function Following({ following }: FollowingProps) {
                         className="flex items-center gap-3 flex-1 min-w-0"
                     >
                         {}
-                        <div className="flex-shrink-0">
+                        <div className="shrink-0">
                             <div className="h-10 w-10 rounded-full bg-bat-black border border-bat-dark overflow-hidden flex items-center justify-center">
                                 {followedUser.avatar_url ? (
                                     <img
@@ -63,7 +63,7 @@ export default function Following({ following }: FollowingProps) {
                     </Link>
 
                     {}
-                    <div className="ml-4 flex-shrink-0">
+                    <div className="ml-4 shrink-0">
                         {}
                         <FollowButton targetUser={followedUser.user_id} />
                     </div>

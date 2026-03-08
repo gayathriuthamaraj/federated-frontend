@@ -28,6 +28,7 @@ function ProfileContent() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [replies, setReplies] = useState<UserReply[]>([]);
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
+  const [highlights, setHighlights] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -163,10 +164,11 @@ function ProfileContent() {
             setPosts(data.posts || []);
           }
         } else {
-          const [postsRes, repliesRes, likesRes] = await Promise.all([
+          const [postsRes, repliesRes, likesRes, repostsRes] = await Promise.all([
             fetch(`${base}/posts/user?user_id=${uid}&viewer_id=${vid}`),
             fetch(`${base}/posts/user/replies?user_id=${uid}`),
             fetch(`${base}/posts/user/likes?user_id=${uid}&viewer_id=${vid}`),
+            fetch(`${base}/posts/user/reposts?user_id=${uid}&viewer_id=${vid}`),
           ]);
 
           if (postsRes.ok) {
@@ -180,6 +182,10 @@ function ProfileContent() {
           if (likesRes.ok) {
             const data = await likesRes.json();
             setLikedPosts(data.posts || []);
+          }
+          if (repostsRes.ok) {
+            const data = await repostsRes.json();
+            setHighlights(data.posts || []);
           }
         }
       } catch (err) {
@@ -252,6 +258,7 @@ function ProfileContent() {
         posts={posts}
         replies={replies}
         likedPosts={likedPosts}
+        highlights={highlights}
         loadingPosts={loadingPosts}
         did={did || undefined}
         linkedAccounts={linkedAccounts}

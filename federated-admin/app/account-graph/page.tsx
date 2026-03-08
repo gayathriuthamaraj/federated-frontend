@@ -21,6 +21,8 @@ interface GraphNode {
     x: number;
     y: number;
     status: 'center' | 'confirmed' | 'pending';
+    /** Whether this peer sent the link request to the center node */
+    direction: 'outgoing' | 'incoming' | 'both' | 'center';
 }
 
 interface GraphEdge {
@@ -37,7 +39,7 @@ function buildAdminGraph(focusUserId: string | null, links: AdminAccountLink[]) 
 
     if (links.length === 0) {
         if (focusUserId) {
-            nodes.set(focusUserId, { id: focusUserId, isCenter: true, x: CX, y: CY, status: 'center' });
+            nodes.set(focusUserId, { id: focusUserId, isCenter: true, x: CX, y: CY, status: 'center', direction: 'center' });
         }
         return { nodes: Array.from(nodes.values()), edges, W, H };
     }
@@ -48,13 +50,35 @@ function buildAdminGraph(focusUserId: string | null, links: AdminAccountLink[]) 
 
     // Place focus node (or allIds[0] as center if no focus)
     const centerId = focusUserId && allIds.has(focusUserId) ? focusUserId : (focusUserId || Array.from(allIds)[0]);
-    nodes.set(centerId, { id: centerId, isCenter: true, x: CX, y: CY, status: 'center' });
+    nodes.set(centerId, { id: centerId, isCenter: true, x: CX, y: CY, status: 'center', direction: 'center' });
+
+    // Determine link direction for each peer relative to the center node
+    const peerDirection = new Map<string, 'outgoing' | 'incoming' | 'both'>();
+    links.forEach(l => {
+        const isOutgoing = l.requester_id === centerId;  // center sent the request
+        const isIncoming = l.target_id === centerId;      // another user sent to center
+        const peerId = isOutgoing ? l.target_id : l.requester_id;
+        const existing = peerDirection.get(peerId);
+        if (existing === undefined) {
+            peerDirection.set(peerId, isOutgoing ? 'outgoing' : 'incoming');
+        } else if (existing !== (isOutgoing ? 'outgoing' : 'incoming')) {
+            peerDirection.set(peerId, 'both');
+        }
+    });
 
     // Place peers radially
     const peers = Array.from(allIds).filter(id => id !== centerId);
     peers.forEach((id, i) => {
         const angle = (2 * Math.PI * i) / Math.max(1, peers.length) - Math.PI / 2;
-        nodes.set(id, { id, isCenter: false, x: CX + R * Math.cos(angle), y: CY + R * Math.sin(angle), status: 'confirmed' });
+        const dir = peerDirection.get(id) ?? 'outgoing';
+        nodes.set(id, {
+            id,
+            isCenter: false,
+            x: CX + R * Math.cos(angle),
+            y: CY + R * Math.sin(angle),
+            status: 'confirmed',
+            direction: dir,
+        });
     });
 
     // Edges
@@ -66,6 +90,7 @@ function buildAdminGraph(focusUserId: string | null, links: AdminAccountLink[]) 
 }
 
 function shortId(userId: string): string {
+    if (!userId) return '??';
     return (userId.split('@')[0] || userId).slice(0, 14);
 }
 
@@ -293,11 +318,21 @@ export default function AccountGraphPage() {
                                         })}
                                         {/* Nodes */}
                                         {graph.nodes.map(node => {
-                                            const stroke = node.status === 'center' ? '#F5C518' : node.status === 'confirmed' ? '#F5C518' : '#888';
+                                            // Center node: gold; outgoing (center sent request): teal/cyan; incoming (other user sent to center): violet; both: white
+                                            const stroke =
+                                                node.direction === 'center'   ? '#F5C518' :
+                                                node.direction === 'outgoing' ? '#22d3ee' :  // cyan-400
+                                                node.direction === 'incoming' ? '#a78bfa' :  // violet-400
+                                                                                '#f1f5f9';   // both
+                                            const fill =
+                                                node.isCenter ? '#1a1a0f' :
+                                                node.direction === 'outgoing' ? '#0a1f22' :
+                                                node.direction === 'incoming' ? '#130a22' :
+                                                                                '#111';
                                             const r = node.isCenter ? 32 : 26;
                                             return (
                                                 <g key={node.id} transform={`translate(${node.x},${node.y})`}>
-                                                    <circle r={r} fill={node.isCenter ? '#1a1a0f' : '#111'} stroke={stroke} strokeWidth={node.isCenter ? 3 : 2} />
+                                                    <circle r={r} fill={fill} stroke={stroke} strokeWidth={node.isCenter ? 3 : 2} />
                                                     <text textAnchor="middle" dominantBaseline="central" fontSize={r * 0.48} fill={stroke} fontWeight="bold">
                                                         {shortId(node.id).slice(0, 2).toUpperCase()}
                                                     </text>
@@ -309,7 +344,11 @@ export default function AccountGraphPage() {
                                         })}
                                     </svg>
                                     {/* Legend */}
-                                    <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '0.7rem', color: 'var(--text-ghost)' }}>
+                                    <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '0.7rem', color: 'var(--text-ghost)', flexWrap: 'wrap' }}>
+                                        <span style={{ color: '#F5C518' }}>● center</span>
+                                        <span style={{ color: '#22d3ee' }}>● sent link request</span>
+                                        <span style={{ color: '#a78bfa' }}>● received link from</span>
+                                        <span style={{ color: '#f1f5f9' }}>● mutual</span>
                                         <span>─── confirmed</span>
                                         <span style={{ opacity: 0.6 }}>- - - pending</span>
                                     </div>

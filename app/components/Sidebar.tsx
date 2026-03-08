@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { NavItem } from "./navItem";
 import { useAuth } from "../context/AuthContext";
@@ -35,10 +35,36 @@ export default function Sidebar() {
     const [switchPassword, setSwitchPassword] = useState('');
     const [switchError, setSwitchError] = useState('');
     const [switchLoading, setSwitchLoading] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const pathname = usePathname();
     const router = useRouter();
-    const { identity, logout, sessions, switchToLinked, loginWithoutRedirect, addSession } = useAuth();
+    const { identity, logout, sessions, switchToLinked, loginWithoutRedirect, addSession, removeSession } = useAuth();
+
+    // Poll for unread notifications every 30 s; reset badge when on the notifications page
+    useEffect(() => {
+        if (!identity) return;
+        const fetchUnread = async () => {
+            try {
+                const res = await fetch(
+                    `${identity.home_server}/notifications?user_id=${encodeURIComponent(identity.user_id)}`
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    const count = (data.notifications || []).filter((n: { is_read: boolean }) => !n.is_read).length;
+                    setUnreadCount(count);
+                }
+            } catch { /* non-critical */ }
+        };
+        fetchUnread();
+        const id = setInterval(fetchUnread, 30_000);
+        return () => clearInterval(id);
+    }, [identity]);
+
+    // Clear the badge when the user navigates to the notifications page
+    useEffect(() => {
+        if (pathname.startsWith('/notifications')) setUnreadCount(0);
+    }, [pathname]);
 
     // Try linked switch first; if no confirmed link exists, fall back to password form
     const handleSwitchTo = async (session: AccountSession) => {
@@ -94,7 +120,7 @@ export default function Sidebar() {
         >
             {}
             <div className="flex items-center gap-3 px-4 py-6">
-                <div className="min-w-[48px] flex justify-center">
+                <div className="min-w-12 flex justify-center">
                     <BatLogo />
                 </div>
                 <span
@@ -127,7 +153,7 @@ export default function Sidebar() {
                     <span
                         className={`
                 whitespace-nowrap transition-all duration-300
-                ${expanded ? "opacity-100" : "opacity-0 translate-x-[-10px] hidden"}
+                ${expanded ? "opacity-100" : "opacity-0 -translate-x-2.5 hidden"}
             `}
                     >
                         Menu
@@ -148,14 +174,21 @@ export default function Sidebar() {
                     <Search_svg />
                 </NavItem>
 
-                <NavItem
-                    label="Notifications"
-                    href="/notifications"
-                    expanded={expanded}
-                    active={pathname.startsWith("/notifications")}
-                >
-                    <NotifSvg />
-                </NavItem>
+                <div className="relative">
+                    <NavItem
+                        label="Notifications"
+                        href="/notifications"
+                        expanded={expanded}
+                        active={pathname.startsWith("/notifications")}
+                    >
+                        <NotifSvg />
+                    </NavItem>
+                    {unreadCount > 0 && (
+                        <span className="absolute top-1.5 left-7 min-w-4 h-4 rounded-full bg-bat-yellow text-bat-black text-[9px] font-bold flex items-center justify-center px-0.5 pointer-events-none z-20">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                    )}
+                </div>
 
                 <NavItem
                     label="Messages"
@@ -383,26 +416,38 @@ export default function Sidebar() {
                                             </div>
                                         ) : (
                                             /* Session row — linked accounts switch instantly */
-                                            <button
-                                                onClick={() => handleSwitchTo(session)}
-                                                disabled={switchingTo === session.user_id}
-                                                className="flex items-center gap-3 w-full px-4 py-3 hover:bg-bat-yellow/10 transition-colors disabled:opacity-60 group"
-                                            >
-                                                <div className="w-8 h-8 shrink-0 rounded-full bg-bat-gray/20 flex items-center justify-center text-bat-yellow text-sm font-bold">
-                                                    {session.user_id.substring(0, 2).toUpperCase()}
-                                                </div>
-                                                <div className="flex flex-col text-left min-w-0">
-                                                    <span className="text-sm text-bat-gray font-medium truncate">{session.user_id.split('@')[0]}</span>
-                                                    <span className="text-xs text-bat-gray/50 truncate">{session.user_id}</span>
-                                                </div>
-                                                {switchingTo === session.user_id ? (
-                                                    <span className="ml-auto text-xs text-bat-yellow animate-pulse">switching…</span>
-                                                ) : (
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 ml-auto text-bat-gray/30 group-hover:text-bat-yellow transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                            <div className="flex items-center">
+                                                <button
+                                                    onClick={() => handleSwitchTo(session)}
+                                                    disabled={switchingTo === session.user_id}
+                                                    className="flex items-center gap-3 flex-1 px-4 py-3 hover:bg-bat-yellow/10 transition-colors disabled:opacity-60 group"
+                                                >
+                                                    <div className="w-8 h-8 shrink-0 rounded-full bg-bat-gray/20 flex items-center justify-center text-bat-yellow text-sm font-bold">
+                                                        {session.user_id.substring(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <div className="flex flex-col text-left min-w-0">
+                                                        <span className="text-sm text-bat-gray font-medium truncate">{session.user_id.split('@')[0]}</span>
+                                                        <span className="text-xs text-bat-gray/50 truncate">{session.user_id}</span>
+                                                    </div>
+                                                    {switchingTo === session.user_id ? (
+                                                        <span className="ml-auto text-xs text-bat-yellow animate-pulse">switching…</span>
+                                                    ) : (
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 ml-auto text-bat-gray/30 group-hover:text-bat-yellow transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                                {/* Remove session from list */}
+                                                <button
+                                                    onClick={() => removeSession(session.user_id)}
+                                                    title="Remove from list"
+                                                    className="px-3 py-3 text-bat-gray/30 hover:text-red-400 transition-colors shrink-0"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                                     </svg>
-                                                )}
-                                            </button>
+                                                </button>
+                                            </div>
                                         )}
                                     </div>
                                 ))}

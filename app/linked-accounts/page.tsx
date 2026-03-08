@@ -206,6 +206,13 @@ export default function LinkedAccountsPage() {
         fetchLinks();
     }, [fetchLinks]);
 
+    // Poll every 15 s so the receiving user sees incoming link requests without a manual refresh
+    useEffect(() => {
+        if (!identity) return;
+        const id = setInterval(fetchLinks, 15_000);
+        return () => clearInterval(id);
+    }, [identity, fetchLinks]);
+
     // ── Actions ────────────────────────────────────────────────────────────────
 
     async function handleRequest(e: React.FormEvent) {
