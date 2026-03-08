@@ -29,7 +29,7 @@ export async function moderatorLogin(username: string, password: string): Promis
     const res = await fetch(`${getApiBase()}/moderator/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ user_id: username, password }),
     });
     if (!res.ok) {
         const txt = await res.text();
@@ -86,7 +86,7 @@ export async function assignModerator(adminToken: string, username: string): Pro
     const res = await fetch(`${getApiBase()}/admin/moderators/assign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ user_id: username }),
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
@@ -96,7 +96,7 @@ export async function removeModerator(adminToken: string, username: string): Pro
     const res = await fetch(`${getApiBase()}/admin/moderators/remove`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ user_id: username }),
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();

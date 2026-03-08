@@ -37,8 +37,6 @@ interface ProfileCardProps {
     linkedAccounts?: LinkedAccountInfo[];
     /** Base path for user-profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
     linkBase?: string;
-    /** Base path for user-profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
-    linkBase?: string;
     /** Called after a follow/unfollow with +1 or -1 so parent can update counts & cache */
     onFollowChange?: (delta: 1 | -1) => void;
 }
@@ -53,7 +51,6 @@ export default function ProfileCard({
     loadingPosts = false,
     did,
     linkedAccounts = [],
-    linkBase = '/search',
     linkBase = '/search',
     onFollowChange,
 }: ProfileCardProps) {
@@ -85,19 +82,14 @@ export default function ProfileCard({
         touchStartX.current = null
     }
 
-    
-    // Only hard-reset local state when we switch to a different user.
-    // Using the inline profile object reference as a dep would fire on every
-    // parent render (new object each time), wiping out optimistic updates.
+
     // Only hard-reset local state when we switch to a different user.
     // Using the inline profile object reference as a dep would fire on every
     // parent render (new object each time), wiping out optimistic updates.
     useEffect(() => {
         setProfile(initialProfile)
         setFollowingState(isFollowing)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialProfile.user_id, isFollowing])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialProfile.user_id, isFollowing])
 
     const handleFollowSuccess = () => {
@@ -113,7 +105,7 @@ export default function ProfileCard({
     return (
         <div className="w-full bg-bat-black flex flex-col">
 
-            {}
+            { }
             <div className="relative h-48 sm:h-64 w-full bg-bat-dark">
                 {profile.banner_url ? (
                     <img
@@ -128,10 +120,10 @@ export default function ProfileCard({
                 <div className="absolute inset-0 bg-linear-to-t from-bat-black/60 to-transparent pointer-events-none" />
             </div>
 
-            {}
+            { }
             <div className="px-4 pb-4">
                 <div className="relative flex justify-between items-start">
-                    {}
+                    { }
                     <div className="-mt-[15%] sm:-mt-16 mb-3">
                         <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-bat-black bg-bat-black overflow-hidden transition-transform duration-300 hover:scale-105 shadow-lg">
                             {profile.avatar_url ? (
@@ -148,7 +140,7 @@ export default function ProfileCard({
                         </div>
                     </div>
 
-                    {}
+                    { }
                     <div className="pt-3 flex gap-2 flex-wrap">
                         {isOwnProfile ? (
                             <>
@@ -203,15 +195,13 @@ export default function ProfileCard({
                                 <BlockButton
                                     targetUser={profile.user_id}
                                 />
-                                <BlockButton
-                                    targetUser={profile.user_id}
-                                />
+
                             </>
                         )}
                     </div>
                 </div>
 
-                {}
+                { }
                 <div className="mt-2">
                     <h1 className="text-xl sm:text-2xl font-bold text-bat-gray leading-tight">
                         {profile.display_name}
@@ -226,14 +216,14 @@ export default function ProfileCard({
                     )}
                 </div>
 
-                {}
+                { }
                 {profile.bio && (
                     <p className="mt-4 text-bat-gray text-[15px] leading-normal whitespace-pre-wrap">
                         {profile.bio}
                     </p>
                 )}
 
-                {}
+                { }
                 <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-bat-gray/60">
                     {profile.location && (
                         <span className="flex items-center gap-1.5">
@@ -266,7 +256,7 @@ export default function ProfileCard({
                     </span>
                 </div>
 
-                {}
+                { }
                 <div className="mt-4 flex gap-5 text-sm">
                     <Link
                         href={`/following?user_id=${encodeURIComponent(profile.user_id)}`}
@@ -312,7 +302,7 @@ export default function ProfileCard({
                 )}
             </div>
 
-            {}
+            { }
             <div
                 className="mt-2 flex border-b border-bat-dark"
                 onTouchStart={handleTouchStart}
@@ -335,7 +325,7 @@ export default function ProfileCard({
                 ))}
             </div>
 
-            {}
+            { }
             <div
                 key={tabAnimKey}
                 className="flex-1 animate-fade-up"
@@ -356,7 +346,7 @@ export default function ProfileCard({
                         <div className="border-t border-bat-dark/50">
                             {posts.map((post) => (
                                 <PostCard key={post.id} post={post} linkBase={linkBase} />
-                                <PostCard key={post.id} post={post} linkBase={linkBase} />
+
                             ))}
                         </div>
                     )
@@ -425,7 +415,7 @@ export default function ProfileCard({
                         <div className="border-t border-bat-dark/50">
                             {likedPosts.map((post) => (
                                 <PostCard key={post.id} post={post} linkBase={linkBase} />
-                                <PostCard key={post.id} post={post} linkBase={linkBase} />
+
                             ))}
                         </div>
                     )
