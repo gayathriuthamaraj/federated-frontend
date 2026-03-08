@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext'
 
 interface FollowButtonProps {
     targetUser: string
-    isFollowing?: boolean 
+    isFollowing?: boolean
     onSuccess?: () => void
 }
 
@@ -15,12 +15,13 @@ export default function FollowButton({
     onSuccess
 }: FollowButtonProps) {
     const { identity } = useAuth()
-    const [status, setStatus] = useState<'idle' | 'followed' | 'loading'>('idle')
+    const [status, setStatus] = useState<'idle' | 'followed' | 'loading'>(() =>
+        isFollowing ? 'followed' : 'idle'
+    )
 
     useEffect(() => {
-        if (isFollowing) {
-            setStatus('followed')
-        }
+        // Sync button state whenever the server-provided isFollowing prop changes
+        setStatus(isFollowing ? 'followed' : 'idle')
     }, [isFollowing])
 
     const handleAction = async () => {
@@ -56,7 +57,7 @@ export default function FollowButton({
             } else {
                 const error = await res.text()
                 alert(`Action failed: ${error}`)
-                setStatus(status) 
+                setStatus(status)
             }
         } catch (err: any) {
             console.error('Follow error:', err)
@@ -75,8 +76,8 @@ export default function FollowButton({
             className={`
                 px-6 py-2 rounded-full font-bold text-sm transition-all duration-200
                 ${status === 'followed'
-                    ? 'bg-transparent border border-bat-dark text-bat-gray hover:text-red-500 hover:border-red-500' 
-                    : 'bg-bat-yellow text-bat-black hover:bg-[#E0B000] shadow-md' 
+                    ? 'bg-transparent border border-bat-dark text-bat-gray hover:text-red-500 hover:border-red-500'
+                    : 'bg-bat-yellow text-bat-black hover:bg-[#E0B000] shadow-md'
                 }
                 ${status === 'loading' ? 'opacity-50 cursor-wait' : ''}
             `}

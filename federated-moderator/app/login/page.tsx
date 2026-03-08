@@ -14,6 +14,8 @@ export default function LoginPage() {
         e.preventDefault();
         setError('');
         setLoading(true);
+        // Clear any stale token before attempting login
+        localStorage.removeItem('mod_token');
         try {
             const data = await moderatorLogin(username, password);
             localStorage.setItem('mod_token', data.token);

@@ -103,7 +103,9 @@ export default function QueuePage() {
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Failed to load queue';
             setError(msg);
-            if (msg.toLowerCase().includes('authenticated') || msg.includes('403')) {
+            const lmsg = msg.toLowerCase();
+            if (lmsg.includes('authenticated') || lmsg.includes('401') || lmsg.includes('invalid or expired') || lmsg.includes('403') || lmsg.includes('unauthorized')) {
+                localStorage.removeItem('mod_token');
                 router.push('/login');
             }
         } finally {
