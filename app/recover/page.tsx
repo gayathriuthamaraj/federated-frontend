@@ -183,8 +183,7 @@ export default function RecoverPage() {
                         </label>
                         <OTPInput
                             length={6}
-                            value={totpCode}
-                            onChange={setTotpCode}
+                            onComplete={setTotpCode}
                         />
                         <p className="text-xs text-bat-gray/50 mt-1">
                             6-digit code from your authenticator app
