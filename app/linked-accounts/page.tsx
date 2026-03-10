@@ -221,6 +221,32 @@ export default function LinkedAccountsPage() {
         setFormError(null);
         setFormSuccess(null);
 
+        const target = targetInput.trim();
+        const myServer = identity.user_id.split('@')[1];
+        const targetServer = target.includes('@') ? target.split('@').pop() : myServer;
+
+        // Only pre-check existence for users on the same server; cross-server
+        // validation is handled by the backend federation layer.
+        if (targetServer === myServer) {
+            try {
+                const checkRes = await fetch(
+                    `${identity.home_server}/user/search?user_id=${encodeURIComponent(target)}&viewer_id=${encodeURIComponent(identity.user_id)}`
+                );
+                if (checkRes.status === 404) {
+                    setFormError('User not found on this server.');
+                    return;
+                }
+                if (!checkRes.ok && checkRes.status !== 403) {
+                    // 403 = user exists but has hidden profile — still allow link request
+                    setFormError('Could not verify user. Please try again.');
+                    return;
+                }
+            } catch {
+                setFormError('Could not verify user. Please check your connection.');
+                return;
+            }
+        }
+
         try {
             const res = await fetch(`${identity.home_server}/account/link/request`, {
                 method: "POST",

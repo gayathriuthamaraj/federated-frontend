@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useCache } from '../../context/CacheContext';
 import { updateProfile, getUserProfile } from '../../api/profile';
+import { useTOTPUnlock } from '../../utils/useTOTPUnlock';
 
 export default function EditProfilePage() {
     const { identity } = useAuth();
@@ -26,6 +27,25 @@ export default function EditProfilePage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [totpEnabled, setTotpEnabled] = useState(false);
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') ?? '' : '';
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const { requestPrivateKey, unlockModal } = useTOTPUnlock({
+        homeServer: identity?.home_server ?? '',
+        accessToken: token,
+    });
+
+    useEffect(() => {
+        if (!identity) return;
+        const accessToken = localStorage.getItem('access_token') ?? '';
+        fetch(`${identity.home_server}/totp/status`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        })
+            .then(r => r.json())
+            .then(d => setTotpEnabled(d.totp_enabled ?? false))
+            .catch(() => setTotpEnabled(false));
+    }, [identity]);
 
     
     useEffect(() => {
@@ -68,6 +88,12 @@ export default function EditProfilePage() {
         if (!formData.displayName) {
             setError('Display name is required');
             return;
+        }
+
+        // Require TOTP verification before profile changes when TOTP is enabled
+        if (totpEnabled) {
+            const key = await requestPrivateKey();
+            if (!key) return; // user cancelled
         }
 
         setIsSubmitting(true);
@@ -114,6 +140,7 @@ export default function EditProfilePage() {
 
     return (
         <div className="min-h-screen bg-bat-black p-4 py-8">
+            {unlockModal}
             <div className="max-w-2xl mx-auto bg-bat-dark rounded-lg shadow-2xl border border-bat-gray/10">
                 {}
                 <div className="p-8 border-b border-bat-gray/10">

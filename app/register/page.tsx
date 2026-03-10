@@ -13,7 +13,6 @@ export default function RegisterPage() {
 
     // Form State
     const [username, setUsername] = useState('');
-    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [inviteCode, setInviteCode] = useState('');
@@ -58,11 +57,6 @@ export default function RegisterPage() {
             return;
         }
 
-        if (!email.includes('@')) {
-            setError('Please enter a valid email address');
-            return;
-        }
-
         setIsSubmitting(true);
 
         try {
@@ -83,7 +77,6 @@ export default function RegisterPage() {
             // Send registration request with client public key
             const res = await apiPost('/register', {
                 username: username,
-                email: email,
                 password: password,
                 invite_code: inviteCode,
                 home_server: chosenServer.name,
@@ -338,23 +331,6 @@ export default function RegisterPage() {
                             disabled={isSubmitting}
                         />
                         <p className="mt-1 text-xs text-gray-500">Alphanumeric and underscores only</p>
-                    </div>
-
-                    <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-bat-gray mb-2">
-                            Email Address
-                        </label>
-                        <input
-                            type="email"
-                            id="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 placeholder-gray-600"
-                            placeholder="your@email.com"
-                            required
-                            disabled={isSubmitting}
-                        />
-                        <p className="mt-1 text-xs text-gray-500">We don't verify this anymore, but it's good for recovery.</p>
                     </div>
 
                     <div>

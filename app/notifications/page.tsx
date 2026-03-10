@@ -157,8 +157,13 @@ export default function NotificationsPage() {
                                 )}
                             </div>
                             <div className="flex-1">
-                                {n.type === 'SYSTEM' ? (
-                                    <p className="text-bat-gray">{n.entity_id || n.message}</p>
+                                {(['SYSTEM', 'SERVER_UPDATE', 'POST_UNDER_REVIEW', 'REPLY_UNDER_REVIEW', 'POST_APPROVED', 'POST_REJECTED', 'BADGE_GRANTED'] as string[]).includes(n.type) ? (
+                                    <div className="flex flex-col">
+                                        <p className="text-bat-gray text-sm">{getNotificationText(n)}</p>
+                                        <span className="text-xs text-bat-gray/40 mt-1">
+                                            {new Date(n.created_at).toLocaleDateString()} at {new Date(n.created_at).toLocaleTimeString()}
+                                        </span>
+                                    </div>
                                 ) : (
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-1.5 flex-wrap">
