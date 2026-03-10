@@ -30,7 +30,7 @@ export default function ExplorePage() {
                 setLoading(true);
 
                 if (activeTab === 'posts') {
-                    
+
                     const res = await apiGet('/posts/recent?limit=20');
 
                     if (res.ok) {
@@ -38,12 +38,26 @@ export default function ExplorePage() {
                         setPosts(data.posts || []);
                     }
                 } else {
-                    
+
                     const res = await apiGet('/users/suggested?limit=20');
 
                     if (res.ok) {
                         const data = await res.json();
-                        setUsers(data.users || []);
+                        setUsers((data.users || []).map((u: any) => {
+                            // API returns nested: { identity: { user_id }, profile: { display_name, avatar_url, bio } }
+                            const userId = u?.identity?.user_id ?? u?.user_id ?? u?.userId ?? u?.id ?? '';
+                            const username = userId.split('@')[0];
+                            const displayName = u?.profile?.display_name ?? u?.display_name ?? u?.displayName ?? username;
+                            return {
+                                userId,
+                                username,
+                                displayName,
+                                avatarUrl: u?.profile?.avatar_url ?? u?.avatar_url ?? u?.avatarUrl ?? '',
+                                bio: u?.profile?.bio ?? u?.bio ?? '',
+                                followersCount: u?.followers_count ?? u?.followersCount ?? 0,
+                                followingCount: u?.following_count ?? u?.followingCount ?? 0,
+                            };
+                        }));
                     }
                 }
             } catch (err) {
@@ -86,9 +100,8 @@ export default function ExplorePage() {
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
-                            className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors relative ${
-                                activeTab === tab ? 'text-gray-100' : 'text-bat-gray/50 hover:text-bat-gray/80'
-                            }`}
+                            className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors relative ${activeTab === tab ? 'text-gray-100' : 'text-bat-gray/50 hover:text-bat-gray/80'
+                                }`}
                         >
                             {tab.charAt(0).toUpperCase() + tab.slice(1)}
                             {activeTab === tab && (
