@@ -27,6 +27,12 @@ export default function LoginPage() {
     // Passkey login state
     const [passkeyLoading, setPasskeyLoading] = useState(false);
 
+    // Toggle password visibility
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Increment to force-reset OTPInput boxes after a failed attempt
+    const [otpResetKey, setOtpResetKey] = useState(0);
+
     // Populate from localStorage only after mount (avoids SSR/hydration mismatch)
     useEffect(() => {
         const pinned = getPinnedServer();
@@ -99,6 +105,7 @@ export default function LoginPage() {
             login(data.user_id, data.home_server, data.access_token || '', data.refresh_token || '');
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Verification failed');
+            setOtpResetKey(k => k + 1); // clear boxes so user can re-enter
         } finally {
             setIsSubmitting(false);
         }
@@ -191,7 +198,7 @@ export default function LoginPage() {
                                     Open your authenticator app and enter the 6-digit code for{' '}
                                     <span className="text-bat-yellow font-semibold">{username}</span>.
                                 </p>
-                                <OTPInput onComplete={handleTOTPComplete} length={6} />
+                                <OTPInput onComplete={handleTOTPComplete} length={6} resetKey={otpResetKey} />
                                 {isSubmitting && (
                                     <p className="text-sm text-bat-gray/60 text-center">Verifying…</p>
                                 )}
@@ -305,7 +312,7 @@ export default function LoginPage() {
                             </select>
                         </div>
 
-                        <div>
+                        <div className="relative">
                             <label
                                 htmlFor="password"
                                 className="block text-sm font-medium text-bat-gray mb-2"
@@ -313,12 +320,12 @@ export default function LoginPage() {
                                 Password
                             </label>
                             <input
-                                type="password"
+                                type={showPassword ? 'text' : 'password'}
                                 id="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="
-                  w-full px-4 py-3 rounded-md
+                  w-full px-4 py-3 pr-12 rounded-md
                   bg-bat-black text-white
                   border border-bat-gray/20
                   focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
@@ -329,6 +336,24 @@ export default function LoginPage() {
                                 required
                                 disabled={isSubmitting}
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(v => !v)}
+                                className="absolute right-3 top-9 text-bat-gray/40 hover:text-bat-yellow transition-colors"
+                                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                tabIndex={-1}
+                            >
+                                {showPassword ? (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                )}
+                            </button>
                         </div>
 
                         <button
@@ -349,23 +374,48 @@ export default function LoginPage() {
 
                         {/* Passkey login */}
                         {isPasskeySupported() && (
-                            <button
-                                type="button"
-                                onClick={handlePasskeyLogin}
-                                disabled={passkeyLoading || isSubmitting}
-                                className="
-                  w-full py-3 px-4 rounded-md font-semibold text-sm
-                  bg-transparent text-bat-gray border border-bat-gray/20
-                  hover:border-bat-yellow/50 hover:text-bat-yellow
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  transition-all duration-200 flex items-center justify-center gap-2
-                "
-                            >
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                                </svg>
-                                {passkeyLoading ? 'Verifying passkey…' : 'Sign in with passkey'}
-                            </button>
+                            <div className="space-y-2 pt-2">
+                                {/* OR divider */}
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-1 h-px bg-bat-gray/10" />
+                                    <span className="text-xs text-bat-gray/30 font-medium">or</span>
+                                    <div className="flex-1 h-px bg-bat-gray/10" />
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handlePasskeyLogin}
+                                    disabled={passkeyLoading || isSubmitting}
+                                    className="
+                      w-full py-3 px-4 rounded-md font-semibold text-sm
+                      bg-transparent text-bat-gray border border-bat-gray/20
+                      hover:border-bat-yellow/60 hover:text-bat-yellow hover:bg-bat-yellow/5
+                      disabled:opacity-50 disabled:cursor-not-allowed
+                      transition-all duration-200 flex items-center justify-center gap-2
+                    "
+                                >
+                                    {passkeyLoading ? (
+                                        <>
+                                            <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                                            </svg>
+                                            Verifying with your device…
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0-1.104-.896-2-2-2s-2 .896-2 2 .896 2 2 2 2-.896 2-2zM6.343 6.343A8 8 0 1017.657 17.657 8 8 0 006.343 6.343z" />
+                                            </svg>
+                                            Sign in with passkey
+                                        </>
+                                    )}
+                                </button>
+                                <p className="text-xs text-bat-gray/35 text-center leading-relaxed">
+                                    Uses your device’s biometrics or security key (Face ID, fingerprint, Windows Hello).
+                                    No password needed — enter your username above first.
+                                </p>
+                            </div>
                         )}
                     </form>
                 )}

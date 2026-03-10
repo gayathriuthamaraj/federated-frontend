@@ -34,6 +34,10 @@ export default function SettingsPage() {
     const [backupCodes, setBackupCodes] = useState<string[]>([]);
     const [backupCodesLoading, setBackupCodesLoading] = useState(false);
 
+    // ── OTPInput reset keys (increment to clear boxes after a wrong code) ─────
+    const [confirmOtpKey, setConfirmOtpKey] = useState(0);
+    const [disableOtpKey, setDisableOtpKey] = useState(0);
+
     // ── ZKP state ─────────────────────────────────────────────────────────────
     const [zkpRegistered, setZkpRegistered] = useState<boolean>(false);
     const [zkpLastProved, setZkpLastProved] = useState<string | null>(null);
@@ -282,6 +286,7 @@ export default function SettingsPage() {
             handleGenerateBackupCodes();
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Invalid OTP code');
+            setConfirmOtpKey(k => k + 1);
         } finally {
             setLoading(false);
         }
@@ -308,6 +313,7 @@ export default function SettingsPage() {
             setSetupStep("idle");
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Disable failed');
+            setDisableOtpKey(k => k + 1);
         } finally {
             setLoading(false);
         }
@@ -405,6 +411,7 @@ export default function SettingsPage() {
                             <OTPInput
                                 onComplete={handleConfirmOTP}
                                 length={6}
+                                resetKey={confirmOtpKey}
                             />
                         </div>
                         {loading && <p className="text-sm text-bat-gray/60">Verifying…</p>}
@@ -475,6 +482,7 @@ export default function SettingsPage() {
                         <OTPInput
                             onComplete={handleDisable}
                             length={6}
+                            resetKey={disableOtpKey}
                         />
                         {loading && <p className="text-sm text-bat-gray/60">Disabling…</p>}
                     </div>
