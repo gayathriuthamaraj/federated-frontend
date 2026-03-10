@@ -167,9 +167,9 @@ export default function GroupsPage() {
                             </button>
                         </div>
                     )}
-                    {groups.map(g => (
+                    {groups.map((g, idx) => (
                         <button
-                            key={g.id}
+                            key={g.id || g.name || String(idx)}
                             onClick={() => setSelectedGroup(g)}
                             className={`w-full text-left px-4 py-3 border-b border-bat-gray/5 transition-colors ${
                                 selectedGroup?.id === g.id

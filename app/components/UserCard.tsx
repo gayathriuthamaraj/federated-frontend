@@ -41,7 +41,7 @@ export default function UserCard({ user, showFollowButton = true, onClick }: Use
                     />
                 ) : (
                     <div className="h-12 w-12 rounded-full bg-bat-dark border border-bat-yellow/50 flex items-center justify-center text-bat-yellow font-bold text-lg">
-                        {user.displayName[0].toUpperCase()}
+                        {(user.displayName?.[0] ?? user.username?.[0] ?? '?').toUpperCase()}
                     </div>
                 )}
             </div>

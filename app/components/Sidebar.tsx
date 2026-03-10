@@ -294,18 +294,6 @@ export default function Sidebar() {
 
                 {/* Social / fediverse quick-links */}
                 <div className={`flex mb-4 gap-2 ${expanded ? "justify-start px-1" : "justify-center"}`}>
-                    {/* Fediverse / ActivityPub */}
-                    <a
-                        href="https://joinmastodon.org"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Fediverse / Mastodon"
-                        className="p-1.5 rounded-md text-bat-gray/50 hover:text-bat-yellow hover:bg-bat-yellow/10 transition-all duration-200"
-                    >
-                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
-                            <path d="M23.193 7.88c-.33-2.335-2.45-4.18-4.93-4.56-2.12-.33-4.25-.5-6.37-.5-2.12 0-4.25.17-6.37.5C3.04 3.71.92 5.55.6 7.88c-.26 1.84-.4 3.69-.4 5.54 0 1.85.14 3.7.4 5.54.33 2.35 2.45 4.18 4.93 4.56 2.12.33 4.25.5 6.37.5 2.12 0 4.25-.17 6.37-.5 2.48-.38 4.6-2.21 4.93-4.56.26-1.84.4-3.69.4-5.54 0-1.85-.14-3.7-.4-5.54zM12 16.97c-1.12 0-2.21-.08-3.27-.24-1.04-.16-1.97-.52-2.7-1.06-.73-.54-1.19-1.28-1.19-2.12 0-.83.46-1.58 1.19-2.12.73-.54 1.66-.9 2.7-1.06 1.06-.16 2.15-.24 3.27-.24 1.12 0 2.21.08 3.27.24 1.04.16 1.97.52 2.7 1.06.73.54 1.19 1.29 1.19 2.12 0 .84-.46 1.58-1.19 2.12-.73.54-1.66.9-2.7 1.06-1.06.16-2.15.24-3.27.24z"/>
-                        </svg>
-                    </a>
                     {/* GitHub */}
                     <a
                         href="https://github.com"

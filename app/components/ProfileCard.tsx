@@ -104,7 +104,7 @@ export default function ProfileCard({
 
     // Touch swipe support
     const touchStartX = useRef<number | null>(null)
-    const TABS = ['Posts', 'Replies', 'Highlights', 'Media', 'Likes'] as const
+    const TABS = ['Posts', 'Replies', 'Reposts', 'Likes'] as const
     const TAB_COUNT = TABS.length
 
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -168,7 +168,7 @@ export default function ProfileCard({
                 <div className="relative flex justify-between items-start">
                     {}
                     <div className="-mt-[15%] sm:-mt-16 mb-3">
-                        <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-bat-black bg-bat-black overflow-hidden transition-transform duration-300 hover:scale-105 shadow-lg">
+                        <div className={`relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 ${isMod ? 'border-bat-blue/70 shadow-[0_0_14px_rgba(47,128,237,0.4)]' : 'border-bat-black'} bg-bat-black overflow-hidden transition-transform duration-300 hover:scale-105 shadow-lg`}>
                             {profile.avatar_url ? (
                                 <img
                                     src={profile.avatar_url}
@@ -245,7 +245,7 @@ export default function ProfileCard({
 
                 {}
                 <div className="mt-2">
-                    <h1 className="text-xl sm:text-2xl font-bold text-bat-gray leading-tight">
+                    <h1 className={`text-xl sm:text-2xl font-bold leading-tight ${isMod ? 'text-bat-blue' : 'text-bat-gray'}`}>
                         {profile.display_name}
                     </h1>
                     <p className="text-bat-gray/60 text-sm sm:text-base">
@@ -261,7 +261,7 @@ export default function ProfileCard({
                             ${isMod
                                 ? 'bg-bat-blue/20 text-bat-blue border border-bat-blue/40'
                                 : 'bg-bat-yellow/20 text-bat-yellow border border-bat-yellow/40'}`}>
-                            {isMod ? '🛡️' : '⭐'} {profile.badge}
+                            {profile.badge}
                         </span>
                     )}
                     {zkpEnabled && (
@@ -269,7 +269,7 @@ export default function ProfileCard({
                             title="Identity verified with zero-knowledge proof"
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold mt-2 bg-green-500/10 text-green-400 border border-green-500/20"
                         >
-                            🛡 ZK Verified
+                            ZK Verified
                         </span>
                     )}
                 </div>
@@ -432,7 +432,11 @@ export default function ProfileCard({
                     ) : (
                         <div className="border-t border-bat-dark/50 divide-y divide-bat-dark/40">
                             {replies.map((rep) => (
-                                <div key={rep.id} className="px-4 pt-3 pb-1 hover:bg-bat-dark/10 transition-colors">
+                                <div
+                                    key={rep.id}
+                                    className="px-4 pt-3 pb-1 hover:bg-bat-dark/10 transition-colors cursor-pointer"
+                                    onClick={() => router.push(`/post/${rep.post_id}`)}
+                                >
                                     {rep.post_content && (
                                         <div className="mb-1.5 pl-3 border-l-2 border-bat-gray/20 text-xs text-bat-gray/40 line-clamp-2">
                                             <span className="font-semibold text-bat-gray/50">
@@ -458,15 +462,15 @@ export default function ProfileCard({
                     )
                 )}
 
-                {/* Highlights tab — posts this user has reposted */}
+                {/* Reposts tab — posts this user has reposted */}
                 {activeTab === 2 && (
                     loadingPosts ? (
-                        <div className="text-center text-bat-gray py-8">Loading highlights...</div>
+                        <div className="text-center text-bat-gray py-8">Loading reposts...</div>
                     ) : highlights.length === 0 ? (
                         <div className="p-8 text-center border-t border-bat-dark/50">
-                            <div className="text-bat-gray/40 text-lg font-medium">No highlights yet</div>
+                            <div className="text-bat-gray/40 text-lg font-medium">No reposts yet</div>
                             <div className="text-bat-gray/20 text-sm mt-1">
-                                {isOwnProfile ? "Repost content to highlight it here." : "Nothing here yet."}
+                                {isOwnProfile ? "Repost content to see it here." : "Nothing here yet."}
                             </div>
                         </div>
                     ) : (
@@ -478,28 +482,8 @@ export default function ProfileCard({
                     )
                 )}
 
-                {/* Media tab — posts by this user that contain an image */}
-                {activeTab === 3 && (
-                    loadingPosts ? (
-                        <div className="text-center text-bat-gray py-8">Loading media...</div>
-                    ) : posts.filter(p => p.image_url).length === 0 ? (
-                        <div className="p-8 text-center border-t border-bat-dark/50">
-                            <div className="text-bat-gray/40 text-lg font-medium">No media yet</div>
-                            <div className="text-bat-gray/20 text-sm mt-1">
-                                {isOwnProfile ? "Share a post with an image to see it here." : "Nothing here yet."}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="border-t border-bat-dark/50">
-                            {posts.filter(p => p.image_url).map((post) => (
-                                <PostCard key={post.id} post={post} linkBase={linkBase} />
-                            ))}
-                        </div>
-                    )
-                )}
-
                 {/* Likes tab */}
-                {activeTab === 4 && (
+                {activeTab === 3 && (
                     loadingPosts ? (
                         <div className="text-center text-bat-gray py-8">Loading likes...</div>
                     ) : likedPosts.length === 0 ? (

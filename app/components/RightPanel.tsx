@@ -63,7 +63,7 @@ export default function RightPanel() {
                                 <div>
                                     <div className="text-[11px] text-bat-gray/40">#{i + 1} · Trending</div>
                                     <div className="font-bold text-gray-100 text-sm">{t.tag}</div>
-                                    <div className="text-bat-gray/40 text-xs">{t.post_count.toLocaleString()} posts</div>
+                                    <div className="text-bat-gray/40 text-xs">{(t.post_count ?? 0).toLocaleString()} posts</div>
                                 </div>
                                 {t.servers && t.servers.length > 1 && (
                                     <div className="text-[10px] text-bat-yellow/50 ml-2 shrink-0">{t.servers.length} servers</div>

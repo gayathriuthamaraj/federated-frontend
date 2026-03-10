@@ -278,6 +278,30 @@ function MessagesContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [identity, selectedUserId]);
 
+    // ── Poll DM messages every 5 s so receiver sees new messages ─────────────
+    useEffect(() => {
+        if (!identity || !selectedUserId) return;
+        const poll = async () => {
+            try {
+                const accessToken = localStorage.getItem('access_token');
+                const headers: HeadersInit = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+                const res = await fetch(
+                    `${identity.home_server}/messages/conversation?user_id=${encodeURIComponent(identity.user_id)}&other_user_id=${encodeURIComponent(selectedUserId)}`,
+                    { headers }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    const msgs: Message[] = data.messages || [];
+                    setMessages(msgs);
+                    cache.setMessages(identity.user_id, selectedUserId, msgs);
+                }
+            } catch { /* ignore */ }
+        };
+        const id = setInterval(poll, 5_000);
+        return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [identity, selectedUserId]);
+
     // ── Send message ──────────────────────────────────────────────────────────
     const handleSendMessage = async () => {
         if (!newMessage.trim() && !msgImageFile) return;

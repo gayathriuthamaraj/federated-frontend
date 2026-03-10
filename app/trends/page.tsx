@@ -103,7 +103,7 @@ export default function TrendsPage() {
                                     </div>
                                     <div className="font-bold text-bat-yellow text-base truncate">{t.tag}</div>
                                     <div className="text-bat-gray/45 text-xs mt-0.5">
-                                        {t.post_count.toLocaleString()} post{t.post_count !== 1 ? 's' : ''}
+                                        {(t.post_count ?? 0).toLocaleString()} post{(t.post_count ?? 0) !== 1 ? 's' : ''}
                                         {t.servers && t.servers.length > 1 && (
                                             <span className="ml-2 text-bat-yellow/40">
                                                 · {t.servers.length} servers

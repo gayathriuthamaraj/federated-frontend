@@ -56,7 +56,21 @@ export default function ExplorePage() {
 
                     if (res.ok) {
                         const data = await res.json();
-                        setUsers(data.users || []);
+                        const mapped = (data.users || []).map((u: any) => {
+                            if (u?.identity?.user_id) {
+                                return {
+                                    userId: u.identity.user_id,
+                                    username: u.identity.user_id.split('@')[0],
+                                    displayName: u.profile?.display_name || u.identity.user_id.split('@')[0],
+                                    avatarUrl: u.profile?.avatar_url || '',
+                                    bio: u.profile?.bio || '',
+                                    followersCount: u.profile?.followers_count ?? 0,
+                                    followingCount: u.profile?.following_count ?? 0,
+                                };
+                            }
+                            return u;
+                        });
+                        setUsers(mapped);
                     }
                 }
             } catch (err) {
@@ -135,8 +149,8 @@ export default function ExplorePage() {
                                 </div>
                             ) : (
                                 <div className="divide-y divide-bat-dark/40">
-                                    {users.map(user => (
-                                        <UserCard key={user.userId} user={user} showFollowButton={true} />
+                                    {users.map((user, idx) => (
+                                        <UserCard key={user.userId || user.username || idx} user={user} showFollowButton={true} />
                                     ))}
                                 </div>
                             )

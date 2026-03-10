@@ -446,17 +446,6 @@ export default function LoginPage() {
                     <p className="text-xs text-bat-gray/40 text-center mb-3">Find us on</p>
                     <div className="flex items-center justify-center gap-5">
                         <a
-                            href="https://joinmastodon.org"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Mastodon / Fediverse"
-                            className="text-bat-gray/40 hover:text-bat-yellow transition-colors duration-200"
-                        >
-                            <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
-                                <path d="M23.193 7.88c-.33-2.335-2.45-4.18-4.93-4.56-2.12-.33-4.25-.5-6.37-.5-2.12 0-4.25.17-6.37.5C3.04 3.71.92 5.55.6 7.88c-.26 1.84-.4 3.69-.4 5.54 0 1.85.14 3.7.4 5.54.33 2.35 2.45 4.18 4.93 4.56 2.12.33 4.25.5 6.37.5 2.12 0 4.25-.17 6.37-.5 2.48-.38 4.6-2.21 4.93-4.56.26-1.84.4-3.69.4-5.54 0-1.85-.14-3.7-.4-5.54z"/>
-                            </svg>
-                        </a>
-                        <a
                             href="https://github.com"
                             target="_blank"
                             rel="noopener noreferrer"

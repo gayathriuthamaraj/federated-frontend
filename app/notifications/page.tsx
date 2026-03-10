@@ -81,7 +81,7 @@ export default function NotificationsPage() {
             case 'REPOST': return 'reposted your post';
             case 'MESSAGE': return 'sent you a message';
             case 'SERVER_UPDATE': return n.entity_id || 'Server configuration updated';
-            case 'SYSTEM': return n.entity_id || n.message || 'System notification';
+            case 'SYSTEM': return n.message || n.entity_id || 'System notification';
             case 'LINK_REQUEST': return 'sent you an account link request';
             case 'LINK_ACCEPTED': return 'accepted your account link request';
             case 'POST_UNDER_REVIEW': return 'Your post is being reviewed by the moderation team';
@@ -134,9 +134,13 @@ export default function NotificationsPage() {
                             key={n.id}
                             onClick={() => {
                                 if (n.type === 'FOLLOW') {
-                                    router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);
+                                    router.push(`/profile?user_id=${encodeURIComponent(n.actor_id)}`);
+                                } else if (n.type === 'MESSAGE') {
+                                    router.push(`/messages?user=${encodeURIComponent(n.actor_id)}`);
                                 } else if (n.type === 'LINK_REQUEST' || n.type === 'LINK_ACCEPTED') {
                                     router.push('/linked-accounts');
+                                } else if (n.type === 'BADGE_GRANTED') {
+                                    router.push('/profile');
                                 } else if (n.entity_id) {
                                     router.push(`/post/${n.entity_id}`);
                                 }
