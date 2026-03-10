@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { KNOWN_SERVERS, findServerById, pinServer, getPinnedServer } from '../utils/servers';
 import OTPInput from '../components/OTPInput';
+import { loginWithPasskey, isPasskeySupported } from '../utils/passkey';
 
 export default function LoginPage() {
     const { login } = useAuth();
@@ -17,6 +18,9 @@ export default function LoginPage() {
     const [totpRequired, setTotpRequired] = useState(false);
     const [partialToken, setPartialToken] = useState('');
     const [chosenServerURL, setChosenServerURL] = useState('');
+
+    // Passkey login state
+    const [passkeyLoading, setPasskeyLoading] = useState(false);
 
     // Populate from localStorage only after mount (avoids SSR/hydration mismatch)
     useEffect(() => {
@@ -92,6 +96,30 @@ export default function LoginPage() {
             setError(err instanceof Error ? err.message : 'Verification failed');
         } finally {
             setIsSubmitting(false);
+        }
+    };
+
+    // ── Passkey login ─────────────────────────────────────────────────────────
+    const handlePasskeyLogin = async () => {
+        if (!username) {
+            setError('Enter your username first, then click Sign in with passkey.');
+            return;
+        }
+        const chosenServer = findServerById(serverId);
+        if (!chosenServer) {
+            setError('Please select a server.');
+            return;
+        }
+        pinServer(chosenServer);
+        setError('');
+        setPasskeyLoading(true);
+        try {
+            const data = await loginWithPasskey(chosenServer.url, username);
+            login(data.user_id, data.home_server, data.access_token, data.refresh_token);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Passkey login failed');
+        } finally {
+            setPasskeyLoading(false);
         }
     };
 
@@ -239,10 +267,31 @@ export default function LoginPage() {
                         >
                             {isSubmitting ? 'Signing in...' : 'Sign In'}
                         </button>
+
+                        {/* Passkey login */}
+                        {isPasskeySupported() && (
+                            <button
+                                type="button"
+                                onClick={handlePasskeyLogin}
+                                disabled={passkeyLoading || isSubmitting}
+                                className="
+                  w-full py-3 px-4 rounded-md font-semibold text-sm
+                  bg-transparent text-bat-gray border border-bat-gray/20
+                  hover:border-bat-yellow/50 hover:text-bat-yellow
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  transition-all duration-200 flex items-center justify-center gap-2
+                "
+                            >
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                </svg>
+                                {passkeyLoading ? 'Verifying passkey…' : 'Sign in with passkey'}
+                            </button>
+                        )}
                     </form>
                 )}
 
-                <div className="mt-6 text-center">
+                <div className="mt-6 text-center space-y-2">
                     <p className="text-sm text-gray-500">
                         Don't have an account?{' '}
                         <Link
@@ -250,6 +299,15 @@ export default function LoginPage() {
                             className="text-bat-yellow hover:text-white transition-colors duration-200 font-medium"
                         >
                             Create an account
+                        </Link>
+                    </p>
+                    <p className="text-sm text-gray-500">
+                        Lost your passkey?{' '}
+                        <Link
+                            href="/recover"
+                            className="text-bat-gray/70 hover:text-bat-yellow transition-colors duration-200"
+                        >
+                            Recover account
                         </Link>
                     </p>
                 </div>

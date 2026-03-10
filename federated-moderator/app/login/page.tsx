@@ -2,12 +2,14 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { moderatorLogin } from '../api/moderator';
+import { Loader2, LogIn } from 'lucide-react';
 
 export default function LoginPage() {
     const router = useRouter();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [serverUrl, setServerUrl] = useState('http://localhost:8080');
+    const [moderationUrl, setModerationUrl] = useState('http://localhost:8090');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -18,6 +20,7 @@ export default function LoginPage() {
         try {
             // Persist the backend URL so all API calls use it
             localStorage.setItem('mod_backend', serverUrl.replace(/\/$/, ''));
+            localStorage.setItem('mod_moderation_backend', moderationUrl.replace(/\/$/, ''));
             const data = await moderatorLogin(username, password);
             localStorage.setItem('mod_token', data.token);
             localStorage.setItem('mod_username', username);
@@ -64,6 +67,19 @@ export default function LoginPage() {
                     </div>
 
                     <div className="form-group">
+                        <label className="form-label">// MODERATION SERVICE URL</label>
+                        <input
+                            id="mod-moderation-server"
+                            className="input"
+                            type="url"
+                            value={moderationUrl}
+                            onChange={e => setModerationUrl(e.target.value)}
+                            placeholder="http://localhost:8090"
+                            required
+                        />
+                    </div>
+
+                    <div className="form-group">
                         <label className="form-label">// USERNAME</label>
                         <input
                             id="mod-username"
@@ -98,7 +114,9 @@ export default function LoginPage() {
                         className="btn btn-green"
                         style={{ width: '100%', justifyContent: 'center', marginTop: 4 }}
                     >
-                        {loading ? '⠴ AUTHENTICATING...' : '▶ AUTHENTICATE'}
+                        {loading
+                            ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> AUTHENTICATING...</>
+                            : <><LogIn size={13} /> AUTHENTICATE</>}
                     </button>
                 </form>
 
@@ -109,8 +127,7 @@ export default function LoginPage() {
 
             <style>{`
                 @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=JetBrains+Mono:wght@300;400;500&display=swap');
-                body { font-family: 'JetBrains Mono', monospace; }
-            `}</style>
+                body { font-family: 'JetBrains Mono', monospace; }                @keyframes spin { to { transform: rotate(360deg); } }            `}</style>
         </div>
     );
 }

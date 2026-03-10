@@ -12,6 +12,7 @@ import {
     clearTOTPProtectedKeyPair,
     getEncryptedPrivateKey,
     getStoredPublicKey,
+    signData,
 } from "../utils/crypto";
 import { useTOTPUnlock } from "../utils/useTOTPUnlock";
 
@@ -28,6 +29,16 @@ export default function SettingsPage() {
     const [error, setError] = useState<string>("");
     const [loading, setLoading] = useState(false);
     const [unlockResult, setUnlockResult] = useState<"success" | "none" | null>(null);
+
+    // ── ZKP state ─────────────────────────────────────────────────────────────
+    const [zkpRegistered, setZkpRegistered] = useState<boolean>(false);
+    const [zkpLastProved, setZkpLastProved] = useState<string | null>(null);
+    const [zkpProofToken, setZkpProofToken] = useState<string>("");
+    const [zkpVerifyInput, setZkpVerifyInput] = useState<string>("");
+    const [zkpVerifyResult, setZkpVerifyResult] = useState<{ valid: boolean; user_id?: string; expires_at?: string } | null>(null);
+    const [zkpError, setZkpError] = useState<string>("");
+    const [zkpLoading, setZkpLoading] = useState(false);
+    const [zkpCopied, setZkpCopied] = useState(false);
     // ── auth guard ────────────────────────────────────────────────────────────
     useEffect(() => {
         if (!identity) {
@@ -47,6 +58,19 @@ export default function SettingsPage() {
             .catch(() => setTotpEnabled(false));
     }, [identity]);
 
+    // ── Fetch ZKP status on mount ─────────────────────────────────────────────
+    useEffect(() => {
+        if (!identity) return;
+        fetch(`${identity.home_server}/zkp/status?user_id=${encodeURIComponent(identity.user_id)}`)
+            .then(r => r.ok ? r.json() : null)
+            .then(d => {
+                if (!d) return;
+                setZkpRegistered(d.zkp_enabled ?? false);
+                setZkpLastProved(d.last_proved_at ?? null);
+            })
+            .catch(() => {});
+    }, [identity]);
+
     if (!identity) return null;
 
     const token = () => localStorage.getItem("access_token") ?? "";
@@ -64,6 +88,90 @@ export default function SettingsPage() {
         const key = await requestPrivateKey();
         setUnlockResult(key ? "success" : "none");
         // Key stays only in memory for this instant – we don't store it
+    }
+
+    // ── ZKP: register current public key with server ──────────────────────────
+    async function handleZKPRegister() {
+        setZkpError(""); setZkpLoading(true);
+        try {
+            const pubKey = getStoredPublicKey();
+            if (!pubKey) throw new Error("No local key pair found. Enable TOTP first to generate a key pair.");
+            const res = await fetch(`${identity!.home_server}/zkp/register-key`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+                body: JSON.stringify({ zkp_public_key: pubKey }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? "Registration failed");
+            setZkpRegistered(true);
+        } catch (e: unknown) {
+            setZkpError(e instanceof Error ? e.message : "Registration failed");
+        } finally {
+            setZkpLoading(false);
+        }
+    }
+
+    // ── ZKP: obtain challenge → sign → get proof token ────────────────────────
+    async function handleZKPGenerateProof() {
+        setZkpError(""); setZkpProofToken(""); setZkpLoading(true);
+        try {
+            if (!zkpRegistered) throw new Error("Enable ZKP first by registering your key.");
+
+            // Unlock the private key via TOTP
+            const privateKeyHex = await requestPrivateKey();
+            if (!privateKeyHex) throw new Error("TOTP unlock cancelled.");
+
+            // Get a challenge
+            const chalRes = await fetch(`${identity!.home_server}/zkp/challenge`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token()}` },
+            });
+            const chalData = await chalRes.json();
+            if (!chalRes.ok) throw new Error(chalData.error ?? "Failed to get challenge");
+
+            // Sign the challenge message
+            const message = `zkp-challenge:${chalData.challenge}:user:${identity!.user_id}`;
+            const userSig = await signData(message, privateKeyHex);
+
+            // Submit proof
+            const proveRes = await fetch(`${identity!.home_server}/zkp/prove`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
+                body: JSON.stringify({ challenge_id: chalData.challenge_id, user_sig: userSig }),
+            });
+            const proveData = await proveRes.json();
+            if (!proveRes.ok) throw new Error(proveData.error ?? "Proof failed");
+
+            setZkpProofToken(proveData.proof_token);
+            setZkpLastProved(new Date().toISOString());
+        } catch (e: unknown) {
+            setZkpError(e instanceof Error ? e.message : "Proof generation failed");
+        } finally {
+            setZkpLoading(false);
+        }
+    }
+
+    // ── ZKP: verify a proof token ─────────────────────────────────────────────
+    async function handleZKPVerifyToken() {
+        setZkpError(""); setZkpVerifyResult(null); setZkpLoading(true);
+        try {
+            const res = await fetch(`${identity!.home_server}/zkp/verify-token`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ proof_token: zkpVerifyInput.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setZkpVerifyResult({ valid: false });
+                setZkpError(data.error ?? "Invalid token");
+            } else {
+                setZkpVerifyResult(data);
+            }
+        } catch (e: unknown) {
+            setZkpError(e instanceof Error ? e.message : "Verification failed");
+        } finally {
+            setZkpLoading(false);
+        }
     }
 
     // ── Step 1: request a new TOTP secret from the server ────────────────────
@@ -237,9 +345,9 @@ export default function SettingsPage() {
                             6-digit code below to confirm.
                         </p>
                         {qrDataURL && (
-                            <div className="inline-block bg-white p-2 rounded-lg">
+                            <div className="inline-block bg-white p-3 rounded-lg">
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={qrDataURL} alt="TOTP QR code" width={200} height={200} />
+                                <img src={qrDataURL} alt="TOTP QR code" width={256} height={256} style={{imageRendering: "pixelated"}} />
                             </div>
                         )}
                         <p className="text-xs text-bat-gray/50 font-mono break-all">
@@ -317,6 +425,120 @@ export default function SettingsPage() {
                     </div>
                 </section>
             )}
+        </div>
+
+        {/* ── Zero-Knowledge Identity Verification ─────────────────────────── */}
+        <div className="max-w-2xl mx-auto px-6 pb-6">
+            <section className="bg-bat-dark rounded-lg border border-bat-gray/10 p-6 mb-6">
+                <h2 className="text-lg font-bold text-bat-gray mb-1 flex items-center gap-2">
+                    <span>🛡</span> Zero-Knowledge Identity Verification
+                    {zkpRegistered && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/20">
+                            ✓ Active
+                        </span>
+                    )}
+                </h2>
+                <p className="text-sm text-bat-gray/60 mb-4">
+                    Prove you own your account to anyone — without revealing your password or any personal data.
+                    Uses your Ed25519 client key (requires TOTP to be set up first).
+                    {zkpLastProved && (
+                        <span className="block mt-1 text-bat-gray/40 text-xs">
+                            Last proved: {new Date(zkpLastProved).toLocaleString()}
+                        </span>
+                    )}
+                </p>
+
+                {zkpError && (
+                    <div className="mb-4 p-3 rounded-md bg-red-900/20 border border-red-500/50 text-red-400 text-sm">
+                        {zkpError}
+                    </div>
+                )}
+
+                {/* Step 1 — register key */}
+                {!zkpRegistered && (
+                    <div className="mb-5">
+                        <p className="text-sm text-bat-gray/50 mb-3">
+                            {!getStoredPublicKey()
+                                ? "⚠ No local key found. Set up your Authenticator App above first."
+                                : "Register your public key to enable ZKP proofs."}
+                        </p>
+                        <button
+                            onClick={handleZKPRegister}
+                            disabled={zkpLoading || !getStoredPublicKey()}
+                            className="px-4 py-2 bg-bat-yellow text-bat-black font-bold rounded-md hover:bg-yellow-400 transition-colors text-sm disabled:opacity-50"
+                        >
+                            {zkpLoading ? "Registering…" : "Enable Zero-Knowledge Verification"}
+                        </button>
+                    </div>
+                )}
+
+                {/* Step 2 — generate proof */}
+                {zkpRegistered && (
+                    <div className="mb-5">
+                        <button
+                            onClick={handleZKPGenerateProof}
+                            disabled={zkpLoading}
+                            className="px-4 py-2 bg-bat-yellow text-bat-black font-bold rounded-md hover:bg-yellow-400 transition-colors text-sm disabled:opacity-50"
+                        >
+                            {zkpLoading ? "Generating…" : "Generate Proof Token"}
+                        </button>
+                        <p className="text-xs text-bat-gray/40 mt-1">
+                            Requires your authenticator code. The token proves your identity for 1 hour.
+                        </p>
+                    </div>
+                )}
+
+                {/* Proof token display */}
+                {zkpProofToken && (
+                    <div className="mb-5 p-3 rounded bg-bat-gray/5 border border-bat-gray/20">
+                        <p className="text-xs text-bat-gray/50 mb-1 font-medium">Your proof token (share with anyone to verify you):</p>
+                        <textarea
+                            readOnly
+                            value={zkpProofToken}
+                            rows={3}
+                            className="w-full text-xs font-mono bg-transparent text-bat-gray/70 resize-none outline-none border-none"
+                        />
+                        <button
+                            onClick={() => { navigator.clipboard.writeText(zkpProofToken); setZkpCopied(true); setTimeout(() => setZkpCopied(false), 2000); }}
+                            className="mt-2 px-3 py-1 text-xs rounded bg-bat-gray/10 hover:bg-bat-gray/20 text-bat-gray/70 transition-colors"
+                        >
+                            {zkpCopied ? "✓ Copied!" : "Copy token"}
+                        </button>
+                    </div>
+                )}
+
+                {/* Verify someone else's token */}
+                <div className="border-t border-bat-gray/10 pt-4 mt-4">
+                    <p className="text-sm text-bat-gray/60 mb-2 font-medium">Verify someone&apos;s proof token:</p>
+                    <textarea
+                        value={zkpVerifyInput}
+                        onChange={e => setZkpVerifyInput(e.target.value)}
+                        rows={3}
+                        placeholder="Paste proof token here…"
+                        className="w-full text-xs font-mono bg-bat-gray/5 border border-bat-gray/20 rounded p-2 text-bat-gray/70 resize-none outline-none focus:border-bat-yellow/40 transition-colors"
+                    />
+                    <button
+                        onClick={handleZKPVerifyToken}
+                        disabled={zkpLoading || !zkpVerifyInput.trim()}
+                        className="mt-2 px-4 py-2 bg-bat-gray/20 hover:bg-bat-gray/30 text-bat-gray font-bold rounded-md transition-colors text-sm disabled:opacity-50"
+                    >
+                        Verify Token
+                    </button>
+                    {zkpVerifyResult && (
+                        <div className={`mt-3 p-3 rounded border text-sm ${zkpVerifyResult.valid ? "bg-green-900/20 border-green-500/30 text-green-400" : "bg-red-900/20 border-red-500/30 text-red-400"}`}>
+                            {zkpVerifyResult.valid ? (
+                                <>
+                                    <span className="font-bold">✓ Valid proof</span>
+                                    {zkpVerifyResult.user_id && <span className="ml-2 font-mono text-xs">{zkpVerifyResult.user_id}</span>}
+                                    {zkpVerifyResult.expires_at && <span className="text-xs text-bat-gray/40 block mt-0.5">Expires: {new Date(zkpVerifyResult.expires_at).toLocaleString()}</span>}
+                                </>
+                            ) : (
+                                <span className="font-bold">✗ Invalid or expired proof</span>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </section>
         </div>
 
         {/* Render the unlock modal at root level */}

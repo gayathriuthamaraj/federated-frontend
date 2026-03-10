@@ -16,6 +16,8 @@ export interface PrivacySettings {
     following_list_visibility: string;
     /** 'public' | 'followers' | 'private' */
     followers_list_visibility: string;
+    /** when true, others cannot repost your content */
+    disable_resharing: boolean;
     created_at?: string;
     updated_at?: string;
 }
@@ -29,6 +31,7 @@ export const defaultPrivacySettings = (): PrivacySettings => ({
     replies_visibility: 'public',
     following_list_visibility: 'public',
     followers_list_visibility: 'public',
+    disable_resharing: false,
 });
 
 export async function fetchPrivacySettings(homeServer: string, accessToken: string): Promise<PrivacySettings> {

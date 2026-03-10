@@ -2,19 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiGet } from '../utils/api';
 import PostCard from '../components/PostCard';
 import UserCard from '../components/UserCard';
 import RightPanel from '../components/RightPanel';
 
+type Tab = 'posts' | 'users' | 'hashtag';
+
 export default function ExplorePage() {
     const { identity, isLoading: authLoading } = useAuth();
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState<'posts' | 'users'>('posts');
+    const searchParams = useSearchParams();
+
+    const tabParam = (searchParams.get('tab') as Tab) || 'posts';
+    const tagParam = searchParams.get('tag') || '';
+
+    const [activeTab, setActiveTab] = useState<Tab>(tabParam);
+    const [hashtagInput, setHashtagInput] = useState(tagParam);
+    const [activeTag, setActiveTag] = useState(tagParam);
     const [posts, setPosts] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
+    const [hashtagPosts, setHashtagPosts] = useState<any[]>([]);
+    const [federatedResults, setFederatedResults] = useState<{ server: string; posts: any[] }[]>([]);
+    const [trendingTags, setTrendingTags] = useState<{ tag: string; post_count: number }[]>([]);
     const [loading, setLoading] = useState(true);
+    const [hashtagLoading, setHashtagLoading] = useState(false);
 
     useEffect(() => {
         if (!authLoading && !identity) {

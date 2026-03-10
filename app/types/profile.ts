@@ -17,4 +17,7 @@ export interface Profile {
 
     followers_count?: number
     following_count?: number
+
+    badge?: string
+    is_moderator?: boolean
 }

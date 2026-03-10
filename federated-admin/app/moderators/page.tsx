@@ -3,8 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
-import { listModerators, assignModerator, removeModerator, ModeratorRecord } from '../api/admin';
-import { Shield, UserPlus, UserMinus, RefreshCw } from 'lucide-react';
+import {
+    listModerators, assignModerator, removeModerator, ModeratorRecord,
+    getModerationStatus, toggleModeration, assignBadge, BadgeType,
+} from '../api/admin';
+import { Shield, UserPlus, UserMinus, RefreshCw, ToggleLeft, ToggleRight, Award } from 'lucide-react';
 
 export default function ModeratorsPage() {
     const router = useRouter();
@@ -16,12 +19,22 @@ export default function ModeratorsPage() {
     const [removing, setRemoving] = useState<string | null>(null);
     const [newUsername, setNewUsername] = useState('');
 
+    // Moderation toggle
+    const [moderationEnabled, setModerationEnabled] = useState(true);
+    const [togglingMod, setTogglingMod] = useState(false);
+
+    // Badge assignment
+    const [badgeUserId, setBadgeUserId] = useState('');
+    const [badgeValue, setBadgeValue] = useState<BadgeType>('');
+    const [assigningBadge, setAssigningBadge] = useState(false);
+
     const getAdminToken = () => localStorage.getItem('admin_token') || '';
 
     useEffect(() => {
         const token = getAdminToken();
         if (!token) { router.push('/login'); return; }
         load();
+        loadModerationStatus();
     }, []);
 
     const load = async () => {
@@ -34,6 +47,47 @@ export default function ModeratorsPage() {
             setError(err instanceof Error ? err.message : 'Failed to load moderators');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const loadModerationStatus = async () => {
+        try {
+            const data = await getModerationStatus();
+            setModerationEnabled(data.moderation_enabled);
+        } catch { /* non-critical */ }
+    };
+
+    const handleToggleModeration = async () => {
+        setTogglingMod(true);
+        setError('');
+        setSuccess('');
+        try {
+            const next = !moderationEnabled;
+            await toggleModeration(next);
+            setModerationEnabled(next);
+            setSuccess(`✓ Moderation feature ${next ? 'enabled' : 'disabled'}. Moderator list is preserved.`);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to toggle moderation');
+        } finally {
+            setTogglingMod(false);
+        }
+    };
+
+    const handleAssignBadge = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!badgeUserId.trim()) return;
+        setAssigningBadge(true);
+        setError('');
+        setSuccess('');
+        try {
+            await assignBadge(badgeUserId.trim(), badgeValue);
+            setSuccess(`✓ Badge "${badgeValue}" assigned to ${badgeUserId.trim()}`);
+            setBadgeUserId('');
+            await load();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to assign badge');
+        } finally {
+            setAssigningBadge(false);
         }
     };
 
@@ -118,6 +172,86 @@ export default function ModeratorsPage() {
                         {success}
                     </div>
                 )}
+
+                {/* Moderation feature toggle */}
+                <div className="term-panel" style={{ padding: '18px 20px' }}>
+                    <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.12em', marginBottom: 14 }}>
+                        // MODERATION FEATURE TOGGLE
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                        <div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
+                                AI Content Moderation
+                            </div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-ghost)' }}>
+                                {moderationEnabled
+                                    ? 'Posts and replies are scanned before publishing. Flagged content is held for review.'
+                                    : 'Moderation is OFF. All posts publish immediately. Moderator list is preserved for when you re-enable.'}
+                            </div>
+                        </div>
+                        <button
+                            id="mod-toggle-btn"
+                            onClick={handleToggleModeration}
+                            disabled={togglingMod}
+                            className={`term-btn${moderationEnabled ? '' : ' danger'}`}
+                            style={{ gap: 8, minWidth: 140, justifyContent: 'center' }}
+                        >
+                            {moderationEnabled
+                                ? <><ToggleRight size={16} /> ENABLED</>
+                                : <><ToggleLeft size={16} /> DISABLED</>}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Badge assignment */}
+                <div className="term-panel" style={{ padding: '18px 20px' }}>
+                    <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.12em', marginBottom: 14 }}>
+                        // ASSIGN USER BADGE
+                    </div>
+                    <form onSubmit={handleAssignBadge} style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <div style={{ flex: 1, minWidth: 180, position: 'relative' }}>
+                            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-ghost)', fontSize: '0.75rem', pointerEvents: 'none' }}>
+                                $&nbsp;user_id&nbsp;
+                            </span>
+                            <input
+                                type="text"
+                                value={badgeUserId}
+                                onChange={e => setBadgeUserId(e.target.value)}
+                                placeholder="alice@server_a"
+                                className="term-input"
+                                style={{ paddingLeft: 90 }}
+                                required
+                            />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 160, position: 'relative' }}>
+                            <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-ghost)', fontSize: '0.75rem', pointerEvents: 'none' }}>
+                                $&nbsp;badge&nbsp;
+                            </span>
+                            <input
+                                type="text"
+                                value={badgeValue}
+                                onChange={e => setBadgeValue(e.target.value)}
+                                placeholder="e.g. trustworthy member"
+                                className="term-input"
+                                style={{ paddingLeft: 72 }}
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={assigningBadge || !badgeUserId.trim() || !badgeValue.trim()}
+                            className="term-btn"
+                            style={{ gap: 6, whiteSpace: 'nowrap' }}
+                        >
+                            <Award size={13} />
+                            {assigningBadge ? 'ASSIGNING...' : 'ASSIGN BADGE'}
+                        </button>
+                    </form>
+                    <div style={{ marginTop: 8, fontSize: '0.65rem', color: 'var(--text-ghost)' }}>
+                        Badges are custom labels shown on the user's public profile (e.g. "trustworthy member", "leader").
+                        Moderator access is managed separately above.
+                    </div>
+                </div>
 
                 {/* Assign new moderator */}
                 <div className="term-panel" style={{ padding: '18px 20px' }}>

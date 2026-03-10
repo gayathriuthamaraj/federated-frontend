@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiPost } from '../utils/api';
 import { generateClientKeyPair, storeClientKeyPair, storeSessionKey } from '../utils/crypto';
 import { KNOWN_SERVERS, findServerById, pinServer, getPinnedServer } from '../utils/servers';
+import { registerPasskey, isPasskeySupported } from '../utils/passkey';
 
 export default function RegisterPage() {
     const { loginWithoutRedirect } = useAuth();
@@ -27,6 +28,12 @@ export default function RegisterPage() {
     const [recoveryKey, setRecoveryKey] = useState('');
     const [userId, setUserId] = useState('');
     const [recoveryQRUrl, setRecoveryQRUrl] = useState('');
+    const [accessToken, setAccessToken] = useState('');
+    const [serverURL, setServerURL] = useState('');
+
+    // Passkey setup state
+    const [passkeyStep, setPasskeyStep] = useState<'idle' | 'loading' | 'done' | 'skipped'>('idle');
+    const [passkeyError, setPasskeyError] = useState('');
 
     const [error, setError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,9 +115,11 @@ export default function RegisterPage() {
             // Direct Success - No OTP
             setRecoveryKey(data.recovery_key);
             setUserId(data.user_id);
+            setAccessToken(data.access_token || '');
+            setServerURL(chosenServer.url);
 
             // Generate QR code for the recovery key via backend
-            const qrRes = await fetch(`${chosenServer.server_url}/user/qr?data=${encodeURIComponent(data.recovery_key)}`);
+            const qrRes = await fetch(`${chosenServer.url}/user/qr?data=${encodeURIComponent(data.recovery_key)}`);
             if (qrRes.ok) {
                 const blob = await qrRes.blob();
                 setRecoveryQRUrl(URL.createObjectURL(blob));
@@ -132,6 +141,18 @@ export default function RegisterPage() {
 
     const handleCopyRecoveryKey = () => {
         navigator.clipboard.writeText(recoveryKey);
+    };
+
+    const handleSetupPasskey = async () => {
+        setPasskeyStep('loading');
+        setPasskeyError('');
+        try {
+            await registerPasskey(serverURL, accessToken);
+            setPasskeyStep('done');
+        } catch (err) {
+            setPasskeyError(err instanceof Error ? err.message : 'Passkey setup failed');
+            setPasskeyStep('idle');
+        }
     };
 
     const handleContinue = () => {
@@ -216,6 +237,49 @@ export default function RegisterPage() {
                                 alt="Recovery key QR code"
                                 className="w-40 h-40 rounded-md border border-bat-yellow/30"
                             />
+                        </div>
+                    )}
+
+                    {/* ── Passkey setup ──────────────────────────────── */}
+                    {isPasskeySupported() && (
+                        <div className="mb-6 p-4 rounded-lg border border-bat-gray/20 bg-bat-black/30">
+                            <div className="flex items-start gap-3">
+                                <svg className="w-5 h-5 text-bat-yellow mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                </svg>
+                                <div className="flex-1">
+                                    <p className="text-sm font-semibold text-bat-gray mb-1">Set up passkey login</p>
+                                    <p className="text-xs text-bat-gray/60 mb-3">
+                                        Use your fingerprint, face, or device PIN to sign in — no password needed.
+                                        Your authenticator app remains your recovery method.
+                                    </p>
+                                    {passkeyStep === 'done' ? (
+                                        <p className="text-xs text-green-400 font-semibold">✓ Passkey registered successfully</p>
+                                    ) : (
+                                        <>
+                                            {passkeyError && (
+                                                <p className="text-xs text-red-400 mb-2">{passkeyError}</p>
+                                            )}
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={handleSetupPasskey}
+                                                    disabled={passkeyStep === 'loading'}
+                                                    className="px-3 py-1.5 rounded text-xs font-semibold bg-bat-yellow text-bat-black hover:bg-yellow-400 disabled:opacity-50 transition-colors"
+                                                >
+                                                    {passkeyStep === 'loading' ? 'Setting up…' : 'Set up passkey'}
+                                                </button>
+                                                <button
+                                                    onClick={() => setPasskeyStep('skipped')}
+                                                    disabled={passkeyStep === 'loading'}
+                                                    className="px-3 py-1.5 rounded text-xs text-bat-gray/50 hover:text-bat-gray transition-colors"
+                                                >
+                                                    Skip for now
+                                                </button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     )}
 

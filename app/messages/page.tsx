@@ -289,7 +289,7 @@ function MessagesContent() {
             let imageURL: string | null = null;
             if (msgImageFile) {
                 const form = new FormData();
-                form.append('file', msgImageFile);
+                form.append('image', msgImageFile);
                 const upRes = await fetch(`${identity.home_server}/upload/image`, { method: 'POST', body: form });
                 if (upRes.ok) {
                     const upData = await upRes.json();

@@ -296,6 +296,47 @@ export default function PrivacySettingsPage() {
                         />
                     </div>
                 </section>
+
+                {/* ── RESHARING ────────────────────────────────────────── */}
+                <section>
+                    <SectionTitle
+                        title="Resharing"
+                        subtitle="Control whether others can repost your content"
+                    />
+                    <div className="border border-bat-gray/10 rounded-xl bg-bat-dark/20 p-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <p className="text-bat-gray text-sm font-medium">Disable resharing</p>
+                                <p className="text-bat-gray/50 text-xs mt-0.5">
+                                    {settings.disable_resharing
+                                        ? "Others cannot repost your content"
+                                        : "Others can repost your content"}
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={saving}
+                                onClick={() => set("disable_resharing", !settings.disable_resharing)}
+                                aria-checked={settings.disable_resharing}
+                                role="switch"
+                                className={`
+                                    relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                                    transition-colors duration-200 ease-in-out focus:outline-none
+                                    ${settings.disable_resharing ? 'bg-bat-yellow' : 'bg-bat-gray/30'}
+                                    ${saving ? 'opacity-50 cursor-not-allowed' : ''}
+                                `}
+                            >
+                                <span
+                                    className={`
+                                        pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow
+                                        transition-transform duration-200 ease-in-out
+                                        ${settings.disable_resharing ? 'translate-x-5' : 'translate-x-0'}
+                                    `}
+                                />
+                            </button>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
     );

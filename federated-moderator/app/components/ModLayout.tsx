@@ -2,10 +2,11 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useEffect, useState } from 'react';
-import { ShieldCheck, List, LogOut } from 'lucide-react';
+import { ShieldCheck, List, LogOut, Flag, ChevronRight } from 'lucide-react';
 
 const NAV = [
     { href: '/queue', label: 'REVIEW QUEUE', icon: List, cmd: 'queue' },
+    { href: '/reports', label: 'REPORTS', icon: Flag, cmd: 'reports' },
 ];
 
 export default function ModLayout({ children }: { children: ReactNode }) {
@@ -54,7 +55,9 @@ export default function ModLayout({ children }: { children: ReactNode }) {
                         const active = pathname === href;
                         return (
                             <Link key={href} href={href} className={`nav-item${active ? ' active' : ''}`}>
-                                <span style={{ opacity: 0.7 }}>{active ? '▶' : '·'}</span>
+                                {active
+                                    ? <ChevronRight size={12} style={{ opacity: 0.85, flexShrink: 0 }} />
+                                    : <span style={{ width: 12, flexShrink: 0 }} />}
                                 <Icon size={14} />
                                 <span style={{ flex: 1 }}>{label}</span>
                                 {active && <span style={{ fontSize: '0.6rem', color: 'var(--text-ghost)' }}>[{cmd}]</span>}

@@ -21,6 +21,8 @@ interface UserProfile {
     isFollowing?: boolean;
     createdAt?: string;
     updatedAt?: string;
+    badge?: string;
+    is_moderator?: boolean;
     // Federation metadata
     isFederated?: boolean;
     remoteServer?: string;
@@ -174,6 +176,8 @@ export default function SearchPage() {
         isFollowing:    data.is_following,
         createdAt:      data.profile.created_at,
         updatedAt:      data.profile.updated_at,
+        badge:          data.badge,
+        is_moderator:   data.is_moderator,
         isFederated:    false,
     }), []);
 
@@ -450,6 +454,8 @@ export default function SearchPage() {
                                         following_count: selectedUser.followingCount,
                                         created_at: selectedUser.createdAt || new Date().toISOString(),
                                         updated_at: new Date().toISOString(),
+                                        badge: selectedUser.badge,
+                                        is_moderator: selectedUser.is_moderator,
                                     }}
                                     isFollowing={selectedUser.isFollowing}
                                     posts={userPosts}

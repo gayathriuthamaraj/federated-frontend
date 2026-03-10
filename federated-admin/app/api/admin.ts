@@ -434,3 +434,106 @@ export async function removeModerator(username: string): Promise<{ message: stri
     return res.json();
 }
 
+// ── Badge Management ──────────────────────────────────────────────────────────
+
+export type BadgeType = string;
+
+export async function assignBadge(userId: string, badge: BadgeType): Promise<{ message: string; user_id: string; badge: string }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getApiBaseUrl()}/admin/users/assign-badge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ user_id: userId, badge }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+// ── Moderation Feature Toggle ─────────────────────────────────────────────────
+
+export async function getModerationStatus(): Promise<{ moderation_enabled: boolean }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getApiBaseUrl()}/admin/moderation/status`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to get moderation status');
+    return res.json();
+}
+
+export async function toggleModeration(enabled: boolean): Promise<{ message: string; moderation_enabled: string }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getApiBaseUrl()}/admin/moderation/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ enabled }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+// ── Privacy Audit Logs ────────────────────────────────────────────────────────
+
+export interface PrivacyLogEntry {
+    id: string;
+    event_type: string;
+    actor_id: string;
+    target_id: string;
+    detail: string;
+    ip_addr: string;
+    created_at: string;
+}
+
+export async function getPrivacyLogs(params?: {
+    limit?: number;
+    offset?: number;
+    actor_id?: string;
+}): Promise<{ logs: PrivacyLogEntry[]; count: number }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const qs = new URLSearchParams();
+    if (params?.limit)    qs.set('limit',    String(params.limit));
+    if (params?.offset)   qs.set('offset',   String(params.offset));
+    if (params?.actor_id) qs.set('actor_id', params.actor_id);
+    const res = await fetch(`${getApiBaseUrl()}/admin/privacy/logs?${qs}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch privacy logs');
+    return res.json();
+}
+
+// ── Encryption Policy ─────────────────────────────────────────────────────────
+
+export interface EncryptionPolicy {
+    dm_encryption_at_rest:     boolean;
+    require_encrypted_groups:  boolean;
+    updated_by:                string;
+    updated_at:                string;
+}
+
+export async function getEncryptionPolicy(): Promise<EncryptionPolicy> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getApiBaseUrl()}/admin/encryption/policy`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch encryption policy');
+    return res.json();
+}
+
+export async function updateEncryptionPolicy(
+    dmAtRest: boolean,
+    requireGroups: boolean,
+): Promise<{ message: string }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getApiBaseUrl()}/admin/encryption/policy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ dm_encryption_at_rest: dmAtRest, require_encrypted_groups: requireGroups }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}

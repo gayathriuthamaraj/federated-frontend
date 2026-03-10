@@ -9,9 +9,16 @@ interface SuggestedUser {
     profile: { display_name: string; user_id: string };
 }
 
+interface TrendingTag {
+    tag: string;
+    post_count: number;
+    servers?: string[];
+}
+
 export default function RightPanel() {
     const { identity } = useAuth();
     const [suggested, setSuggested] = useState<SuggestedUser[]>([]);
+    const [trends, setTrends] = useState<TrendingTag[]>([]);
 
     useEffect(() => {
         if (!identity) return;
@@ -25,12 +32,54 @@ export default function RightPanel() {
             .catch(() => {});
     }, [identity]);
 
+    useEffect(() => {
+        if (!identity) return;
+        fetch(`${identity.home_server}/hashtags/trending/global?window=24h&limit=5`)
+            .then(r => r.ok ? r.json() : null)
+            .then(d => { if (d?.hashtags) setTrends(d.hashtags.slice(0, 5)); })
+            .catch(() => {});
+    }, [identity]);
+
     const serverHost = identity?.home_server
         ?.replace(/^https?:\/\//, '')
         ?.replace(/\/$/, '') || 'local';
 
     return (
         <div className="space-y-5">
+            {/* Trending now */}
+            {trends.length > 0 && (
+                <div className="bg-bat-dark/35 rounded-2xl border border-bat-dark overflow-hidden">
+                    <div className="px-4 py-3 flex items-center justify-between">
+                        <h2 className="font-bold text-gray-100 text-[15px]">Trending now</h2>
+                        <Link href="/trends" className="text-bat-blue text-xs hover:underline">See all</Link>
+                    </div>
+                    <div className="divide-y divide-bat-dark/60">
+                        {trends.map((t, i) => (
+                            <Link
+                                key={t.tag}
+                                href={`/explore?tab=hashtag&tag=${encodeURIComponent(t.tag)}`}
+                                className="flex items-center justify-between px-4 py-2.5 hover:bg-bat-dark/60 transition-colors"
+                            >
+                                <div>
+                                    <div className="text-[11px] text-bat-gray/40">#{i + 1} · Trending</div>
+                                    <div className="font-bold text-gray-100 text-sm">{t.tag}</div>
+                                    <div className="text-bat-gray/40 text-xs">{t.post_count.toLocaleString()} posts</div>
+                                </div>
+                                {t.servers && t.servers.length > 1 && (
+                                    <div className="text-[10px] text-bat-yellow/50 ml-2 shrink-0">{t.servers.length} servers</div>
+                                )}
+                            </Link>
+                        ))}
+                    </div>
+                    <Link
+                        href="/trends"
+                        className="block px-4 py-3 text-bat-blue text-sm hover:bg-bat-dark/60 transition-colors border-t border-bat-dark/60"
+                    >
+                        Show more
+                    </Link>
+                </div>
+            )}
+
             {/* Who to follow */}
             {suggested.length > 0 && (
                 <div className="bg-bat-dark/35 rounded-2xl border border-bat-dark overflow-hidden">

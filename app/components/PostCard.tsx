@@ -6,6 +6,57 @@ import { useAuth } from '../context/AuthContext';
 import Link from 'next/link';
 import BlockButton from './BlockButton';
 
+/** Renders post content with clickable #hashtag links. */
+function PostContent({ content }: { content: string }) {
+    const parts = content.split(/(#[A-Za-z0-9_]{1,100})/g);
+    return (
+        <>
+            {parts.map((part, i) =>
+                /^#[A-Za-z0-9_]+$/.test(part) ? (
+                    <Link
+                        key={i}
+                        href={`/explore?tab=hashtag&tag=${encodeURIComponent(part.slice(1))}`}
+                        className="text-bat-blue hover:underline"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        {part}
+                    </Link>
+                ) : (
+                    <span key={i}>{part}</span>
+                )
+            )}
+        </>
+    );
+}
+
+/** Displays a live countdown badge for ephemeral posts. */
+function ExpiryBadge({ expiresAt }: { expiresAt: string }) {
+    const [label, setLabel] = useState('');
+
+    useEffect(() => {
+        const update = () => {
+            const diff = new Date(expiresAt).getTime() - Date.now();
+            if (diff <= 0) { setLabel('expired'); return; }
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            if (h > 0) setLabel(`${h}h ${m}m`);
+            else if (m > 0) setLabel(`${m}m ${s}s`);
+            else setLabel(`${s}s`);
+        };
+        update();
+        const id = setInterval(update, 1000);
+        return () => clearInterval(id);
+    }, [expiresAt]);
+
+    if (!label) return null;
+    return (
+        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-400/15 text-red-400 border border-red-400/30 shrink-0">
+            ⏱ {label}
+        </span>
+    );
+}
+
 interface PostCardProps {
     post: Post;
     /** Base path for author profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
@@ -267,11 +318,58 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                         </Link>
                         <span className="text-bat-gray/50 truncate text-sm">{handle}</span>
                         <span className="text-bat-gray/40 text-xs ml-0.5"> {timeAgo}</span>
+                        {post.expires_at && (
+                            <ExpiryBadge expiresAt={post.expires_at} />
+                        )}
+                        {post.origin_server &&
+                            identity?.home_server &&
+                            !post.origin_server.startsWith(identity.home_server) && (
+                            <span
+                                title={`Original post from ${post.origin_server}`}
+                                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20 shrink-0"
+                            >
+                                🌐 {post.origin_server.replace(/^https?:\/\//, '')}
+                            </span>
+                        )}
+                        {post.replica_servers && post.replica_servers.length > 0 && (
+                            post.replica_servers.map(s => (
+                                <span
+                                    key={s}
+                                    title={`Also posted to ${s}`}
+                                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-bat-yellow/10 text-bat-yellow/60 border border-bat-yellow/20 shrink-0"
+                                >
+                                    🔗 {s.replace(/^https?:\/\//, '')}
+                                </span>
+                            ))
+                        )}
+                        {post.visibility && post.visibility !== 'PUBLIC' && (
+                            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                                post.visibility === 'FOLLOWERS'
+                                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                                    : 'bg-pink-500/10 text-pink-400 border-pink-500/20'
+                            }`}>
+                                {post.visibility === 'FOLLOWERS' ? (
+                                    <>
+                                        <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-current" aria-hidden="true">
+                                            <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                                        </svg>
+                                        Followers
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-current" aria-hidden="true">
+                                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                        </svg>
+                                        Close friends
+                                    </>
+                                )}
+                            </span>
+                        )}
                     </div>
 
                     {/* Post body */}
                     <div className="mt-1 text-[15px] text-bat-gray/90 whitespace-pre-wrap leading-relaxed">
-                        {post.content}
+                        <PostContent content={post.content} />
                     </div>
 
                     {post.image_url && (
@@ -296,6 +394,19 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                             </span>
                         </button>
 
+                        {post.resharing_disabled ? (
+                            <span
+                                title="Author has disabled resharing"
+                                className="group flex items-center gap-1.5 text-bat-gray/25 cursor-not-allowed select-none"
+                            >
+                                <div className="p-1.5 rounded-full">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[1.1rem] w-[1.1rem] fill-current">
+                                        <path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z" />
+                                    </svg>
+                                </div>
+                                <span className="text-xs font-medium tabular-nums">{repostCount}</span>
+                            </span>
+                        ) : (
                         <button
                             onClick={handleRepost}
                             className={`group flex items-center gap-1.5 transition-colors ${isReposted ? 'text-green-500' : 'hover:text-green-500'}`}
@@ -307,6 +418,7 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                             </div>
                             <span className="text-xs font-medium tabular-nums">{repostCount}</span>
                         </button>
+                        )}
 
                         <button
                             onClick={handleLike}

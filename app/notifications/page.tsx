@@ -15,7 +15,7 @@ interface AS2Activity {
 
 interface Notification {
     id: string;
-    type: 'FOLLOW' | 'LIKE' | 'REPLY' | 'REPOST' | 'SYSTEM' | 'SERVER_UPDATE' | 'MESSAGE' | 'UNLIKE' | 'LINK_REQUEST' | 'LINK_ACCEPTED';
+    type: 'FOLLOW' | 'LIKE' | 'REPLY' | 'REPOST' | 'SYSTEM' | 'SERVER_UPDATE' | 'MESSAGE' | 'UNLIKE' | 'LINK_REQUEST' | 'LINK_ACCEPTED' | 'POST_UNDER_REVIEW' | 'REPLY_UNDER_REVIEW' | 'POST_APPROVED' | 'POST_REJECTED' | 'BADGE_GRANTED';
     actor_id: string;
     actor_name?: string;
     actor_avatar?: string;
@@ -84,6 +84,11 @@ export default function NotificationsPage() {
             case 'SYSTEM': return n.entity_id || n.message || 'System notification';
             case 'LINK_REQUEST': return 'sent you an account link request';
             case 'LINK_ACCEPTED': return 'accepted your account link request';
+            case 'POST_UNDER_REVIEW': return 'Your post is being reviewed by the moderation team';
+            case 'REPLY_UNDER_REVIEW': return 'Your reply is being reviewed by the moderation team';
+            case 'POST_APPROVED': return 'Your post has been approved and is now visible';
+            case 'POST_REJECTED': return 'Your post was rejected by the moderation team';
+            case 'BADGE_GRANTED': return n.entity_id || 'Your account badge has been updated';
             default: return 'interacted with you';
         }
     };
@@ -100,9 +105,14 @@ export default function NotificationsPage() {
             case 'Announce':      case 'REPOST':        return <span className="text-purple-500">🔁</span>;
             case 'Update':        case 'SERVER_UPDATE': return <span className="text-yellow-500">⚙️</span>;
             case 'MESSAGE':       return <span className="text-sky-400">✉️</span>;
-            case 'LINK_REQUEST':  return <span className="text-bat-yellow">🔗</span>;
-            case 'LINK_ACCEPTED': return <span className="text-green-400">🔗</span>;
-            default:              return <span className="text-gray-500">🔔</span>;
+            case 'LINK_REQUEST':       return <span className="text-bat-yellow">🔗</span>;
+            case 'LINK_ACCEPTED':      return <span className="text-green-400">🔗</span>;
+            case 'POST_UNDER_REVIEW':
+            case 'REPLY_UNDER_REVIEW': return <span>🔍</span>;
+            case 'POST_APPROVED':      return <span className="text-green-400">✅</span>;
+            case 'POST_REJECTED':      return <span className="text-red-400">❌</span>;
+            case 'BADGE_GRANTED':      return <span className="text-bat-yellow">🏅</span>;
+            default:                   return <span className="text-gray-500">🔔</span>;
         }
     };
 

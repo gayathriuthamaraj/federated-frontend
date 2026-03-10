@@ -3,6 +3,11 @@ function getApiBase(): string {
     return localStorage.getItem('mod_backend') || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 }
 
+function getModerationBase(): string {
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_MODERATION_URL || 'http://localhost:8090';
+    return localStorage.getItem('mod_moderation_backend') || process.env.NEXT_PUBLIC_MODERATION_URL || 'http://localhost:8090';
+}
+
 function getToken(): string | null {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('mod_token');
@@ -105,4 +110,55 @@ export async function removeModerator(adminToken: string, username: string): Pro
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
+}
+
+// ── Reports ───────────────────────────────────────────────────────────────────
+
+export interface Report {
+    id: number;
+    reporter_id: string;
+    target_ref: string;
+    target_server: string;
+    reason: string;
+    status: 'pending' | 'resolved';
+    created_at: string;
+    resolved_at?: string;
+    resolved_by?: string;
+}
+
+export async function listReports(): Promise<Report[]> {
+    const token = getToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getModerationBase()}/moderation/reports`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+    });
+    if (!res.ok) {
+        const body = await res.text();
+        let msg = body;
+        try { msg = JSON.parse(body).error || body; } catch { /* use raw */ }
+        throw new Error(msg || 'Failed to fetch reports');
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : (data.reports || []);
+}
+
+export async function resolveReport(id: number, resolvedBy: string): Promise<void> {
+    const token = getToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(
+        `${getModerationBase()}/moderation/resolve?id=${encodeURIComponent(id)}&resolved_by=${encodeURIComponent(resolvedBy)}`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } },
+    );
+    if (!res.ok) throw new Error(await res.text());
+}
+
+export async function blockServer(domain: string, reason: string, adminId: string): Promise<void> {
+    const token = getToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getModerationBase()}/servers/block`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ domain, reason, admin_id: adminId }),
+    });
+    if (!res.ok) throw new Error(await res.text());
 }

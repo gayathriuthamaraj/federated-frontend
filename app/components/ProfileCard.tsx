@@ -27,6 +27,36 @@ export interface LinkedAccountInfo {
     peer_avatar?: string;
 }
 
+export interface Vouch {
+    id: string;
+    vouching_server_id: string;
+    vouching_server_name: string;
+    issued_at: string;
+}
+
+function VouchBadge({ vouches }: { vouches: Vouch[] }) {
+    if (!vouches.length) return null;
+    return (
+        <div className="mt-3">
+            <p className="text-[11px] text-bat-gray/40 uppercase tracking-widest mb-1.5 font-semibold">Vouched by</p>
+            <div className="flex flex-wrap gap-1.5">
+                {vouches.map(v => (
+                    <span
+                        key={v.id}
+                        title={`Vouched by ${v.vouching_server_id} on ${new Date(v.issued_at).toLocaleDateString()}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25"
+                    >
+                        <svg viewBox="0 0 24 24" className="h-3 w-3 fill-current" aria-hidden="true">
+                            <path d="M12 1L3 5v6c0 5.25 3.75 10.15 9 11.35C17.25 21.15 21 16.25 21 11V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+                        </svg>
+                        {v.vouching_server_name || v.vouching_server_id}
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 interface ProfileCardProps {
     profile: Profile;
     isOwnProfile?: boolean;
@@ -38,6 +68,8 @@ interface ProfileCardProps {
     loadingPosts?: boolean;
     did?: string;
     linkedAccounts?: LinkedAccountInfo[];
+    vouches?: Vouch[];
+    zkpEnabled?: boolean;
     /** Base path for user-profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
     linkBase?: string;
     /** Called after a follow/unfollow with +1 or -1 so parent can update counts & cache */
@@ -55,6 +87,8 @@ export default function ProfileCard({
     loadingPosts = false,
     did,
     linkedAccounts = [],
+    vouches = [],
+    zkpEnabled = false,
     linkBase = '/search',
     onFollowChange,
 }: ProfileCardProps) {
@@ -64,6 +98,9 @@ export default function ProfileCard({
     const [tabAnimKey, setTabAnimKey] = useState(0)
     const router = useRouter()
     const { identity, switchToLinked } = useAuth()
+
+    // Accent colour: bat-blue for moderators, bat-yellow for everyone else
+    const isMod = !!profile.is_moderator
 
     // Touch swipe support
     const touchStartX = useRef<number | null>(null)
@@ -120,7 +157,7 @@ export default function ProfileCard({
                         className="h-full w-full object-cover"
                     />
                 ) : (
-                    <div className="h-full w-full bg-linear-to-br from-bat-dark via-bat-dark to-bat-yellow/10" />
+                    <div className={`h-full w-full bg-linear-to-br from-bat-dark via-bat-dark ${isMod ? 'to-bat-blue/10' : 'to-bat-yellow/10'}`} />
                 )}
                 {/* Gradient overlay for readability */}
                 <div className="absolute inset-0 bg-linear-to-t from-bat-black/60 to-transparent pointer-events-none" />
@@ -139,7 +176,7 @@ export default function ProfileCard({
                                     className="h-full w-full object-cover"
                                 />
                             ) : (
-                                <div className="h-full w-full flex items-center justify-center bg-bat-dark text-4xl font-bold text-bat-yellow">
+                                <div className={`h-full w-full flex items-center justify-center bg-bat-dark text-4xl font-bold ${isMod ? 'text-bat-blue' : 'text-bat-yellow'}`}>
                                     {(profile.display_name || profile.user_id)[0]?.toUpperCase()}
                                 </div>
                             )}
@@ -219,6 +256,22 @@ export default function ProfileCard({
                             {did}
                         </p>
                     )}
+                    {profile.badge && profile.badge !== 'user' && (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold mt-2
+                            ${isMod
+                                ? 'bg-bat-blue/20 text-bat-blue border border-bat-blue/40'
+                                : 'bg-bat-yellow/20 text-bat-yellow border border-bat-yellow/40'}`}>
+                            {isMod ? '🛡️' : '⭐'} {profile.badge}
+                        </span>
+                    )}
+                    {zkpEnabled && (
+                        <span
+                            title="Identity verified with zero-knowledge proof"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold mt-2 bg-green-500/10 text-green-400 border border-green-500/20"
+                        >
+                            🛡 ZK Verified
+                        </span>
+                    )}
                 </div>
 
                 {}
@@ -227,6 +280,8 @@ export default function ProfileCard({
                         {profile.bio}
                     </p>
                 )}
+
+                <VouchBadge vouches={vouches} />
 
                 {}
                 <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-bat-gray/60">

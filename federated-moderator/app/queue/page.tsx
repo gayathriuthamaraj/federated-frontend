@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import ModLayout from '../components/ModLayout';
 import { getPendingPosts, approvePost, rejectPost, PendingPost } from '../api/moderator';
-import { CheckCircle, XCircle, RefreshCw, ShieldAlert, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, RefreshCw, ShieldAlert, Clock, Loader2 } from 'lucide-react';
 
 type ActionState = 'idle' | 'approving' | 'rejecting' | 'done-approve' | 'done-reject';
 
@@ -53,8 +53,10 @@ function PostCard({ post, onAction }: { post: PendingPost; onAction: (id: string
                 </div>
 
                 {isDone ? (
-                    <span style={{ fontSize: '0.72rem', color: doneCol, fontFamily: 'monospace', letterSpacing: '0.06em' }}>
-                        {state === 'done-approve' ? '✓ APPROVED' : '✗ REJECTED'}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.72rem', color: doneCol, fontFamily: 'monospace', letterSpacing: '0.06em' }}>
+                        {state === 'done-approve'
+                            ? <><CheckCircle size={12} /> APPROVED</>
+                            : <><XCircle size={12} /> REJECTED</>}
                     </span>
                 ) : (
                     <div className="actions">
@@ -135,7 +137,7 @@ export default function QueuePage() {
                         <h1 className="term-header" style={{ fontSize: '1.4rem', margin: 0 }}>REVIEW QUEUE</h1>
                         <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 5 }}>
                             Posts flagged by the ML model — awaiting moderator decision
-                            {loadedAt && <span style={{ color: 'var(--text-ghost)', marginLeft: 12 }}>⟳ {loadedAt}</span>}
+                            {loadedAt && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--text-ghost)', marginLeft: 12 }}><RefreshCw size={10} />{loadedAt}</span>}
                         </div>
                     </div>
                     <button onClick={loadPosts} disabled={refresh} className="btn btn-ghost" style={{ fontSize: '0.7rem' }}>
@@ -164,12 +166,12 @@ export default function QueuePage() {
                 )}
 
                 {loading ? (
-                    <div style={{ color: 'var(--text-ghost)', fontSize: '0.8rem', padding: '40px 0', textAlign: 'center' }}>
-                        ⠴ LOADING QUEUE...
+                    <div style={{ color: 'var(--text-ghost)', fontSize: '0.8rem', padding: '40px 0', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                        <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> LOADING QUEUE...
                     </div>
                 ) : posts.length === 0 ? (
                     <div className="panel" style={{ textAlign: 'center', padding: '52px 20px' }}>
-                        <div style={{ fontSize: '2rem', marginBottom: 12 }}>✓</div>
+                        <CheckCircle size={32} style={{ color: 'var(--green)', opacity: 0.5, marginBottom: 12 }} />
                         <div style={{ color: 'var(--green)', fontSize: '0.85rem', marginBottom: 6 }}>ALL CLEAR</div>
                         <div style={{ color: 'var(--text-ghost)', fontSize: '0.72rem' }}>No posts waiting for review. The queue is empty.</div>
                     </div>

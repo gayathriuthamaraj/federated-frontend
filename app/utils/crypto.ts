@@ -300,7 +300,7 @@ async function deriveAESKeyFromTOTPSecret(totpSecretBase32: string): Promise<Cry
     // Import as raw key material
     const keyMaterial = await crypto.subtle.importKey(
         'raw',
-        secretBytes,
+        secretBytes.buffer as ArrayBuffer,
         { name: 'HKDF' },
         false,
         ['deriveKey']

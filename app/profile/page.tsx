@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ProfileCard from '../components/ProfileCard';
-import type { LinkedAccountInfo } from '../components/ProfileCard';
+import type { LinkedAccountInfo, Vouch } from '../components/ProfileCard';
 import { useAuth } from '../context/AuthContext';
 import { Profile } from '../types/profile';
 import { useCache } from '../context/CacheContext';
@@ -34,6 +34,8 @@ function ProfileContent() {
   const [error, setError] = useState<string | null>(null);
   const [isFollowingTarget, setIsFollowingTarget] = useState(false);
   const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccountInfo[]>([]);
+  const [vouches, setVouches] = useState<Vouch[]>([]);
+  const [zkpEnabled, setZkpEnabled] = useState(false);
 
   // Support viewing other users via ?user_id= query param
   const queryUserId = searchParams.get('user_id');
@@ -118,6 +120,12 @@ function ProfileContent() {
         } else {
           profileData = data.profile ?? data.user ?? null;
           if (typeof data.is_following === 'boolean') setIsFollowingTarget(data.is_following);
+          if (profileData && data.badge) {
+            profileData = { ...profileData, badge: data.badge };
+          }
+          if (profileData && typeof data.is_moderator === 'boolean') {
+            profileData = { ...profileData, is_moderator: data.is_moderator };
+          }
         }
 
         setProfileState(profileData);
@@ -216,8 +224,38 @@ function ProfileContent() {
       }
     };
 
+    const fetchVouches = async () => {
+      try {
+        const res = await fetch(
+          `${identity.home_server}/api/vouches?user_id=${encodeURIComponent(targetUserId)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setVouches(data.vouches || []);
+        }
+      } catch {
+        /* non-critical */
+      }
+    };
+
+    const fetchZKPStatus = async () => {
+      try {
+        const res = await fetch(
+          `${identity.home_server}/zkp/status?user_id=${encodeURIComponent(targetUserId)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setZkpEnabled(!!data.zkp_enabled);
+        }
+      } catch {
+        /* non-critical */
+      }
+    };
+
     fetchProfile();
     fetchPosts();
+    fetchVouches();
+    fetchZKPStatus();
     if (isOwnProfile && !isCrossServer) fetchLinkedAccounts();
   }, [authLoading, identity, targetUserId]);
 
@@ -262,6 +300,8 @@ function ProfileContent() {
         loadingPosts={loadingPosts}
         did={did || undefined}
         linkedAccounts={linkedAccounts}
+        vouches={vouches}
+        zkpEnabled={zkpEnabled}
         onFollowChange={(delta) => {
           setProfileState(prev => {
             if (!prev) return prev;

@@ -1,46 +1,21 @@
-import { NextResponse } from 'next/server';
-import { mockUsers } from '@/app/data/mockData';
+import { NextRequest, NextResponse } from 'next/server';
 
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
-const followers = new Map<string, Set<string>>();
-
-
-followers.set('batman', new Set(['robin', 'alfred', 'batgirl', 'gordon']));
-followers.set('catwoman', new Set(['batman']));
-followers.set('joker', new Set(['harley']));
-
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-        return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-    }
-
-    const userFollowers = followers.get(userId) || new Set();
-    const followerUsers = mockUsers.filter(u => userFollowers.has(u.username));
-
-    return NextResponse.json(followerUsers);
+function fwd(req: Request): HeadersInit {
+    const auth = req.headers.get('authorization');
+    return auth ? { Authorization: auth } : {};
 }
 
-export async function POST(request: Request) {
-    const { userId, followerId } = await request.json();
-
-    if (!followers.has(userId)) {
-        followers.set(userId, new Set());
-    }
-
-    const userFollowers = followers.get(userId)!;
-    const wasFollowing = userFollowers.has(followerId);
-
-    if (wasFollowing) {
-        userFollowers.delete(followerId);
-    } else {
-        userFollowers.add(followerId);
-    }
-
-    return NextResponse.json({
-        following: !wasFollowing,
-        followerCount: userFollowers.size
-    });
+/** GET /api/followers?user_id=...&viewer_id=... */
+export async function GET(req: NextRequest) {
+    const user_id = req.nextUrl.searchParams.get('user_id');
+    if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 });
+    const viewer_id = req.nextUrl.searchParams.get('viewer_id') ?? '';
+    const res = await fetch(
+        `${BACKEND}/followers?user_id=${encodeURIComponent(user_id)}&viewer_id=${encodeURIComponent(viewer_id)}`,
+        { headers: fwd(req) },
+    );
+    const data = await res.json().catch(() => ({}));
+    return NextResponse.json(data, { status: res.status });
 }
