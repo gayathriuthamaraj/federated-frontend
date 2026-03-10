@@ -10,36 +10,62 @@ import {
     sendGroupMessage,
     getGroupMembers,
     addGroupMember,
+    leaveGroup,
+    joinGroup,
+    updateGroupJoinPolicy,
+    listPublicGroups,
     Group,
     GroupMessage,
     GroupMember,
 } from '../utils/groups';
 
+type JoinPolicy = 'anyone' | 'followers' | 'invite_only';
+const JOIN_POLICY_LABELS: Record<JoinPolicy, string> = {
+    anyone: 'Anyone',
+    followers: 'Followers only',
+    invite_only: 'Invite only',
+};
+
 export default function GroupsPage() {
     const { identity, isLoading: authLoading } = useAuth();
     const router = useRouter();
 
-    const [groups, setGroups]             = useState<Group[]>([]);
+    const [groups, setGroups]               = useState<Group[]>([]);
     const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
-    const [messages, setMessages]         = useState<GroupMessage[]>([]);
-    const [members, setMembers]           = useState<GroupMember[]>([]);
-    const [newMessage, setNewMessage]     = useState('');
-    const [loading, setLoading]           = useState(true);
-    const [sending, setSending]           = useState(false);
-    const [error, setError]               = useState('');
+    const [messages, setMessages]           = useState<GroupMessage[]>([]);
+    const [members, setMembers]             = useState<GroupMember[]>([]);
+    const [newMessage, setNewMessage]       = useState('');
+    const [loading, setLoading]             = useState(true);
+    const [sending, setSending]             = useState(false);
+    const [error, setError]                 = useState('');
 
     // New-group modal state
-    const [showCreate, setShowCreate]     = useState(false);
-    const [newGroupName, setNewGroupName] = useState('');
-    const [creating, setCreating]         = useState(false);
+    const [showCreate, setShowCreate]           = useState(false);
+    const [newGroupName, setNewGroupName]       = useState('');
+    const [newGroupPolicy, setNewGroupPolicy]   = useState<JoinPolicy>('invite_only');
+    const [creating, setCreating]               = useState(false);
 
     // Add-member modal
-    const [showAddMember, setShowAddMember]   = useState(false);
-    const [addMemberId, setAddMemberId]       = useState('');
-    const [addingMember, setAddingMember]     = useState(false);
+    const [showAddMember, setShowAddMember] = useState(false);
+    const [addMemberId, setAddMemberId]     = useState('');
+    const [addingMember, setAddingMember]   = useState(false);
+
+    // Leave / policy panel
+    const [leavingGroup, setLeavingGroup]   = useState(false);
+    const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+    const [showPolicyEdit, setShowPolicyEdit]     = useState(false);
+    const [policyValue, setPolicyValue]           = useState<JoinPolicy>('invite_only');
+    const [savingPolicy, setSavingPolicy]         = useState(false);
+
+    // Discover public groups tab
+    const [showDiscover, setShowDiscover]   = useState(false);
+    const [publicGroups, setPublicGroups]   = useState<Group[]>([]);
+    const [loadingPublic, setLoadingPublic] = useState(false);
+    const [joiningId, setJoiningId]         = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const pollRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+    const groupsPollRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // ── Auth guard ────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -58,7 +84,12 @@ export default function GroupsPage() {
         }
     }, []);
 
-    useEffect(() => { loadGroups(); }, [loadGroups]);
+    useEffect(() => {
+        loadGroups();
+        // Poll for newly-added groups every 30 s (receiving side fix)
+        groupsPollRef.current = setInterval(loadGroups, 30_000);
+        return () => { if (groupsPollRef.current) clearInterval(groupsPollRef.current); };
+    }, [loadGroups]);
 
     // ── Load messages + members when group is selected ────────────────────────
     const loadMessages = useCallback(async (groupId: string) => {
@@ -72,6 +103,7 @@ export default function GroupsPage() {
         if (!selectedGroup) return;
         loadMessages(selectedGroup.id);
         getGroupMembers(selectedGroup.id).then(setMembers).catch(() => {});
+        setPolicyValue((selectedGroup.join_policy as JoinPolicy) ?? 'invite_only');
 
         // Poll for new messages every 5 s
         if (pollRef.current) clearInterval(pollRef.current);
@@ -107,10 +139,15 @@ export default function GroupsPage() {
         setCreating(true);
         try {
             const g = await createGroup(newGroupName.trim());
-            setGroups(prev => [g, ...prev]);
+            // Apply the chosen join policy right after creation
+            if (newGroupPolicy !== 'invite_only') {
+                try { await updateGroupJoinPolicy(g.id, newGroupPolicy); } catch { /* non-fatal */ }
+            }
+            setGroups(prev => [{ ...g, join_policy: newGroupPolicy }, ...prev]);
             setNewGroupName('');
+            setNewGroupPolicy('invite_only');
             setShowCreate(false);
-            setSelectedGroup(g);
+            setSelectedGroup({ ...g, join_policy: newGroupPolicy });
         } catch (e) {
             setError(e instanceof Error ? e.message : 'Failed to create group');
         } finally {
@@ -136,22 +173,95 @@ export default function GroupsPage() {
         }
     };
 
+    // ── Leave group ───────────────────────────────────────────────────────────
+    const handleLeaveGroup = async () => {
+        if (!selectedGroup || leavingGroup) return;
+        setLeavingGroup(true);
+        try {
+            await leaveGroup(selectedGroup.id);
+            setGroups(prev => prev.filter(g => g.id !== selectedGroup.id));
+            setSelectedGroup(null);
+            setMessages([]);
+            setMembers([]);
+            setShowLeaveConfirm(false);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to leave group');
+        } finally {
+            setLeavingGroup(false);
+        }
+    };
+
+    // ── Update join policy ────────────────────────────────────────────────────
+    const handleSavePolicy = async () => {
+        if (!selectedGroup || savingPolicy) return;
+        setSavingPolicy(true);
+        try {
+            await updateGroupJoinPolicy(selectedGroup.id, policyValue);
+            setGroups(prev => prev.map(g => g.id === selectedGroup.id ? { ...g, join_policy: policyValue } : g));
+            setSelectedGroup(prev => prev ? { ...prev, join_policy: policyValue } : prev);
+            setShowPolicyEdit(false);
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to update policy');
+        } finally {
+            setSavingPolicy(false);
+        }
+    };
+
+    // ── Discover public groups ────────────────────────────────────────────────
+    const handleOpenDiscover = async () => {
+        setShowDiscover(true);
+        setLoadingPublic(true);
+        try {
+            const data = await listPublicGroups();
+            setPublicGroups(data);
+        } catch { /* ignore */ } finally {
+            setLoadingPublic(false);
+        }
+    };
+
+    const handleJoinPublicGroup = async (groupId: string) => {
+        setJoiningId(groupId);
+        try {
+            await joinGroup(groupId);
+            setPublicGroups(prev => prev.filter(g => g.id !== groupId));
+            await loadGroups();
+        } catch (e) {
+            setError(e instanceof Error ? e.message : 'Failed to join group');
+        } finally {
+            setJoiningId(null);
+        }
+    };
+
+    const isAdmin = selectedGroup
+        ? members.some(m => m.user_id === identity?.user_id && m.role === 'admin')
+        : false;
+
+
     if (authLoading || (!identity && !authLoading)) return null;
 
     return (
         <div className="flex h-full bg-bat-black text-bat-gray">
 
             {/* ── Group list (left panel) ─────────────────────────────────── */}
-            <div className="w-72 border-r border-bat-gray/10 flex flex-col bg-bat-dark/30 flex-shrink-0">
+            <div className="w-72 border-r border-bat-gray/10 flex flex-col bg-bat-dark/30 shrink-0">
                 {/* Header */}
                 <div className="p-4 border-b border-bat-gray/10 flex items-center justify-between">
                     <h2 className="text-bat-yellow font-semibold tracking-wide text-sm">GROUP CHATS</h2>
-                    <button
-                        onClick={() => setShowCreate(true)}
-                        className="text-xs px-2 py-1 border border-bat-yellow/40 text-bat-yellow/70 hover:bg-bat-yellow/10 hover:text-bat-yellow transition-colors rounded"
-                    >
-                        + NEW
-                    </button>
+                    <div className="flex gap-1.5">
+                        <button
+                            onClick={handleOpenDiscover}
+                            title="Discover open groups"
+                            className="text-xs px-2 py-1 border border-bat-gray/20 text-bat-gray/60 hover:bg-bat-gray/10 hover:text-bat-gray transition-colors rounded"
+                        >
+                            Discover
+                        </button>
+                        <button
+                            onClick={() => setShowCreate(true)}
+                            className="text-xs px-2 py-1 border border-bat-yellow/40 text-bat-yellow/70 hover:bg-bat-yellow/10 hover:text-bat-yellow transition-colors rounded"
+                        >
+                            + NEW
+                        </button>
+                    </div>
                 </div>
 
                 {/* List */}
@@ -170,7 +280,7 @@ export default function GroupsPage() {
                     {groups.map((g, idx) => (
                         <button
                             key={g.id || g.name || String(idx)}
-                            onClick={() => setSelectedGroup(g)}
+                            onClick={() => { setSelectedGroup(g); setShowPolicyEdit(false); }}
                             className={`w-full text-left px-4 py-3 border-b border-bat-gray/5 transition-colors ${
                                 selectedGroup?.id === g.id
                                     ? 'bg-bat-yellow/10 border-bat-yellow/20'
@@ -178,13 +288,13 @@ export default function GroupsPage() {
                             }`}
                         >
                             <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-full bg-bat-yellow/20 flex items-center justify-center text-bat-yellow font-bold text-sm flex-shrink-0">
+                                <div className="w-9 h-9 rounded-full bg-bat-yellow/20 flex items-center justify-center text-bat-yellow font-bold text-sm shrink-0">
                                     {g.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
                                     <div className="text-sm font-medium text-bat-gray truncate">{g.name}</div>
                                     <div className="text-xs text-bat-gray/40 truncate">
-                                        {new Date(g.created_at).toLocaleDateString()}
+                                        {JOIN_POLICY_LABELS[(g.join_policy as JoinPolicy) ?? 'invite_only']}
                                     </div>
                                 </div>
                             </div>
@@ -198,17 +308,63 @@ export default function GroupsPage() {
                 {selectedGroup ? (
                     <>
                         {/* Chat header */}
-                        <div className="p-4 border-b border-bat-gray/10 flex items-center justify-between flex-shrink-0">
-                            <div>
-                                <h3 className="font-semibold text-bat-yellow tracking-wide">{selectedGroup.name}</h3>
-                                <p className="text-xs text-bat-gray/40">{members.length} member{members.length !== 1 ? 's' : ''} · encrypted</p>
+                        <div className="p-4 border-b border-bat-gray/10 flex flex-col gap-2 shrink-0">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="font-semibold text-bat-yellow tracking-wide">{selectedGroup.name}</h3>
+                                    <p className="text-xs text-bat-gray/40">
+                                        {members.length} member{members.length !== 1 ? 's' : ''} · encrypted ·{' '}
+                                        <span className="text-bat-gray/60">
+                                            {JOIN_POLICY_LABELS[(selectedGroup.join_policy as JoinPolicy) ?? 'invite_only']}
+                                        </span>
+                                    </p>
+                                </div>
+                                <div className="flex gap-1.5 flex-wrap justify-end">
+                                    {isAdmin && (
+                                        <>
+                                            <button
+                                                onClick={() => setShowAddMember(true)}
+                                                className="text-xs px-2 py-1 border border-bat-gray/20 text-bat-gray/60 hover:bg-bat-gray/10 hover:text-bat-gray transition-colors rounded"
+                                            >
+                                                + Add Member
+                                            </button>
+                                            <button
+                                                onClick={() => setShowPolicyEdit(v => !v)}
+                                                className={`text-xs px-2 py-1 border rounded transition-colors ${showPolicyEdit ? 'border-bat-yellow/60 text-bat-yellow bg-bat-yellow/10' : 'border-bat-gray/20 text-bat-gray/60 hover:bg-bat-gray/10'}`}
+                                            >
+                                                Policy
+                                            </button>
+                                        </>
+                                    )}
+                                    <button
+                                        onClick={() => setShowLeaveConfirm(true)}
+                                        className="text-xs px-2 py-1 border border-red-500/30 text-red-400/70 hover:bg-red-500/10 hover:text-red-400 transition-colors rounded"
+                                    >
+                                        Leave
+                                    </button>
+                                </div>
                             </div>
-                            <button
-                                onClick={() => setShowAddMember(true)}
-                                className="text-xs px-2 py-1 border border-bat-gray/20 text-bat-gray/60 hover:bg-bat-gray/10 hover:text-bat-gray transition-colors rounded"
-                            >
-                                + Add Member
-                            </button>
+                            {/* Join policy editor (admin only) */}
+                            {showPolicyEdit && isAdmin && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    {(['anyone', 'followers', 'invite_only'] as JoinPolicy[]).map(p => (
+                                        <button
+                                            key={p}
+                                            onClick={() => setPolicyValue(p)}
+                                            className={`text-xs px-2 py-1 rounded border transition-colors ${policyValue === p ? 'border-bat-yellow/60 bg-bat-yellow/10 text-bat-yellow' : 'border-bat-gray/20 text-bat-gray/50 hover:border-bat-gray/40'}`}
+                                        >
+                                            {JOIN_POLICY_LABELS[p]}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onClick={handleSavePolicy}
+                                        disabled={savingPolicy}
+                                        className="text-xs px-3 py-1 bg-bat-yellow/20 border border-bat-yellow/40 text-bat-yellow rounded hover:bg-bat-yellow/30 disabled:opacity-40 transition-colors"
+                                    >
+                                        {savingPolicy ? 'Saving...' : 'Save'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Messages */}
@@ -287,8 +443,22 @@ export default function GroupsPage() {
                                 value={newGroupName}
                                 onChange={e => setNewGroupName(e.target.value)}
                                 maxLength={60}
-                                className="w-full bg-bat-gray/10 border border-bat-gray/20 rounded px-4 py-2 text-sm text-bat-gray mb-4 focus:outline-none focus:border-bat-yellow/40"
+                                className="w-full bg-bat-gray/10 border border-bat-gray/20 rounded px-4 py-2 text-sm text-bat-gray mb-3 focus:outline-none focus:border-bat-yellow/40"
                             />
+                            {/* Join policy */}
+                            <p className="text-xs text-bat-gray/50 mb-1.5">Who can join?</p>
+                            <div className="flex gap-1.5 mb-4 flex-wrap">
+                                {(['invite_only', 'followers', 'anyone'] as JoinPolicy[]).map(p => (
+                                    <button
+                                        key={p}
+                                        type="button"
+                                        onClick={() => setNewGroupPolicy(p)}
+                                        className={`text-xs px-2.5 py-1 rounded border transition-colors ${newGroupPolicy === p ? 'border-bat-yellow/60 bg-bat-yellow/10 text-bat-yellow' : 'border-bat-gray/20 text-bat-gray/50 hover:border-bat-gray/40'}`}
+                                    >
+                                        {JOIN_POLICY_LABELS[p]}
+                                    </button>
+                                ))}
+                            </div>
                             <div className="flex gap-2">
                                 <button
                                     type="submit"
@@ -299,13 +469,77 @@ export default function GroupsPage() {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => { setShowCreate(false); setNewGroupName(''); }}
+                                    onClick={() => { setShowCreate(false); setNewGroupName(''); setNewGroupPolicy('invite_only'); }}
                                     className="flex-1 py-2 border border-bat-gray/20 text-bat-gray/50 text-sm rounded hover:bg-bat-gray/10 transition-colors"
                                 >
                                     Cancel
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Leave Confirmation Modal ────────────────────────────────── */}
+            {showLeaveConfirm && selectedGroup && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                    <div className="bg-bat-dark border border-bat-gray/20 rounded-xl p-6 w-full max-w-sm shadow-2xl">
+                        <h3 className="text-red-400 font-semibold mb-2 tracking-wide">LEAVE GROUP?</h3>
+                        <p className="text-bat-gray/60 text-sm mb-4">
+                            You will leave <span className="text-bat-gray font-medium">{selectedGroup.name}</span>.
+                            You&apos;ll need to be re-added to rejoin.
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleLeaveGroup}
+                                disabled={leavingGroup}
+                                className="flex-1 py-2 bg-red-500/20 border border-red-500/40 text-red-400 text-sm rounded hover:bg-red-500/30 disabled:opacity-40 transition-colors"
+                            >
+                                {leavingGroup ? 'Leaving...' : 'Leave Group'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowLeaveConfirm(false)}
+                                className="flex-1 py-2 border border-bat-gray/20 text-bat-gray/50 text-sm rounded hover:bg-bat-gray/10 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Discover Groups Modal ──────────────────────────────────── */}
+            {showDiscover && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+                    <div className="bg-bat-dark border border-bat-gray/20 rounded-xl p-6 w-full max-w-md shadow-2xl">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-bat-yellow font-semibold tracking-wide">DISCOVER GROUPS</h3>
+                            <button onClick={() => setShowDiscover(false)} className="text-bat-gray/50 hover:text-bat-gray text-lg leading-none">✕</button>
+                        </div>
+                        {loadingPublic && <p className="text-bat-gray/40 text-sm text-center py-8">Loading...</p>}
+                        {!loadingPublic && publicGroups.length === 0 && (
+                            <p className="text-bat-gray/40 text-sm text-center py-8">No open groups found.</p>
+                        )}
+                        <div className="space-y-2 max-h-80 overflow-y-auto">
+                            {publicGroups.map(g => (
+                                <div key={g.id} className="flex items-center justify-between p-3 rounded-lg bg-bat-gray/5 border border-bat-gray/10">
+                                    <div>
+                                        <p className="text-sm font-medium text-bat-gray">{g.name}</p>
+                                        <p className="text-xs text-bat-gray/40">
+                                            {g.member_count ?? 0} members &middot; {JOIN_POLICY_LABELS[(g.join_policy as JoinPolicy) ?? 'anyone']}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleJoinPublicGroup(g.id)}
+                                        disabled={joiningId === g.id}
+                                        className="text-xs px-3 py-1 bg-bat-yellow/20 border border-bat-yellow/40 text-bat-yellow rounded hover:bg-bat-yellow/30 disabled:opacity-40 transition-colors"
+                                    >
+                                        {joiningId === g.id ? '...' : 'Join'}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}

@@ -9,6 +9,10 @@ export interface Group {
     name: string;
     created_by: string;
     created_at: string;
+    join_policy?: 'anyone' | 'followers' | 'invite_only';
+    member_count?: number;
+    last_message_at?: string;
+    role?: string;
 }
 
 export interface GroupMember {
@@ -101,4 +105,37 @@ export async function getGroupMessages(groupId: string, limit = 50, before?: str
     if (!res.ok) throw new Error(await res.text());
     const data = await res.json();
     return Array.isArray(data) ? data : (data.messages ?? []);
+}
+
+// ── Leave a group (self-removal, no admin required) ───────────────────────────
+
+export async function leaveGroup(groupId: string): Promise<void> {
+    const res = await apiPost('/groups/leave', { group_id: groupId });
+    if (!res.ok) throw new Error(await res.text());
+}
+
+// ── Join an open/followers group ──────────────────────────────────────────────
+
+export async function joinGroup(groupId: string): Promise<void> {
+    const res = await apiPost('/groups/join', { group_id: groupId });
+    if (!res.ok) throw new Error(await res.text());
+}
+
+// ── Update group join policy (admin only) ─────────────────────────────────────
+
+export async function updateGroupJoinPolicy(
+    groupId: string,
+    policy: 'anyone' | 'followers' | 'invite_only',
+): Promise<void> {
+    const res = await apiPost('/groups/policy', { group_id: groupId, join_policy: policy });
+    if (!res.ok) throw new Error(await res.text());
+}
+
+// ── List public/open groups (not already a member) ────────────────────────────
+
+export async function listPublicGroups(): Promise<Group[]> {
+    const res = await apiGet('/groups/public');
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    return Array.isArray(data) ? data : (data.groups ?? []);
 }

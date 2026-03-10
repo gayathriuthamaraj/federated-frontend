@@ -3,6 +3,7 @@
 import { Post } from '@/types/post';
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useCloseFriends } from '../context/CloseFriendsContext';
 import Link from 'next/link';
 import BlockButton from './BlockButton';
 
@@ -77,6 +78,8 @@ interface Reply {
 
 export default function PostCard({ post, linkBase = '/search', initialShowComments = false }: PostCardProps) {
     const { identity } = useAuth();
+    const { closeFriends } = useCloseFriends();
+    const isCloseFriend = closeFriends.has(post.author);
 
     const [isLiked, setIsLiked] = useState(post.has_liked || false);
     const [likeCount, setLikeCount] = useState(post.like_count || 0);
@@ -314,7 +317,7 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
 
     /*  Post card  */
     return (
-        <article className="border-b border-bat-dark/60 hover:bg-white/[0.018] transition-colors duration-150 animate-fade-up">
+        <article className={`border-b border-bat-dark/60 hover:bg-white/[0.018] transition-colors duration-150 animate-fade-up${isCloseFriend ? ' border-l-2 border-l-green-500/60 bg-green-500/[0.025] shadow-[inset_2px_0_8px_rgba(34,197,94,0.06)]' : ''}`}>
             {/*
               ONE shared flex row: left avatar-column + right content-column.
               The left column's flex-1 thread line will grow to match the full

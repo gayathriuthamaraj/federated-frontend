@@ -5,6 +5,7 @@ import Sidebar from "./components/Sidebar";
 import PageTransition from "./components/PageTransition";
 import { AuthProvider } from "./context/AuthContext";
 import { CacheProvider } from "./context/CacheContext";
+import { CloseFriendsProvider } from "./context/CloseFriendsContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,14 +34,16 @@ export default function RootLayout({
       >
         <AuthProvider>
           <CacheProvider>
-            <div className="flex h-full w-full">
-              <Sidebar />
-              <main className="flex-1 overflow-y-auto relative h-full">
-                <PageTransition>
-                  {children}
-                </PageTransition>
-              </main>
-            </div>
+            <CloseFriendsProvider>
+              <div className="flex h-full w-full">
+                <Sidebar />
+                <main className="flex-1 overflow-y-auto relative h-full">
+                  <PageTransition>
+                    {children}
+                  </PageTransition>
+                </main>
+              </div>
+            </CloseFriendsProvider>
           </CacheProvider>
         </AuthProvider>
       </body>
