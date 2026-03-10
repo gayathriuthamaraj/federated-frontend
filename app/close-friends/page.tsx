@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { useCloseFriends } from '../context/CloseFriendsContext';
 
 interface Follower {
-    user_id: string;
-    display_name?: string;
+    identity: { user_id: string; home_server?: string };
+    profile: { display_name?: string; avatar_url?: string };
 }
 
 export default function CloseFriendsPage() {
@@ -26,7 +26,7 @@ export default function CloseFriendsPage() {
             );
             if (!res.ok) return;
             const data = await res.json();
-            setFollowers(data.followers ?? []);
+            setFollowers((data.followers ?? []).filter((f: Follower) => f?.identity?.user_id));
         } catch {
             // ignore
         } finally {
@@ -56,13 +56,13 @@ export default function CloseFriendsPage() {
         ? followers.filter(f => {
             const q = search.toLowerCase();
             return (
-                f.user_id.toLowerCase().includes(q) ||
-                (f.display_name ?? '').toLowerCase().includes(q)
+                f.identity.user_id.toLowerCase().includes(q) ||
+                (f.profile.display_name ?? '').toLowerCase().includes(q)
             );
         })
         : followers;
 
-    const closeFriendCount = followers.filter(f => closeFriends.has(f.user_id)).length;
+    const closeFriendCount = followers.filter(f => closeFriends.has(f.identity.user_id)).length;
 
     return (
         <div className="max-w-lg mx-auto px-4 py-8">
@@ -111,13 +111,14 @@ export default function CloseFriendsPage() {
 
             <div className="space-y-2">
                 {filtered.map(f => {
-                    const isClose = closeFriends.has(f.user_id);
-                    const busy = toggling === f.user_id;
-                    const name = f.display_name || f.user_id.split('@')[0];
+                    const uid = f.identity.user_id;
+                    const isClose = closeFriends.has(uid);
+                    const busy = toggling === uid;
+                    const name = f.profile.display_name || uid.split('@')[0];
 
                     return (
                         <div
-                            key={f.user_id}
+                            key={uid}
                             className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
                                 isClose
                                     ? 'border-green-500/30 bg-green-500/[0.04]'
@@ -135,12 +136,12 @@ export default function CloseFriendsPage() {
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-sm font-medium text-bat-gray truncate">{name}</p>
-                                    <p className="text-xs text-bat-gray/40 truncate">@{f.user_id}</p>
+                                    <p className="text-xs text-bat-gray/40 truncate">@{uid}</p>
                                 </div>
                             </div>
 
                             <button
-                                onClick={() => handleToggle(f.user_id)}
+                                onClick={() => handleToggle(uid)}
                                 disabled={busy}
                                 className={`shrink-0 ml-3 text-xs px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 ${
                                     isClose
