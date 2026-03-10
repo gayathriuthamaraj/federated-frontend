@@ -19,6 +19,11 @@ export default function LoginPage() {
     const [partialToken, setPartialToken] = useState('');
     const [chosenServerURL, setChosenServerURL] = useState('');
 
+    // Backup code login state
+    const [useBackupCode, setUseBackupCode] = useState(false);
+    const [backupCodeInput, setBackupCodeInput] = useState('');
+    const [lowCodesWarning, setLowCodesWarning] = useState(false);
+
     // Passkey login state
     const [passkeyLoading, setPasskeyLoading] = useState(false);
 
@@ -99,6 +104,32 @@ export default function LoginPage() {
         }
     };
 
+    // ── Step 2b: backup code login ────────────────────────────────────────────
+    const handleBackupCodeLogin = async () => {
+        if (!backupCodeInput.trim()) return;
+        setError('');
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`${chosenServerURL}/login/totp/backup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ partial_token: partialToken, backup_code: backupCodeInput.trim().toUpperCase() }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.error || 'Invalid backup code');
+            }
+            if (typeof data.backup_codes_remaining === 'number' && data.backup_codes_remaining < 3) {
+                setLowCodesWarning(true);
+            }
+            login(data.user_id, data.home_server, data.access_token || '', data.refresh_token || '');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Backup code login failed');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     // ── Passkey login ─────────────────────────────────────────────────────────
     const handlePasskeyLogin = async () => {
         if (!username) {
@@ -148,16 +179,64 @@ export default function LoginPage() {
                 {/* ── TOTP step ──────────────────────────────────────────── */}
                 {totpRequired ? (
                     <div className="space-y-4">
-                        <p className="text-sm text-bat-gray/80 text-center">
-                            Open your authenticator app and enter the 6-digit code for{' '}
-                            <span className="text-bat-yellow font-semibold">{username}</span>.
-                        </p>
-                        <OTPInput onComplete={handleTOTPComplete} length={6} />
-                        {isSubmitting && (
-                            <p className="text-sm text-bat-gray/60 text-center">Verifying…</p>
+                        {lowCodesWarning && (
+                            <div className="p-3 rounded-md bg-yellow-900/20 border border-yellow-500/40 text-yellow-400 text-sm">
+                                ⚠ You have fewer than 3 backup codes remaining. Go to Settings to regenerate them.
+                            </div>
                         )}
+
+                        {!useBackupCode ? (
+                            <>
+                                <p className="text-sm text-bat-gray/80 text-center">
+                                    Open your authenticator app and enter the 6-digit code for{' '}
+                                    <span className="text-bat-yellow font-semibold">{username}</span>.
+                                </p>
+                                <OTPInput onComplete={handleTOTPComplete} length={6} />
+                                {isSubmitting && (
+                                    <p className="text-sm text-bat-gray/60 text-center">Verifying…</p>
+                                )}
+                                <button
+                                    onClick={() => { setUseBackupCode(true); setError(''); }}
+                                    className="w-full text-sm text-bat-gray/50 hover:text-bat-yellow transition-colors text-center"
+                                >
+                                    Lost your authenticator? Use a backup code →
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-sm text-bat-gray/80 text-center">
+                                    Enter one of your backup recovery codes for{' '}
+                                    <span className="text-bat-yellow font-semibold">{username}</span>.
+                                </p>
+                                <input
+                                    type="text"
+                                    value={backupCodeInput}
+                                    onChange={e => setBackupCodeInput(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleBackupCodeLogin()}
+                                    placeholder="XXXX-XXXX"
+                                    className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 font-mono text-center tracking-widest placeholder-gray-600 uppercase"
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    disabled={isSubmitting}
+                                />
+                                <button
+                                    onClick={handleBackupCodeLogin}
+                                    disabled={isSubmitting || !backupCodeInput.trim()}
+                                    className="w-full py-3 bg-bat-yellow text-bat-black font-bold rounded-md hover:bg-yellow-400 disabled:opacity-50 transition-colors"
+                                >
+                                    {isSubmitting ? 'Verifying…' : 'Use backup code'}
+                                </button>
+                                <button
+                                    onClick={() => { setUseBackupCode(false); setError(''); }}
+                                    className="w-full text-sm text-bat-gray/50 hover:text-bat-yellow transition-colors"
+                                >
+                                    ← Back to authenticator code
+                                </button>
+                            </>
+                        )}
+
                         <button
-                            onClick={() => { setTotpRequired(false); setError(''); }}
+                            onClick={() => { setTotpRequired(false); setUseBackupCode(false); setBackupCodeInput(''); setError(''); }}
                             className="w-full text-sm text-bat-gray/50 hover:text-bat-yellow transition-colors"
                         >
                             ← Back to sign in

@@ -30,6 +30,10 @@ export default function SettingsPage() {
     const [loading, setLoading] = useState(false);
     const [unlockResult, setUnlockResult] = useState<"success" | "none" | null>(null);
 
+    // ── TOTP backup codes ─────────────────────────────────────────────────────
+    const [backupCodes, setBackupCodes] = useState<string[]>([]);
+    const [backupCodesLoading, setBackupCodesLoading] = useState(false);
+
     // ── ZKP state ─────────────────────────────────────────────────────────────
     const [zkpRegistered, setZkpRegistered] = useState<boolean>(false);
     const [zkpLastProved, setZkpLastProved] = useState<string | null>(null);
@@ -174,6 +178,46 @@ export default function SettingsPage() {
         }
     }
 
+    // ── Backup codes: generate/regenerate ─────────────────────────────────────
+    async function handleGenerateBackupCodes() {
+        setBackupCodesLoading(true);
+        try {
+            const res = await fetch(`${identity!.home_server}/totp/backup-codes/generate`, {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token()}` },
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? "Failed to generate backup codes");
+            setBackupCodes(data.backup_codes ?? []);
+        } catch (e: unknown) {
+            setError(e instanceof Error ? e.message : "Failed to generate backup codes");
+        } finally {
+            setBackupCodesLoading(false);
+        }
+    }
+
+    function handleDownloadBackupCodes() {
+        const text = [
+            "Federated Social Network – TOTP Backup Recovery Codes",
+            `Account: ${identity!.user_id}`,
+            `Generated: ${new Date().toLocaleString()}`,
+            "",
+            "Each code can only be used ONCE.",
+            "Store this file somewhere safe (offline password manager, printed copy, etc.).",
+            "",
+            ...backupCodes.map((c, i) => `  ${i + 1}. ${c}`),
+            "",
+            "These codes expire when you disable or reset your authenticator app.",
+        ].join("\n");
+        const blob = new Blob([text], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "totp-backup-codes.txt";
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
     // ── Step 1: request a new TOTP secret from the server ────────────────────
     async function handleStartSetup() {
         setError("");
@@ -233,6 +277,9 @@ export default function SettingsPage() {
 
             setTotpEnabled(true);
             setSetupStep("done");
+            // Immediately generate backup codes now that TOTP is enabled
+            // (runs async, result populates backupCodes state for display below)
+            handleGenerateBackupCodes();
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Invalid OTP code');
         } finally {
@@ -366,9 +413,56 @@ export default function SettingsPage() {
 
                 {/* ── Done ─────────────────────────────────────────────── */}
                 {setupStep === "done" && (
-                    <div className="p-4 rounded-md bg-green-900/20 border border-green-500/30 text-green-400 text-sm">
-                        Authenticator app configured. Your private key is now encrypted and
-                        protected by your authenticator app.
+                    <div className="space-y-4">
+                        <div className="p-4 rounded-md bg-green-900/20 border border-green-500/30 text-green-400 text-sm">
+                            Authenticator app configured. Your private key is now encrypted and
+                            protected by your authenticator app.
+                        </div>
+
+                        {/* Backup codes section */}
+                        {backupCodesLoading ? (
+                            <p className="text-sm text-bat-gray/60">Generating backup codes…</p>
+                        ) : backupCodes.length > 0 && (
+                            <div className="space-y-3">
+                                {/* Warning banner */}
+                                <div className="p-4 rounded-md bg-yellow-900/20 border border-yellow-500/40 text-yellow-400 text-sm space-y-1">
+                                    <p className="font-bold">⚠ Save your backup codes</p>
+                                    <p className="text-yellow-400/80">
+                                        If you lose your authenticator device, these codes are the{" "}
+                                        <strong>only way</strong> to recover access to your account.
+                                        Each code can only be used once.
+                                    </p>
+                                </div>
+
+                                {/* Codes grid */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    {backupCodes.map((code, i) => (
+                                        <div
+                                            key={i}
+                                            className="font-mono text-sm px-3 py-2 rounded bg-bat-gray/10 border border-bat-gray/20 text-bat-gray text-center tracking-widest"
+                                        >
+                                            {code}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Action buttons */}
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={handleDownloadBackupCodes}
+                                        className="px-4 py-2 bg-bat-yellow text-bat-black font-bold rounded-md hover:bg-yellow-400 transition-colors text-sm"
+                                    >
+                                        Download codes
+                                    </button>
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(backupCodes.join("\n"))}
+                                        className="px-4 py-2 bg-bat-gray/20 hover:bg-bat-gray/30 text-bat-gray font-bold rounded-md transition-colors text-sm"
+                                    >
+                                        Copy all
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -383,6 +477,57 @@ export default function SettingsPage() {
                             length={6}
                         />
                         {loading && <p className="text-sm text-bat-gray/60">Disabling…</p>}
+                    </div>
+                )}
+
+                {/* ── Regenerate backup codes (already enabled) ────────── */}
+                {totpEnabled && setupStep !== "done" && (
+                    <div className="mt-6 border-t border-bat-gray/10 pt-4 space-y-3">
+                        <div>
+                            <p className="text-sm font-semibold text-bat-gray">Backup Recovery Codes</p>
+                            <p className="text-xs text-bat-gray/50 mt-0.5">
+                                Generate fresh one-time recovery codes. Old codes will be invalidated.
+                            </p>
+                        </div>
+                        <button
+                            onClick={handleGenerateBackupCodes}
+                            disabled={backupCodesLoading}
+                            className="px-4 py-2 bg-bat-gray/20 hover:bg-bat-gray/30 text-bat-gray font-bold rounded-md transition-colors text-sm disabled:opacity-50"
+                        >
+                            {backupCodesLoading ? "Generating…" : "Regenerate backup codes"}
+                        </button>
+
+                        {backupCodes.length > 0 && (
+                            <div className="space-y-3">
+                                <div className="p-3 rounded-md bg-yellow-900/20 border border-yellow-500/40 text-yellow-400 text-xs">
+                                    ⚠ New codes generated — your previous codes are now invalid. Save these immediately.
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {backupCodes.map((code, i) => (
+                                        <div
+                                            key={i}
+                                            className="font-mono text-sm px-3 py-2 rounded bg-bat-gray/10 border border-bat-gray/20 text-bat-gray text-center tracking-widest"
+                                        >
+                                            {code}
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={handleDownloadBackupCodes}
+                                        className="px-4 py-2 bg-bat-yellow text-bat-black font-bold rounded-md hover:bg-yellow-400 transition-colors text-sm"
+                                    >
+                                        Download codes
+                                    </button>
+                                    <button
+                                        onClick={() => navigator.clipboard.writeText(backupCodes.join("\n"))}
+                                        className="px-4 py-2 bg-bat-gray/20 hover:bg-bat-gray/30 text-bat-gray font-bold rounded-md transition-colors text-sm"
+                                    >
+                                        Copy all
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </section>
