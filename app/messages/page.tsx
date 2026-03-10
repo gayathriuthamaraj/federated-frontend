@@ -73,6 +73,8 @@ function MessagesContent() {
     const [profiles, setProfiles] = useState<Record<string, CachedProfile>>({});
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const notifPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const convPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const msgPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // ── Auth guard ────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -172,8 +174,46 @@ function MessagesContent() {
         };
 
         run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [identity, retryKey]);
+
+    // ── Silent background refresh for conversations (every 10 s) ─────────────
+    useEffect(() => {
+        if (!identity) return;
+
+        const fetchConvsSilent = async () => {
+            try {
+                const accessToken = localStorage.getItem('access_token');
+                const headers: HeadersInit = accessToken
+                    ? { Authorization: `Bearer ${accessToken}` }
+                    : {};
+                const res = await fetch(
+                    `${identity.home_server}/messages?user_id=${encodeURIComponent(identity.user_id)}`,
+                    { headers }
+                );
+                if (!res.ok) return;
+                const data = await res.json();
+                const convs: Conversation[] = (data.conversations || []).map((c: any) => ({
+                    id: c.id,
+                    other_user: c.sender === identity.user_id ? c.receiver : c.sender,
+                    content: c.content,
+                    created_at: c.created_at,
+                }));
+                setConversations(convs);
+                cache.setConversations(identity.user_id, convs);
+                const partnerIds = [...new Set(convs.map(c => c.other_user))];
+                prefetchProfiles(partnerIds, identity, cache, updateProfile);
+            } catch {
+                // silently ignore
+            }
+        };
+
+        convPollRef.current = setInterval(fetchConvsSilent, 10_000);
+        return () => {
+            if (convPollRef.current) clearInterval(convPollRef.current);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [identity]);
 
     // ── Fetch messages for selected conversation (SWR) ────────────────────────
     useEffect(() => {
@@ -212,7 +252,47 @@ function MessagesContent() {
         };
 
         run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [identity, selectedUserId]);
+
+    // ── Silent background refresh for active message thread (every 5 s) ──────
+    useEffect(() => {
+        if (!identity || !selectedUserId) {
+            if (msgPollRef.current) clearInterval(msgPollRef.current);
+            return;
+        }
+
+        const fetchMsgsSilent = async () => {
+            try {
+                const accessToken = localStorage.getItem('access_token');
+                const headers: HeadersInit = accessToken
+                    ? { Authorization: `Bearer ${accessToken}` }
+                    : {};
+                const res = await fetch(
+                    `${identity.home_server}/messages/conversation?user_id=${encodeURIComponent(identity.user_id)}&other_user_id=${encodeURIComponent(selectedUserId)}`,
+                    { headers }
+                );
+                if (!res.ok) return;
+                const data = await res.json();
+                const msgs: Message[] = data.messages || [];
+                // Only update if message count changed to avoid re-render on every tick
+                setMessages(prev => {
+                    if (msgs.length !== prev.length) {
+                        cache.setMessages(identity.user_id, selectedUserId, msgs);
+                        return msgs;
+                    }
+                    return prev;
+                });
+            } catch {
+                // silently ignore
+            }
+        };
+
+        msgPollRef.current = setInterval(fetchMsgsSilent, 5_000);
+        return () => {
+            if (msgPollRef.current) clearInterval(msgPollRef.current);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [identity, selectedUserId]);
 
     // ── Auto-scroll to bottom of message thread ───────────────────────────────
@@ -263,7 +343,7 @@ function MessagesContent() {
                             method: 'POST',
                             headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), 'Content-Type': 'application/json' },
                             body: JSON.stringify({ notification_id: n.id, user_id: identity.user_id }),
-                        }).catch(() => {});
+                        }).catch(() => { });
                     }
                 }
             } catch {
@@ -275,7 +355,7 @@ function MessagesContent() {
         return () => {
             if (notifPollRef.current) clearInterval(notifPollRef.current);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [identity, selectedUserId]);
 
     // ── Send message ──────────────────────────────────────────────────────────
@@ -427,7 +507,7 @@ function MessagesContent() {
                                         'flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200',
                                         isSelected
                                             ? 'bg-bat-yellow/15 border border-bat-yellow/40 shadow-md'
-                                                : 'bg-bat-black border border-white/5 hover:border-white/15 hover:bg-[#13151a]',
+                                            : 'bg-bat-black border border-white/5 hover:border-white/15 hover:bg-[#13151a]',
                                     ].join(' ')}
                                 >
                                     <div className="shrink-0">
@@ -493,11 +573,10 @@ function MessagesContent() {
                                                 <UserAvatar userId={msg.sender} size={28} />
                                             </div>
                                         )}
-                                        <div className={`px-4 py-2 rounded-2xl max-w-xs text-sm ${
-                                            msg.sender === identity?.user_id
+                                        <div className={`px-4 py-2 rounded-2xl max-w-xs text-sm ${msg.sender === identity?.user_id
                                                 ? 'bg-bat-yellow text-bat-black rounded-br-sm'
                                                 : 'bg-bat-dark text-bat-gray rounded-bl-sm'
-                                        }`}>
+                                            }`}>
                                             {msg.image_url && (
                                                 <div className="mb-1 rounded-xl overflow-hidden">
                                                     <Image
@@ -683,21 +762,21 @@ function MessagesContent() {
                     {/* Follower / Following counts */}
                     {(selectedProfile?.followers_count !== undefined ||
                         selectedProfile?.following_count !== undefined) && (
-                        <div className="p-5 flex justify-around">
-                            <div className="text-center">
-                                <p className="text-bat-yellow font-bold text-lg">
-                                    {selectedProfile?.followers_count ?? 0}
-                                </p>
-                                <p className="text-gray-500 text-xs">Followers</p>
+                            <div className="p-5 flex justify-around">
+                                <div className="text-center">
+                                    <p className="text-bat-yellow font-bold text-lg">
+                                        {selectedProfile?.followers_count ?? 0}
+                                    </p>
+                                    <p className="text-gray-500 text-xs">Followers</p>
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-bat-yellow font-bold text-lg">
+                                        {selectedProfile?.following_count ?? 0}
+                                    </p>
+                                    <p className="text-gray-500 text-xs">Following</p>
+                                </div>
                             </div>
-                            <div className="text-center">
-                                <p className="text-bat-yellow font-bold text-lg">
-                                    {selectedProfile?.following_count ?? 0}
-                                </p>
-                                <p className="text-gray-500 text-xs">Following</p>
-                            </div>
-                        </div>
-                    )}
+                        )}
                 </div>
             )}
         </div>
