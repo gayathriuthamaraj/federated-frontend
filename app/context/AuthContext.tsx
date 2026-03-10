@@ -68,11 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ['local_identity', 'trusted_server'].forEach((key) => {
             const raw = localStorage.getItem(key);
             if (!raw) return;
+            const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
             const fixed = raw
-                .replace(/http:\/\/server[_-]a[_-]identity:\d+/g, 'http://localhost:8080')
-                .replace(/http:\/\/server[_-]b[_-]identity:\d+/g, 'http://localhost:9080')
-                .replace('localhost:8082', 'localhost:8080')
-                .replace('localhost:9082', 'localhost:9080');
+                .replace(/http:\/\/server[_-][a-zA-Z0-9]+[_-]identity:\d+/g, backendURL)
+                .replace(/http:\/\/localhost:(8082|9080|9082)/g, backendURL);
             if (fixed !== raw) localStorage.setItem(key, fixed);
         });
 

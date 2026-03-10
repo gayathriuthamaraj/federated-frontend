@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import OTPInput from '../components/OTPInput';
-import { KNOWN_SERVERS, findServerById, getPinnedServer } from '../utils/servers';
+import { getDefaultServer, pinServer } from '../utils/servers';
 import { recoverWithPasskey, isPasskeySupported } from '../utils/passkey';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,7 +16,7 @@ export default function RecoverPage() {
 
     // Form fields
     const [username, setUsername] = useState('');
-    const [serverId, setServerId] = useState('');
+
     const [totpCode, setTotpCode] = useState('');
     const [recoveryKey, setRecoveryKey] = useState('');
 
@@ -28,9 +28,7 @@ export default function RecoverPage() {
     const [copied, setCopied] = useState(false);
 
     useEffect(() => {
-        const pinned = getPinnedServer();
-        if (pinned?.server_id) setServerId(pinned.server_id);
-        else if (KNOWN_SERVERS.length > 0) setServerId(KNOWN_SERVERS[0].id);
+        pinServer(getDefaultServer());
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -42,11 +40,7 @@ export default function RecoverPage() {
             return;
         }
 
-        const server = findServerById(serverId);
-        if (!server) {
-            setError('Please select a server.');
-            return;
-        }
+        const server = getDefaultServer();
 
         if (totpCode.length !== 6) {
             setError('Enter the 6-digit code from your authenticator app.');
@@ -152,18 +146,7 @@ export default function RecoverPage() {
                         </div>
                     )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-bat-gray mb-1">Server</label>
-                        <select
-                            value={serverId}
-                            onChange={(e) => setServerId(e.target.value)}
-                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow outline-none"
-                        >
-                            {KNOWN_SERVERS.map((srv) => (
-                                <option key={srv.id} value={srv.id}>{srv.name}</option>
-                            ))}
-                        </select>
-                    </div>
+
 
                     <div>
                         <label className="block text-sm font-medium text-bat-gray mb-1">Username</label>

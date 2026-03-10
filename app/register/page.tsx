@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiPost } from '../utils/api';
 import { generateClientKeyPair, storeClientKeyPair, storeSessionKey } from '../utils/crypto';
-import { KNOWN_SERVERS, findServerById, pinServer, getPinnedServer } from '../utils/servers';
+import { getDefaultServer, pinServer } from '../utils/servers';
 import { registerPasskey, isPasskeySupported } from '../utils/passkey';
 
 export default function RegisterPage() {
@@ -16,10 +16,7 @@ export default function RegisterPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [inviteCode, setInviteCode] = useState('');
-    const [serverId, setServerId] = useState<string>(() => {
-        const pinned = getPinnedServer();
-        return pinned?.server_id ?? '';
-    });
+
 
     const [isSuccess, setIsSuccess] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -62,13 +59,8 @@ export default function RegisterPage() {
         setIsSubmitting(true);
 
         try {
-            // Pin the chosen server so getApiBaseUrl() routes to the right host
-            const chosenServer = findServerById(serverId);
-            if (!chosenServer) {
-                setError('Please select a server before registering.');
-                setIsSubmitting(false);
-                return;
-            }
+            // Pin the server configured via NEXT_PUBLIC_BACKEND_URL
+            const chosenServer = getDefaultServer();
             pinServer(chosenServer);
 
             // Generate client Ed25519 key pair
@@ -424,32 +416,7 @@ export default function RegisterPage() {
                         />
                     </div>
 
-                    <div>
-                        <label htmlFor="serverId" className="block text-sm font-medium text-bat-gray mb-2">
-                            Select Server
-                        </label>
-                        <select
-                            id="serverId"
-                            value={serverId}
-                            onChange={(e) => {
-                                const id = e.target.value;
-                                setServerId(id);
-                                const srv = findServerById(id);
-                                if (srv) pinServer(srv);
-                            }}
-                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200"
-                            required
-                            disabled={isSubmitting}
-                        >
-                            <option value="">-- Choose a Server --</option>
-                            {KNOWN_SERVERS.map((srv) => (
-                                <option key={srv.id} value={srv.id}>
-                                    {srv.name} &mdash; {srv.id} (:{srv.port})
-                                </option>
-                            ))}
-                        </select>
-                        <p className="mt-1 text-xs text-gray-500">Select which backend server to register with</p>
-                    </div>
+
 
                     <button
                         type="submit"
