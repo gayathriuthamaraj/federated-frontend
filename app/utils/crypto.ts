@@ -158,7 +158,7 @@ export async function encryptWithSessionKey(data: string, sessionKeyHex: string)
         combined.set(iv, 0);
         combined.set(new Uint8Array(encrypted), iv.length);
 
-        return bufferToHex(combined);
+        return bufferToHex(combined.buffer as ArrayBuffer);
     } catch (error) {
         console.error('Encryption failed:', error);
         throw new Error('Failed to encrypt data');

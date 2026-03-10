@@ -3,16 +3,17 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import PostCard from '../../components/PostCard';
+import { Post } from '@/types/post';
 
 export default function FeedPage() {
     const { identity } = useAuth();
-    const [posts, setPosts] = useState([]);
+    const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
     const [newPostContent, setNewPostContent] = useState('');
     const [posting, setPosting] = useState(false);
 
-    
+
     useEffect(() => {
         async function fetchFeed() {
             if (!identity) {
@@ -33,7 +34,7 @@ export default function FeedPage() {
                 setPosts(data.posts || []);
             } catch (err) {
                 console.error('Feed fetch error:', err);
-                setError(err.message);
+                setError(err instanceof Error ? err.message : 'Failed to load feed');
             } finally {
                 setLoading(false);
             }
@@ -42,7 +43,7 @@ export default function FeedPage() {
         fetchFeed();
     }, [identity]);
 
-    
+
     const handleCreatePost = async () => {
         if (!newPostContent.trim() || !identity) return;
 
@@ -63,7 +64,7 @@ export default function FeedPage() {
 
             const data = await res.json();
 
-            
+
             const newPost = {
                 id: data.post_id,
                 author: identity.user_id,
@@ -77,7 +78,7 @@ export default function FeedPage() {
                 has_reposted: false,
             };
 
-            setPosts([newPost, ...posts]);
+            setPosts((prev) => [newPost as Post, ...prev]);
             setNewPostContent('');
         } catch (err) {
             console.error('Post creation error:', err);
@@ -121,13 +122,13 @@ export default function FeedPage() {
 
     return (
         <div className="max-w-3xl mx-auto p-6">
-            {}
+            { }
             <div className="mb-6">
                 <h1 className="text-3xl font-bold text-bat-gray mb-2">Feed</h1>
                 <div className="h-0.5 w-16 bg-bat-yellow rounded-full opacity-50"></div>
             </div>
 
-            {}
+            { }
             <div className="mb-6 p-4 bg-bat-dark rounded-lg border border-bat-gray/10">
                 <textarea
                     placeholder="What's happening in Gotham?"
@@ -164,7 +165,7 @@ export default function FeedPage() {
                 </div>
             </div>
 
-            {}
+            { }
             {posts.length === 0 ? (
                 <div className="text-center py-12 text-bat-gray">
                     <p className="text-lg">No posts yet</p>
@@ -178,7 +179,7 @@ export default function FeedPage() {
                 </div>
             )}
 
-            {}
+            { }
             {posts.length >= 20 && (
                 <div className="mt-6 text-center">
                     <button className="

@@ -38,6 +38,15 @@
     "**/*.mts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "API_INTEGRATION_GUIDE.ts",
+    "FRONTEND_TEMPLATES.md",
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "federated-admin",
+    "federated-moderator"
   ]
 }

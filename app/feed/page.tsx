@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import PostCard from '../components/PostCard';
 import RightPanel from '../components/RightPanel';
 import Image from 'next/image';
+import { Post } from '@/types/post';
 
 export default function FeedPage() {
     const { identity, isLoading: authLoading } = useAuth();
     const router = useRouter();
-    const [posts, setPosts] = useState([]);
+    const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
     const [newPostContent, setNewPostContent] = useState('');
     const [posting, setPosting] = useState(false);
     const [feedImageFile, setFeedImageFile] = useState<File | null>(null);
@@ -34,14 +35,14 @@ export default function FeedPage() {
         if (feedFileInputRef.current) feedFileInputRef.current.value = '';
     };
 
-    
+
     useEffect(() => {
         if (!authLoading && !identity) {
             router.push('/login');
         }
     }, [identity, authLoading, router]);
 
-    
+
     useEffect(() => {
         async function fetchFeed() {
             if (!identity) {
@@ -62,7 +63,7 @@ export default function FeedPage() {
                 setPosts(data.posts || []);
             } catch (err) {
                 console.error('Feed fetch error:', err);
-                setError(err.message);
+                setError(err instanceof Error ? err.message : 'Failed to load feed');
             } finally {
                 setLoading(false);
             }
@@ -71,7 +72,7 @@ export default function FeedPage() {
         if (identity) fetchFeed();
     }, [identity]);
 
-    
+
     const handleCreatePost = async () => {
         if ((!newPostContent.trim() && !feedImageFile) || !identity) return;
 
@@ -109,7 +110,7 @@ export default function FeedPage() {
 
             const data = await res.json();
 
-            
+
             const newPost = {
                 id: data.post_id,
                 author: identity.user_id,
@@ -124,7 +125,7 @@ export default function FeedPage() {
                 has_reposted: false,
             };
 
-            setPosts([newPost, ...posts]);
+            setPosts((prev) => [newPost as Post, ...prev]);
             setNewPostContent('');
             removeFeedImage();
         } catch (err) {
