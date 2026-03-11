@@ -167,8 +167,8 @@ export default function RegisterPage() {
     // Success Screen
     if (isSuccess) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
-                <div className="w-full max-w-lg bg-bat-dark rounded-xl shadow-2xl p-8 border border-bat-gray/10 animate-scale-in">
+            <div className="flex items-center justify-center min-h-screen p-4" style={{ background: "var(--bg)" }}>
+                <div className="w-full max-w-lg rounded-2xl p-8 animate-scale-in" style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", boxShadow: "var(--shadow-lg)" }}>
                     <div className="mb-8 text-center">
                         <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
                             <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -307,8 +307,8 @@ export default function RegisterPage() {
 
     // Registration Form
     return (
-        <div className="flex items-center justify-center min-h-screen bg-bat-black p-4">
-            <div className="w-full max-w-md bg-bat-dark rounded-xl shadow-2xl p-8 border border-bat-gray/10 animate-scale-in">
+        <div className="flex items-center justify-center min-h-screen p-4" style={{ background: "var(--bg)" }}>
+            <div className="w-full max-w-md rounded-2xl p-8 animate-scale-in" style={{ background: "var(--bg-panel)", border: "1px solid var(--border)", boxShadow: "var(--shadow-lg)" }}>
                 <div className="mb-8 text-center">
                     <div className="flex items-center justify-center gap-2 mb-3">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-bat-yellow">
@@ -336,7 +336,7 @@ export default function RegisterPage() {
                             id="username"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 placeholder-gray-600"
+                            className="input-light"
                             placeholder="Choose a username"
                             required
                             disabled={isSubmitting}
@@ -354,7 +354,8 @@ export default function RegisterPage() {
                                 id="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 pr-12 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 placeholder-gray-600"
+                                className="w-full px-4 py-3 pr-12 rounded-md outline-none transition-all duration-200"
+                                style={{ background: "var(--bg-raised)", border: "1.5px solid var(--border-lit)", color: "var(--text)" }}
                                 placeholder="••••••••"
                                 required
                                 disabled={isSubmitting}
@@ -391,7 +392,8 @@ export default function RegisterPage() {
                                 id="confirmPassword"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full px-4 py-3 pr-12 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 placeholder-gray-600"
+                                className="w-full px-4 py-3 pr-12 rounded-md outline-none transition-all duration-200"
+                                style={{ background: "var(--bg-raised)", border: "1.5px solid var(--border-lit)", color: "var(--text)" }}
                                 placeholder="••••••••"
                                 required
                                 disabled={isSubmitting}
@@ -426,7 +428,8 @@ export default function RegisterPage() {
                             id="inviteCode"
                             value={inviteCode}
                             onChange={(e) => setInviteCode(e.target.value)}
-                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200 placeholder-gray-600 font-mono"
+                            className="w-full px-4 py-3 rounded-md outline-none transition-all duration-200 font-mono"
+                            style={{ background: "var(--bg-raised)", border: "1.5px solid var(--border-lit)", color: "var(--text)" }}
                             placeholder="XXXX-XXXX-XXXX"
                             required
                             disabled={isSubmitting}
@@ -446,7 +449,8 @@ export default function RegisterPage() {
                                 const srv = findServerById(id);
                                 if (srv) pinServer(srv);
                             }}
-                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200"
+                            className="w-full px-4 py-3 rounded-md outline-none transition-all duration-200"
+                            style={{ background: "var(--bg-raised)", border: "1.5px solid var(--border-lit)", color: "var(--text)" }}
                             required
                             disabled={isSubmitting}
                         >
@@ -463,7 +467,7 @@ export default function RegisterPage() {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full py-3 px-4 rounded-md font-bold text-lg bg-bat-yellow text-bat-black hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.98] transition-all duration-200 shadow-[0_0_15px_rgba(245,197,24,0.3)]"
+                        className="btn-amber w-full py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSubmitting ? 'Creating Account...' : 'Create Account'}
                     </button>

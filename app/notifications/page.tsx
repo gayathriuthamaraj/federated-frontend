@@ -146,16 +146,23 @@ export default function NotificationsPage() {
                                 }
                             }}
                             className={`
-                                flex items-center gap-4 p-4 rounded-lg border cursor-pointer
-                                ${n.is_read ? 'bg-bat-black border-bat-gray/10' : 'bg-bat-black border-bat-yellow/30'}
-                                hover:border-bat-yellow/50 transition-colors duration-200
+                                flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-150
+                                ${n.is_read ? '' : 'border-l-2'}
                             `}
+                            style={{
+                                background: n.is_read ? "var(--bg-panel)" : "var(--amber-faint)",
+                                borderColor: n.is_read ? "var(--border)" : "var(--amber)",
+                                borderLeftColor: !n.is_read ? "var(--amber)" : undefined,
+                                boxShadow: "var(--shadow-sm)",
+                            }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-md)"}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-sm)"}
                         >
                             <div className="shrink-0">
                                 {n.actor_avatar && n.actor_avatar !== "" ? (
                                     <img src={n.actor_avatar} alt={n.actor_name} className="w-10 h-10 rounded-full object-cover" />
                                 ) : (
-                                    <div className="text-2xl w-10 h-10 flex items-center justify-center bg-bat-dark rounded-full">
+                                    <div className="text-2xl w-10 h-10 flex items-center justify-center rounded-full" style={{ background: "var(--amber-faint)" }}>
                                         {getIcon(n)}
                                     </div>
                                 )}
@@ -179,7 +186,8 @@ export default function NotificationsPage() {
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             <span
-                                                className="font-bold text-white hover:underline cursor-pointer"
+                                                className="font-bold hover:underline cursor-pointer"
+                                                style={{ color: "var(--text)" }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);

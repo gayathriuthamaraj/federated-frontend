@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -120,7 +120,7 @@ function ExploreContent() {
     return (
         <div className="flex min-h-full">
             <div className="flex-1 min-w-0 max-w-165 border-r border-bat-dark/40">
-                <div className="sticky top-0 z-10 backdrop-blur-md bg-bat-black/85 border-b border-bat-dark/50 px-4 py-3">
+                <div className="sticky top-0 z-10 frosted-header px-4 py-3">
                     {activeTab === 'hashtag' ? (
                         <div className="flex items-center gap-3">
                             <button
@@ -140,7 +140,7 @@ function ExploreContent() {
                             </div>
                         </div>
                     ) : (
-                        <h1 className="font-bold text-[1.05rem] text-gray-100 tracking-tight">Explore</h1>
+                        <h1 className="font-bold text-[1.05rem] tracking-tight" style={{ color: "var(--text)" }}>Explore</h1>
                     )}
                 </div>
 
@@ -152,8 +152,8 @@ function ExploreContent() {
                                 onClick={() => router.push(`/explore?tab=${tab}`)}
                                 className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors relative ${
                                     activeTab === tab
-                                        ? 'text-gray-100'
-                                        : 'text-bat-gray/50 hover:text-bat-gray/80'
+                                        ? 'text-[var(--amber)]'
+                                        : 'text-[var(--text-muted)] hover:text-[var(--text-dim)]'
                                 }`}
                             >
                                 {tab.charAt(0).toUpperCase() + tab.slice(1)}

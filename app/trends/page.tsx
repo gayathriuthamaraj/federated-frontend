@@ -36,9 +36,9 @@ export default function TrendsPage() {
     }, [identity, timeWindow]);
 
     return (
-        <div className="min-h-screen bg-bat-black text-gray-100">
+        <div className="min-h-screen" style={{ background: "var(--bg)", color: "var(--text)" }}>
             {/* Header */}
-            <div className="sticky top-0 z-10 bg-bat-black/90 backdrop-blur border-b border-bat-dark/60 px-4 py-3">
+            <div className="sticky top-0 z-10 frosted-header px-4 py-3">
                 <button
                     onClick={() => router.back()}
                     className="text-bat-gray/50 hover:text-bat-yellow transition-colors mb-2 flex items-center gap-1 text-sm"
@@ -48,8 +48,8 @@ export default function TrendsPage() {
                     </svg>
                     Back
                 </button>
-                <h1 className="text-xl font-bold text-gray-100">Trends</h1>
-                <p className="text-[13px] text-bat-gray/45 mt-0.5">What&apos;s happening globally</p>
+                <h1 className="text-xl font-bold" style={{ color: "var(--text)" }}>Trends</h1>
+                <p className="text-[13px] mt-0.5" style={{ color: "var(--text-ghost)" }}>What&apos;s happening globally</p>
             </div>
 
             {/* Time window tabs */}
@@ -60,9 +60,10 @@ export default function TrendsPage() {
                         onClick={() => setTimeWindow(w.value)}
                         className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                             timeWindow === w.value
-                                ? 'bg-bat-yellow text-bat-black'
-                                : 'bg-bat-dark/40 text-bat-gray/60 hover:bg-bat-dark/70 hover:text-gray-200'
+                                ? 'btn-amber'
+                                : 'hover:bg-[var(--bg-raised)]'
                         }`}
+                        style={timeWindow !== w.value ? { background: "var(--bg-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" } : {}}
                     >
                         {w.label}
                     </button>
@@ -94,15 +95,18 @@ export default function TrendsPage() {
                             <button
                                 key={t.tag}
                                 onClick={() => router.push(`/explore?tab=hashtag&tag=${encodeURIComponent(t.tag)}`)}
-                                className="w-full text-left flex items-start gap-4 py-4 hover:bg-bat-dark/20 transition-colors rounded-lg px-2 -mx-2"
+                                className="w-full text-left flex items-start gap-4 py-4 transition-colors rounded-xl px-3 -mx-1"
+                                style={{ borderBottom: "1px solid var(--border)" }}
+                                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"}
+                                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
                             >
                                 <span className="text-bat-yellow/40 font-bold text-lg w-7 shrink-0 pt-0.5 text-right">{i + 1}</span>
                                 <div className="flex-1 min-w-0">
-                                    <div className="text-[11px] text-bat-gray/35 mb-0.5">
+                                    <div className="text-[11px] mb-0.5" style={{ color: "var(--text-ghost)" }}>
                                         Trending · {timeWindow === 'all' ? 'All time' : `Last ${timeWindow}`}
                                     </div>
                                     <div className="font-bold text-bat-yellow text-base truncate">{t.tag}</div>
-                                    <div className="text-bat-gray/45 text-xs mt-0.5">
+                                    <div className="text-xs mt-0.5" style={{ color: "var(--text-muted)" }}>
                                         {(t.post_count ?? 0).toLocaleString()} post{(t.post_count ?? 0) !== 1 ? 's' : ''}
                                         {t.servers && t.servers.length > 1 && (
                                             <span className="ml-2 text-bat-yellow/40">
@@ -113,7 +117,7 @@ export default function TrendsPage() {
                                     {t.servers && t.servers.length > 0 && (
                                         <div className="flex flex-wrap gap-1 mt-1.5">
                                             {t.servers.slice(0, 4).map(s => (
-                                                <span key={s} className="text-[10px] bg-bat-dark/60 text-bat-gray/50 px-1.5 py-0.5 rounded-full border border-bat-dark">
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--bg-raised)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
                                                     {s}
                                                 </span>
                                             ))}

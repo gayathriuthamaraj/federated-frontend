@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { Post } from '@/types/post';
 import { useState, useEffect, useRef } from 'react';
@@ -387,14 +387,23 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
     /*  Post card  */
     if (isDeleted) {
         return (
-            <article className="border-b border-bat-dark/60 px-4 py-3 text-bat-gray/40 text-sm italic">
+            <article className="px-4 py-3 text-sm italic animate-fade-up" style={{ borderBottom: "1px solid var(--border)", color: "var(--text-ghost)" }}>
                 This post has been deleted.
             </article>
         );
     }
 
     return (
-        <article className={`border-b border-bat-dark/60 hover:bg-white/[0.018] transition-colors duration-150 animate-fade-up${isCloseFriend ? ' border-l-2 border-l-green-500/60 bg-green-500/2.5 shadow-[inset_2px_0_8px_rgba(34,197,94,0.06)]' : ''}`}>
+        <article
+            className={`transition-all duration-150 animate-fade-up${isCloseFriend ? ' border-l-2' : ''}`}
+            style={{
+                borderBottom: "1px solid var(--border)",
+                borderLeftColor: isCloseFriend ? "var(--teal)" : undefined,
+                background: isCloseFriend ? "rgba(15,118,110,0.03)" : "var(--bg-panel)",
+            }}
+            onMouseEnter={e => { if (!isCloseFriend) (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; }}
+            onMouseLeave={e => { if (!isCloseFriend) (e.currentTarget as HTMLElement).style.background = "var(--bg-panel)"; }}
+        >
             {/*
               ONE shared flex row: left avatar-column + right content-column.
               The left column's flex-1 thread line will grow to match the full
@@ -407,7 +416,8 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                 <div className="flex flex-col items-center shrink-0 w-10">
                     <Link
                         href={`${linkBase}?user_id=${encodeURIComponent(post.author)}`}
-                        className="flex h-10 w-10 rounded-full bg-bat-dark border border-bat-yellow/20 items-center justify-center text-bat-yellow font-bold text-lg select-none hover:scale-105 hover:border-bat-yellow/50 transition-all duration-150 shrink-0"
+                        className="flex h-10 w-10 rounded-full items-center justify-center text-white font-bold text-lg select-none hover:scale-110 transition-all duration-200 shrink-0"
+                        style={{ background: "linear-gradient(135deg, var(--amber-light), var(--amber))", boxShadow: "0 2px 8px var(--amber-glow)" }}
                     >
                         {displayName[0].toUpperCase()}
                     </Link>
@@ -424,12 +434,12 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                     <div className="flex items-baseline gap-1.5 text-[15px] leading-5">
                         <Link
                             href={`${linkBase}?user_id=${encodeURIComponent(post.author)}`}
-                            className="font-bold text-gray-200 truncate hover:underline"
+                            className="font-bold truncate hover:underline" style={{ color: "var(--text)" }}
                         >
                             {displayName}
                         </Link>
-                        <span className="text-bat-gray/50 truncate text-sm">{handle}</span>
-                        <span className="text-bat-gray/40 text-xs ml-0.5"> {timeAgo}</span>
+                        <span className="truncate text-sm" style={{ color: "var(--text-muted)" }}>{handle}</span>
+                        <span className="text-xs ml-0.5" style={{ color: "var(--text-ghost)" }}>{timeAgo}</span>
                         {post.expires_at && (
                             <ExpiryBadge expiresAt={post.expires_at} />
                         )}
@@ -488,11 +498,12 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                     </div>
 
                     {/* Post body */}
-                    <div className="mt-1 text-[15px] text-bat-gray/90 whitespace-pre-wrap leading-relaxed">
+                    <div className="mt-1 text-[15px] whitespace-pre-wrap leading-relaxed" style={{ color: "var(--text-dim)" }}>
                         {isEditing ? (
                             <div className="flex flex-col gap-2">
                                 <textarea
-                                    className="w-full bg-bat-dark/60 border border-bat-gray/20 rounded-xl px-3 py-2 text-[15px] text-bat-gray focus:border-bat-blue/50 outline-none resize-none min-h-20"
+                                    className="w-full rounded-xl px-3 py-2 text-[15px] outline-none resize-none min-h-20 transition-all"
+                                    style={{ background: "var(--bg-raised)", border: "1.5px solid var(--border-lit)", color: "var(--text)" }}
                                     value={editContent}
                                     onChange={e => setEditContent(e.target.value)}
                                     autoFocus
@@ -502,13 +513,14 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                                     <button
                                         onClick={handleSaveEdit}
                                         disabled={!editContent.trim()}
-                                        className="px-4 py-1.5 rounded-full bg-bat-yellow text-bat-black font-bold text-sm disabled:opacity-40 hover:bg-yellow-400 transition-colors"
+                                        className="btn-amber px-4 py-1.5 text-sm disabled:opacity-40"
                                     >
                                         Save
                                     </button>
                                     <button
                                         onClick={() => { setIsEditing(false); setEditContent(post.content); setEditError(''); }}
-                                        className="px-4 py-1.5 rounded-full bg-bat-dark border border-bat-gray/20 text-bat-gray text-sm hover:bg-bat-dark/80 transition-colors"
+                                        className="px-4 py-1.5 rounded-full text-sm transition-colors"
+                                        style={{ border: "1px solid var(--border-lit)", color: "var(--text-dim)", background: "transparent" }}
                                     >
                                         Cancel
                                     </button>
@@ -526,12 +538,14 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                     )}
 
                     {/* Action bar */}
-                    <div className="flex justify-between mt-2.5 text-bat-gray/40 max-w-xs">
+                    <div className="flex justify-between mt-2.5 max-w-xs" style={{ color: "var(--text-ghost)" }}>
                         <button
                             onClick={() => setShowComments(!showComments)}
-                            className="group flex items-center gap-1.5 hover:text-bat-blue transition-colors"
-                        >
-                            <div className="p-1.5 rounded-full group-hover:bg-bat-blue/10 transition-colors">
+                            className="group flex items-center gap-1.5 transition-colors"
+                            style={{ color: showComments ? "#1D4ED8" : undefined }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = "#1D4ED8"}
+                            onMouseLeave={e => { if (!showComments) (e.currentTarget as HTMLElement).style.color = ""; }}>
+                            <div className="p-1.5 rounded-full group-hover:bg-blue-500/10 transition-colors">
                                 <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[1.1rem] w-[1.1rem] fill-current">
                                     <path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z" />
                                 </svg>
@@ -668,8 +682,9 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                             {comments.map(comment => renderReply(comment))}
 
                             {/* Compose: new root-level reply, below all existing replies */}
-                            <div className="flex gap-3 pt-3 mt-1 border-t border-bat-dark/30">
-                                <div className="w-8 h-8 rounded-full bg-bat-yellow/15 border border-bat-yellow/25 flex items-center justify-center text-bat-yellow font-bold text-sm shrink-0 mt-0.5">
+                            <div className="flex gap-3 pt-3 mt-1" style={{ borderTop: "1px solid var(--border)" }}>
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0 mt-0.5"
+                                    style={{ background: "linear-gradient(135deg, var(--amber-light), var(--amber))" }}>
                                     {identity?.user_id ? identity.user_id.split('@')[0][0].toUpperCase() : 'Y'}
                                 </div>
                                 <div className="flex-1 flex items-center gap-2">
@@ -679,12 +694,13 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                                         value={commentText}
                                         onChange={e => setCommentText(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && handleComment()}
-                                        className="flex-1 bg-transparent text-bat-gray/90 text-[15px] outline-none placeholder-bat-gray/30 py-1"
+                                        className="flex-1 text-[15px] outline-none py-1"
+                                        style={{ background: "transparent", color: "var(--text)", caretColor: "var(--amber)" }}
                                     />
                                     <button
                                         onClick={() => handleComment()}
                                         disabled={!commentText.trim()}
-                                        className="px-4 py-1.5 rounded-full bg-bat-yellow text-bat-black font-bold text-sm disabled:opacity-40 hover:bg-yellow-400 transition-colors shrink-0"
+                                        className="btn-amber px-4 py-1.5 text-sm disabled:opacity-40 shrink-0"
                                     >
                                         Reply
                                     </button>
