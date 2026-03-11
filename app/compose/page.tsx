@@ -66,27 +66,19 @@ export default function ComposePage() {
     // Load confirmed linked account servers on mount
     useEffect(() => {
         if (!identity) return;
-        const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-        fetch(`${identity.home_server}/account/links`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-        })
+        fetch(`${identity.home_server}/account/links?user_id=${encodeURIComponent(identity.user_id)}`)
             .then(r => r.ok ? r.json() : { links: [] })
             .then(data => {
-                const links: Array<{ status: string; requester_id: string; target_id: string }> =
-                    data.links ?? data ?? [];
+                const links: Array<{
+                    status: string;
+                    is_inbound: boolean;
+                    peer_server_url: string;
+                    requester_name: string;
+                    target_name: string;
+                }> = data.links ?? [];
                 const servers = links
-                    .filter(l => l.status === 'confirmed')
-                    .map(l => {
-                        // Pick the "other" user id — not the current user
-                        const other = l.requester_id === identity.user_id ? l.target_id : l.requester_id;
-                        // Extract server URL: user_id format is "user@host" or "user@host:port"
-                        const parts = other.split('@');
-                        if (parts.length < 2) return null;
-                        const host = parts[parts.length - 1];
-                        return host.startsWith('http') ? host : `http://${host}`;
-                    })
-                    .filter((s): s is string => s !== null);
-                // deduplicate
+                    .filter(l => l.status === 'confirmed' && l.peer_server_url)
+                    .map(l => l.peer_server_url);
                 setLinkedServers([...new Set(servers)]);
             })
             .catch(() => {/* no linked accounts is fine */});
@@ -153,10 +145,15 @@ export default function ComposePage() {
             });
 
             if (res.ok) {
-                router.push('/feed');
+                const data = await res.json().catch(() => ({}));
+                if (data.status === 'post_flagged_and_hidden') {
+                    setUploadError('Your post has been flagged for moderation review and will not appear until a moderator approves it.');
+                } else {
+                    router.refresh();
+                    router.push('/feed');
+                }
             } else {
-                const errText = await res.text().catch(() => 'Failed to create post');
-                alert(errText);
+                setUploadError("Couldn't create your post. Please try again.");
             }
         } catch (err: any) {
             console.error('Post creation error:', err);

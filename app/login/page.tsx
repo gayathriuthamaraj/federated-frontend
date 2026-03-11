@@ -38,6 +38,13 @@ export default function LoginPage() {
         const pinned = getPinnedServer();
         if (pinned?.server_id) setServerId(pinned.server_id);
         else if (KNOWN_SERVERS.length > 0) setServerId(KNOWN_SERVERS[0].id);
+
+        // Pre-fill username if redirected from registration with a taken username
+        const params = new URLSearchParams(window.location.search);
+        const usernameParam = params.get('username');
+        const hint = params.get('hint');
+        if (usernameParam) setUsername(usernameParam);
+        if (hint === 'username_taken') setError('This username already exists on this server. Please sign in instead.');
     }, []);
 
     const [error, setError] = useState('');

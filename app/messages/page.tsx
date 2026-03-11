@@ -50,6 +50,7 @@ function MessagesContent() {
     const [sending, setSending] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [retryKey, setRetryKey] = useState(0);
+    const [sendError, setSendError] = useState<string | null>(null);
     const [msgImageFile, setMsgImageFile] = useState<File | null>(null);
     const [msgImagePreview, setMsgImagePreview] = useState<string | null>(null);
     const msgFileInputRef = useRef<HTMLInputElement>(null);
@@ -156,7 +157,7 @@ function MessagesContent() {
                     prefetchProfiles(partnerIds, identity, cache, updateProfile);
                 } else {
                     const errText = await res.text().catch(() => `HTTP ${res.status}`);
-                    setFetchError(`Server error (${res.status}): ${errText}`);
+                    setFetchError("Couldn't load your conversations. Please try again.");
                     console.error('Conversations fetch failed:', res.status, errText);
                 }
             } catch (err) {
@@ -308,6 +309,7 @@ function MessagesContent() {
         if (!identity || !selectedUserId) return;
 
         setSending(true);
+        setSendError(null);
         try {
             // Upload image first if present
             let imageURL: string | null = null;
@@ -319,7 +321,7 @@ function MessagesContent() {
                     const upData = await upRes.json();
                     imageURL = `${identity.home_server}${upData.url}`;
                 } else {
-                    alert('Image upload failed');
+                    setSendError("Image couldn't be uploaded. Please try a smaller image.");
                     setSending(false);
                     return;
                 }
@@ -355,13 +357,12 @@ function MessagesContent() {
                 setNewMessage('');
                 removeMsgImage();
             } else {
-                const errorText = await res.text();
-                console.error('Failed to send message:', errorText);
-                alert(`Failed to send message: ${errorText}`);
+                console.error('Failed to send message:', await res.text().catch(() => ''));
+                setSendError("Message couldn't be sent. Please try again.");
             }
         } catch (err) {
             console.error('Failed to send message:', err);
-            alert('Failed to send message');
+            setSendError("Message couldn't be sent. Please try again.");
         } finally {
             setSending(false);
         }
@@ -570,6 +571,9 @@ function MessagesContent() {
                                         </svg>
                                     </button>
                                 </div>
+                            )}
+                            {sendError && (
+                                <p className="text-xs text-red-400 mb-2">{sendError}</p>
                             )}
                             <div className="flex gap-2 items-center">
                                 {/* Image attach button */}

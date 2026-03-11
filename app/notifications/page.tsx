@@ -163,6 +163,13 @@ export default function NotificationsPage() {
                             <div className="flex-1">
                                 {(['SYSTEM', 'SERVER_UPDATE', 'POST_UNDER_REVIEW', 'REPLY_UNDER_REVIEW', 'POST_APPROVED', 'POST_REJECTED', 'BADGE_GRANTED'] as string[]).includes(n.type) ? (
                                     <div className="flex flex-col">
+                                        <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                                            <span className="font-bold text-bat-yellow/90 text-sm">
+                                                {n.actor_id && n.actor_id !== 'system' && n.actor_id !== ''
+                                                    ? (n.actor_name || n.actor_id.split('@')[0])
+                                                    : 'Moderation Team'}
+                                            </span>
+                                        </div>
                                         <p className="text-bat-gray text-sm">{getNotificationText(n)}</p>
                                         <span className="text-xs text-bat-gray/40 mt-1">
                                             {new Date(n.created_at).toLocaleDateString()} at {new Date(n.created_at).toLocaleTimeString()}

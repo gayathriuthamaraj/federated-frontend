@@ -123,9 +123,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             .then(data => {
                 (data.links || [])
                     .filter((l: { status: string }) => l.status === 'confirmed')
-                    .forEach((l: { is_inbound: boolean; requester_id: string; target_id: string }) => {
+                    .forEach((l: { is_inbound: boolean; requester_id: string; target_id: string; peer_server_url?: string }) => {
                         const peerId = l.is_inbound ? l.requester_id : l.target_id;
-                        upsertSessionStorage({ user_id: peerId, home_server: identity.home_server, access_token: '', refresh_token: '' });
+                        // Use peer_server_url from the API (correctly set for cross-server
+                        // peers since the backend now populates it via FEDERATION_PEERS_EXTERNAL).
+                        // Fall back to the current server only if not provided.
+                        const peerServer = l.peer_server_url || identity.home_server;
+                        upsertSessionStorage({ user_id: peerId, home_server: peerServer, access_token: '', refresh_token: '' });
                     });
                 setSessions(readSessionsStorage());
             })

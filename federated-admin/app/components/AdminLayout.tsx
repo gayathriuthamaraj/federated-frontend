@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useState, useEffect } from 'react';
-import { LayoutDashboard, Server, Ticket, Users, LogOut, Globe, GitFork, Shield, Settings, ScrollText, Lock } from 'lucide-react';
+import { LayoutDashboard, Server, Ticket, Users, LogOut, Globe, GitFork, Shield, Settings, ScrollText, Lock, ClipboardList } from 'lucide-react';
 
 interface AdminLayoutProps {
     children: ReactNode;
@@ -19,6 +19,7 @@ const NAV = [
     { href: '/account-graph', label: 'ACCOUNT GRAPH', icon: GitFork, cmd: 'graph' },
     { href: '/settings', label: 'SETTINGS', icon: Settings, cmd: 'cfg' },
     { href: '/privacy-logs', label: 'PRIVACY LOGS', icon: ScrollText, cmd: 'priv' },
+    { href: '/admin-logs', label: 'ADMIN LOGS', icon: ClipboardList, cmd: 'alogs' },
     { href: '/encryption', label: 'ENCRYPTION', icon: Lock, cmd: 'enc' },
 ];
 

@@ -97,6 +97,29 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
     const menuRef = useRef<HTMLDivElement>(null);
     const [replyLikes, setReplyLikes] = useState<Map<string, { liked: boolean; count: number }>>(new Map());
 
+    // Edit / delete own post states
+    const [isEditing, setIsEditing] = useState(false);
+    const [editContent, setEditContent] = useState(post.content);
+    const [editError, setEditError] = useState('');
+    const [isDeleted, setIsDeleted] = useState(false);
+    const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+    // Sync like/repost state when the post prop is refreshed by the parent (e.g. after a feed re-fetch).
+    // We key on post.id so a completely different post in the same slot also resets correctly.
+    useEffect(() => {
+        setIsLiked(post.has_liked || false);
+        setLikeCount(post.like_count || 0);
+    }, [post.id, post.has_liked, post.like_count]);
+
+    useEffect(() => {
+        setIsReposted(post.has_reposted || false);
+        setRepostCount(post.repost_count || 0);
+    }, [post.id, post.has_reposted, post.repost_count]);
+
+    useEffect(() => {
+        setReplyCount(post.reply_count || 0);
+    }, [post.id, post.reply_count]);
+
     const displayName = post.author.split('@')[0];
     const handle = `@${post.author}`;
     const date = new Date(post.created_at);
@@ -229,6 +252,52 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
         }
     };
 
+    const handleSaveEdit = async () => {
+        if (!identity || !editContent.trim()) return;
+        setEditError('');
+        try {
+            const res = await fetch(`${identity.home_server}/post/edit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${identity.access_token}`,
+                },
+                body: JSON.stringify({ user_id: identity.user_id, post_id: post.id, content: editContent.trim() }),
+            });
+            if (res.ok) {
+                post.content = editContent.trim();
+                setIsEditing(false);
+                setShowMenu(false);
+            } else {
+                setEditError("Couldn't save your edit. Please try again.");
+            }
+        } catch {
+            setEditError("Couldn't save your edit. Please try again.");
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!identity) return;
+        try {
+            const res = await fetch(`${identity.home_server}/post/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${identity.access_token}`,
+                },
+                body: JSON.stringify({ user_id: identity.user_id, post_id: post.id }),
+            });
+            if (res.ok) {
+                setIsDeleted(true);
+                setShowMenu(false);
+            } else {
+                setDeleteConfirm(false);
+            }
+        } catch {
+            setDeleteConfirm(false);
+        }
+    };
+
     /*  Branched thread renderer  */
     const renderReply = (reply: Reply, depth = 0) => {
         const hasChildren = (reply.replies?.length ?? 0) > 0;
@@ -316,8 +385,16 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
     };
 
     /*  Post card  */
+    if (isDeleted) {
+        return (
+            <article className="border-b border-bat-dark/60 px-4 py-3 text-bat-gray/40 text-sm italic">
+                This post has been deleted.
+            </article>
+        );
+    }
+
     return (
-        <article className={`border-b border-bat-dark/60 hover:bg-white/[0.018] transition-colors duration-150 animate-fade-up${isCloseFriend ? ' border-l-2 border-l-green-500/60 bg-green-500/[0.025] shadow-[inset_2px_0_8px_rgba(34,197,94,0.06)]' : ''}`}>
+        <article className={`border-b border-bat-dark/60 hover:bg-white/[0.018] transition-colors duration-150 animate-fade-up${isCloseFriend ? ' border-l-2 border-l-green-500/60 bg-green-500/2.5 shadow-[inset_2px_0_8px_rgba(34,197,94,0.06)]' : ''}`}>
             {/*
               ONE shared flex row: left avatar-column + right content-column.
               The left column's flex-1 thread line will grow to match the full
@@ -377,6 +454,14 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                                 </span>
                             ))
                         )}
+                        {post.visibility === 'PUBLIC' && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 bg-green-500/10 text-green-400 border-green-500/20">
+                                <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-current" aria-hidden="true">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                                </svg>
+                                Public
+                            </span>
+                        )}
                         {post.visibility && post.visibility !== 'PUBLIC' && (
                             <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
                                 post.visibility === 'FOLLOWERS'
@@ -388,7 +473,7 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                                         <svg viewBox="0 0 24 24" className="w-2.5 h-2.5 fill-current" aria-hidden="true">
                                             <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
                                         </svg>
-                                        Followers
+                                        Followers only
                                     </>
                                 ) : (
                                     <>
@@ -404,7 +489,34 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
 
                     {/* Post body */}
                     <div className="mt-1 text-[15px] text-bat-gray/90 whitespace-pre-wrap leading-relaxed">
-                        <PostContent content={post.content} />
+                        {isEditing ? (
+                            <div className="flex flex-col gap-2">
+                                <textarea
+                                    className="w-full bg-bat-dark/60 border border-bat-gray/20 rounded-xl px-3 py-2 text-[15px] text-bat-gray focus:border-bat-blue/50 outline-none resize-none min-h-20"
+                                    value={editContent}
+                                    onChange={e => setEditContent(e.target.value)}
+                                    autoFocus
+                                />
+                                {editError && <p className="text-red-400 text-xs">{editError}</p>}
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={handleSaveEdit}
+                                        disabled={!editContent.trim()}
+                                        className="px-4 py-1.5 rounded-full bg-bat-yellow text-bat-black font-bold text-sm disabled:opacity-40 hover:bg-yellow-400 transition-colors"
+                                    >
+                                        Save
+                                    </button>
+                                    <button
+                                        onClick={() => { setIsEditing(false); setEditContent(post.content); setEditError(''); }}
+                                        className="px-4 py-1.5 rounded-full bg-bat-dark border border-bat-gray/20 text-bat-gray text-sm hover:bg-bat-dark/80 transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <PostContent content={post.content} />
+                        )}
                     </div>
 
                     {post.image_url && (
@@ -480,31 +592,66 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
                         </button>
 
                         {/* Overflow menu (⋯) */}
-                        {!isOwnPost && (
-                            <div className="relative" ref={menuRef}>
-                                <button
-                                    onClick={() => setShowMenu(v => !v)}
-                                    className="group flex items-center p-1.5 rounded-full hover:bg-white/5 text-bat-gray/40 hover:text-bat-gray transition-colors"
-                                    aria-label="More options"
-                                >
-                                    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[1.1rem] w-[1.1rem] fill-current">
-                                        <circle cx="5" cy="12" r="2" />
-                                        <circle cx="12" cy="12" r="2" />
-                                        <circle cx="19" cy="12" r="2" />
-                                    </svg>
-                                </button>
+                        <div className="relative" ref={menuRef}>
+                            <button
+                                onClick={() => setShowMenu(v => !v)}
+                                className="group flex items-center p-1.5 rounded-full hover:bg-white/5 text-bat-gray/40 hover:text-bat-gray transition-colors"
+                                aria-label="More options"
+                            >
+                                <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[1.1rem] w-[1.1rem] fill-current">
+                                    <circle cx="5" cy="12" r="2" />
+                                    <circle cx="12" cy="12" r="2" />
+                                    <circle cx="19" cy="12" r="2" />
+                                </svg>
+                            </button>
 
-                                {showMenu && (
-                                    <div className="absolute right-0 bottom-full mb-1 w-52 rounded-xl border border-bat-dark/60 bg-bat-black shadow-lg z-50 overflow-hidden">
+                            {showMenu && (
+                                <div className="absolute right-0 bottom-full mb-1 w-52 rounded-xl border border-bat-dark/60 bg-bat-black shadow-lg z-50 overflow-hidden">
+                                    {isOwnPost ? (
+                                        <>
+                                            <button
+                                                onClick={() => { setIsEditing(true); setEditContent(post.content); setShowMenu(false); }}
+                                                className="w-full text-left px-4 py-2.5 text-sm text-bat-gray hover:bg-bat-dark/60 transition-colors"
+                                            >
+                                                ✏️ Edit post
+                                            </button>
+                                            {deleteConfirm ? (
+                                                <div className="px-4 py-2.5 flex flex-col gap-1.5">
+                                                    <p className="text-xs text-bat-gray/70">Delete this post?</p>
+                                                    <div className="flex gap-2">
+                                                        <button
+                                                            onClick={handleDelete}
+                                                            className="flex-1 px-3 py-1 rounded-full bg-red-500 text-white text-xs font-bold hover:bg-red-600 transition-colors"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setDeleteConfirm(false)}
+                                                            className="flex-1 px-3 py-1 rounded-full bg-bat-dark border border-bat-gray/20 text-bat-gray text-xs hover:bg-bat-dark/80 transition-colors"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setDeleteConfirm(true)}
+                                                    className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-bat-dark/60 transition-colors"
+                                                >
+                                                    🗑️ Delete post
+                                                </button>
+                                            )}
+                                        </>
+                                    ) : (
                                         <BlockButton
                                             targetUser={post.author}
                                             variant="menuitem"
                                             onSuccess={() => setShowMenu(false)}
                                         />
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* ── Inline reply section (inside same right column) ── */}

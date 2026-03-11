@@ -104,7 +104,7 @@ export default function ProfileCard({
 
     // Touch swipe support
     const touchStartX = useRef<number | null>(null)
-    const TABS = ['Posts', 'Replies', 'Reposts', 'Likes'] as const
+    const TABS = ['Posts', 'Replies', 'Highlights', 'Likes'] as const
     const TAB_COUNT = TABS.length
 
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -462,15 +462,15 @@ export default function ProfileCard({
                     )
                 )}
 
-                {/* Reposts tab — posts this user has reposted */}
+                {/* Highlights tab — posts this user has reposted */}
                 {activeTab === 2 && (
                     loadingPosts ? (
-                        <div className="text-center text-bat-gray py-8">Loading reposts...</div>
+                        <div className="text-center text-bat-gray py-8">Loading highlights...</div>
                     ) : highlights.length === 0 ? (
                         <div className="p-8 text-center border-t border-bat-dark/50">
-                            <div className="text-bat-gray/40 text-lg font-medium">No reposts yet</div>
+                            <div className="text-bat-gray/40 text-lg font-medium">No highlights yet</div>
                             <div className="text-bat-gray/20 text-sm mt-1">
-                                {isOwnProfile ? "Repost content to see it here." : "Nothing here yet."}
+                                {isOwnProfile ? "Repost content to highlight it here." : "Nothing here yet."}
                             </div>
                         </div>
                     ) : (

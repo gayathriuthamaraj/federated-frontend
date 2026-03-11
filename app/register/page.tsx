@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { apiPost } from '../utils/api';
 import { generateClientKeyPair, storeClientKeyPair, storeSessionKey } from '../utils/crypto';
@@ -10,6 +11,7 @@ import { registerPasskey, isPasskeySupported } from '../utils/passkey';
 
 export default function RegisterPage() {
     const { loginWithoutRedirect } = useAuth();
+    const router = useRouter();
 
     // Form State
     const [username, setUsername] = useState('');
@@ -89,6 +91,13 @@ export default function RegisterPage() {
             const data = await res.json();
 
             if (!res.ok) {
+                // If username is already taken, send the user to the sign-in page
+                if (res.status === 409 || (data.error || '').toLowerCase().includes('username taken')) {
+                    router.push(
+                        `/login?username=${encodeURIComponent(username)}&hint=username_taken`
+                    );
+                    return;
+                }
                 throw new Error(data.error || 'Registration failed');
             }
 

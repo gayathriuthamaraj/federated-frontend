@@ -23,6 +23,14 @@ export default function BlockButton({
     const [blocked, setBlocked] = useState(isBlockedProp ?? false)
     const [loading, setLoading] = useState(false)
     const [confirming, setConfirming] = useState(false)
+    const [actionError, setActionError] = useState<string | null>(null)
+
+    // Auto-clear error after 4 seconds
+    useEffect(() => {
+        if (!actionError) return
+        const t = setTimeout(() => setActionError(null), 4000)
+        return () => clearTimeout(t)
+    }, [actionError])
 
     // Auto-fetch blocked state when prop not supplied
     useEffect(() => {
@@ -72,11 +80,10 @@ export default function BlockButton({
                 setBlocked(next)
                 onSuccess?.(next)
             } else {
-                const err = await res.text()
-                alert(`Action failed: ${err}`)
+                setActionError('Action failed. Please try again.')
             }
-        } catch (err: any) {
-            alert(`Error: ${err.message}`)
+        } catch {
+            setActionError('Something went wrong. Please try again.')
         } finally {
             setLoading(false)
         }
@@ -117,6 +124,7 @@ export default function BlockButton({
                         {loading ? '…' : blocked ? `Unblock @${targetUser.split('@')[0]}` : `Block @${targetUser.split('@')[0]}`}
                     </button>
                 )}
+                {actionError && <p className="text-xs text-red-400 px-4 pt-1">{actionError}</p>}
             </div>
         )
     }
@@ -157,6 +165,7 @@ export default function BlockButton({
                     {loading ? '…' : blocked ? 'Unblock' : 'Block'}
                 </button>
             )}
+            {actionError && <p className="text-xs text-red-400 mt-1">{actionError}</p>}
         </div>
     )
 }

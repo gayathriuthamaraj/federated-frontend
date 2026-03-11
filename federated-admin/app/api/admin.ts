@@ -537,3 +537,47 @@ export async function updateEncryptionPolicy(
     if (!res.ok) throw new Error(await res.text());
     return res.json();
 }
+
+// ── Badge revoke ──────────────────────────────────────────────────────────────
+
+export async function revokeBadge(userId: string): Promise<{ message: string; user_id: string }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const res = await fetch(`${getApiBaseUrl()}/admin/users/revoke-badge`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ user_id: userId }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+}
+
+// ── Admin activity logs ───────────────────────────────────────────────────────
+
+export interface AdminLogEntry {
+    id: string;
+    actor: string;
+    action: string;
+    target_id: string;
+    detail: string;
+    created_at: string;
+}
+
+export async function getAdminLogs(params?: {
+    limit?: number;
+    offset?: number;
+    actor?: string;
+}): Promise<{ logs: AdminLogEntry[]; count: number }> {
+    const token = getAuthToken();
+    if (!token) throw new Error('Not authenticated');
+    const qs = new URLSearchParams();
+    if (params?.limit)  qs.set('limit',  String(params.limit));
+    if (params?.offset) qs.set('offset', String(params.offset));
+    if (params?.actor)  qs.set('actor',  params.actor);
+    const res = await fetch(`${getApiBaseUrl()}/admin/logs?${qs}`, {
+        headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('Failed to fetch admin logs');
+    return res.json();
+}
+

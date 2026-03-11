@@ -3,8 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
-import { getAllUsers } from '../api/admin';
+import { getAllUsers, assignBadge, revokeBadge } from '../api/admin';
 import { Users, Search, MapPin } from 'lucide-react';
+
+const BADGE_COLORS: Record<string, string> = {
+    admin:     'var(--red)',
+    moderator: 'var(--amber)',
+    verified:  'var(--cyan)',
+    user:      'var(--text-ghost)',
+};
 
 interface UserData {
     identity: {
@@ -12,6 +19,7 @@ interface UserData {
         user_id: string;
         home_server: string;
         allow_discovery: boolean;
+        badge?: string;
         created_at: string;
     };
     profile: {
@@ -30,6 +38,10 @@ export default function UsersPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState('');
+    const [badgeAction, setBadgeAction] = useState<{ userId: string; mode: 'assign' | 'revoke' } | null>(null);
+    const [badgeInput, setBadgeInput] = useState('');
+    const [badgeError, setBadgeError] = useState('');
+    const [badgeLoading, setBadgeLoading] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('admin_token');
@@ -58,6 +70,27 @@ export default function UsersPage() {
             if (err instanceof Error && err.message.includes('authenticated')) router.push('/login');
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleBadgeSubmit = async () => {
+        if (!badgeAction) return;
+        setBadgeLoading(true);
+        setBadgeError('');
+        try {
+            if (badgeAction.mode === 'assign') {
+                if (!badgeInput.trim()) { setBadgeError('Badge value is required'); setBadgeLoading(false); return; }
+                await assignBadge(badgeAction.userId, badgeInput.trim());
+            } else {
+                await revokeBadge(badgeAction.userId);
+            }
+            setBadgeAction(null);
+            setBadgeInput('');
+            loadUsers();
+        } catch (err) {
+            setBadgeError(err instanceof Error ? err.message : 'Action failed');
+        } finally {
+            setBadgeLoading(false);
         }
     };
 
@@ -128,6 +161,8 @@ export default function UsersPage() {
                         <span style={{ flex: 1 }}>BIO / LOCATION</span>
                         <span style={{ flex: '0 0 100px', textAlign: 'right' }}>JOINED</span>
                         <span style={{ flex: '0 0 90px', textAlign: 'right' }}>STATUS</span>
+                        <span style={{ flex: '0 0 100px', textAlign: 'right' }}>BADGE</span>
+                        <span style={{ flex: '0 0 140px', textAlign: 'right' }}>ACTIONS</span>
                     </div>
 
                     {filteredUsers.length === 0 ? (
@@ -169,11 +204,99 @@ export default function UsersPage() {
                                         {user.identity.allow_discovery ? 'PUBLIC' : 'PRIVATE'}
                                     </span>
                                 </div>
+                                <div style={{ flex: '0 0 100px', textAlign: 'right' }}>
+                                    <span style={{
+                                        fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.08em',
+                                        color: BADGE_COLORS[user.identity.badge ?? 'user'] ?? 'var(--text-ghost)',
+                                    }}>
+                                        {(user.identity.badge ?? 'user').toUpperCase()}
+                                    </span>
+                                </div>
+                                <div style={{ flex: '0 0 140px', textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                                    <button
+                                        onClick={() => { setBadgeAction({ userId: user.identity.user_id, mode: 'assign' }); setBadgeInput(''); setBadgeError(''); }}
+                                        style={{ fontSize: '0.62rem', padding: '3px 8px', background: 'var(--bg-raised)', border: '1px solid var(--cyan)', color: 'var(--cyan)', fontFamily: 'var(--font-mono)', cursor: 'pointer', letterSpacing: '0.06em' }}
+                                    >
+                                        ASSIGN
+                                    </button>
+                                    {(user.identity.badge && user.identity.badge !== 'user') && (
+                                        <button
+                                            onClick={() => { setBadgeAction({ userId: user.identity.user_id, mode: 'revoke' }); setBadgeError(''); }}
+                                            style={{ fontSize: '0.62rem', padding: '3px 8px', background: 'var(--bg-raised)', border: '1px solid var(--red)', color: 'var(--red)', fontFamily: 'var(--font-mono)', cursor: 'pointer', letterSpacing: '0.06em' }}
+                                        >
+                                            REVOKE
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))
                     )}
                 </div>
             </div>
+
+            {/* Badge assign / revoke modal */}
+            {badgeAction && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+                }}>
+                    <div className="term-panel" style={{ padding: 24, minWidth: 340 }}>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-ghost)', letterSpacing: '0.12em', marginBottom: 8 }}>
+                            {badgeAction.mode === 'assign' ? '// ASSIGN BADGE' : '// REVOKE BADGE'}
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--cyan)', fontFamily: 'var(--font-mono)', marginBottom: 16 }}>
+                            {badgeAction.userId}
+                        </div>
+                        {badgeAction.mode === 'assign' && (
+                            <div style={{ marginBottom: 16 }}>
+                                <select
+                                    value={badgeInput}
+                                    onChange={e => setBadgeInput(e.target.value)}
+                                    style={{
+                                        width: '100%', background: 'var(--bg-raised)',
+                                        border: '1px solid var(--border)', color: 'var(--text)',
+                                        padding: '6px 10px', fontSize: '0.75rem',
+                                        fontFamily: 'var(--font-mono)', outline: 'none',
+                                    }}
+                                >
+                                    <option value="">Select badge…</option>
+                                    <option value="verified">verified</option>
+                                    <option value="moderator">moderator</option>
+                                    <option value="admin">admin</option>
+                                </select>
+                            </div>
+                        )}
+                        {badgeAction.mode === 'revoke' && (
+                            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+                                This will reset the user&apos;s badge to <strong style={{ color: 'var(--text)' }}>user</strong> (default).
+                            </p>
+                        )}
+                        {badgeError && (
+                            <div style={{ fontSize: '0.72rem', color: 'var(--red)', marginBottom: 12 }}>{badgeError}</div>
+                        )}
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => { setBadgeAction(null); setBadgeInput(''); setBadgeError(''); }}
+                                style={{ fontSize: '0.7rem', padding: '5px 14px', background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', cursor: 'pointer' }}
+                            >
+                                CANCEL
+                            </button>
+                            <button
+                                onClick={handleBadgeSubmit}
+                                disabled={badgeLoading}
+                                style={{
+                                    fontSize: '0.7rem', padding: '5px 14px', fontFamily: 'var(--font-mono)', cursor: 'pointer',
+                                    ...(badgeAction.mode === 'assign'
+                                        ? { background: 'var(--green-faint)', border: '1px solid var(--green)', color: 'var(--green)' }
+                                        : { background: 'rgba(255,23,68,0.08)', border: '1px solid var(--red)', color: 'var(--red)' }),
+                                }}
+                            >
+                                {badgeLoading ? '...' : (badgeAction.mode === 'assign' ? 'ASSIGN' : 'REVOKE')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AdminLayout>
     );
 }

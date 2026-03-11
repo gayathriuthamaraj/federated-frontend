@@ -3,11 +3,6 @@ function getApiBase(): string {
     return localStorage.getItem('mod_backend') || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 }
 
-function getModerationBase(): string {
-    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_MODERATION_URL || 'http://localhost:8090';
-    return localStorage.getItem('mod_moderation_backend') || process.env.NEXT_PUBLIC_MODERATION_URL || 'http://localhost:8090';
-}
-
 function getToken(): string | null {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('mod_token');
@@ -30,7 +25,7 @@ export interface ModeratorRecord {
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
-export async function moderatorLogin(username: string, password: string): Promise<{ token: string; role: string; message: string }> {
+export async function moderatorLogin(username: string, password: string): Promise<{ token: string; role: string; message: string; user_id: string }> {
     const res = await fetch(`${getApiBase()}/moderator/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -60,13 +55,18 @@ export async function getPendingPosts(): Promise<{ posts: PendingPost[]; count: 
     return res.json();
 }
 
+function getModeratorId(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('mod_user_id');
+}
+
 export async function approvePost(contentId: string): Promise<void> {
     const token = getToken();
     if (!token) throw new Error('Not authenticated');
     const res = await fetch(`${getApiBase()}/moderation/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ content_id: contentId }),
+        body: JSON.stringify({ content_id: contentId, moderator_id: getModeratorId() ?? '' }),
     });
     if (!res.ok) throw new Error(await res.text());
 }
@@ -77,7 +77,7 @@ export async function rejectPost(contentId: string): Promise<void> {
     const res = await fetch(`${getApiBase()}/moderation/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ content_id: contentId }),
+        body: JSON.stringify({ content_id: contentId, moderator_id: getModeratorId() ?? '' }),
     });
     if (!res.ok) throw new Error(await res.text());
 }
@@ -129,7 +129,7 @@ export interface Report {
 export async function listReports(): Promise<Report[]> {
     const token = getToken();
     if (!token) throw new Error('Not authenticated');
-    const res = await fetch(`${getModerationBase()}/moderation/reports`, {
+    const res = await fetch(`${getApiBase()}/moderation/reports`, {
         headers: { 'Authorization': `Bearer ${token}` },
     });
     if (!res.ok) {
@@ -146,7 +146,7 @@ export async function resolveReport(id: number, resolvedBy: string): Promise<voi
     const token = getToken();
     if (!token) throw new Error('Not authenticated');
     const res = await fetch(
-        `${getModerationBase()}/moderation/resolve?id=${encodeURIComponent(id)}&resolved_by=${encodeURIComponent(resolvedBy)}`,
+        `${getApiBase()}/moderation/resolve?id=${encodeURIComponent(id)}&resolved_by=${encodeURIComponent(resolvedBy)}`,
         { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } },
     );
     if (!res.ok) throw new Error(await res.text());
@@ -155,10 +155,12 @@ export async function resolveReport(id: number, resolvedBy: string): Promise<voi
 export async function blockServer(domain: string, reason: string, adminId: string): Promise<void> {
     const token = getToken();
     if (!token) throw new Error('Not authenticated');
-    const res = await fetch(`${getModerationBase()}/servers/block`, {
+    const res = await fetch(`${getApiBase()}/servers/block`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ domain, reason, admin_id: adminId }),
     });
     if (!res.ok) throw new Error(await res.text());
 }
+
+

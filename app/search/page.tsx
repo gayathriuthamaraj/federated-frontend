@@ -48,6 +48,7 @@ export default function SearchPage() {
     const [federationStep, setFederationStep] = useState<string>('');
 
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+    const [profileHidden, setProfileHidden] = useState(false);
     const [userPosts, setUserPosts] = useState<Post[]>([]);
     const [userReplies, setUserReplies] = useState<UserReply[]>([]);
     const [likedPosts, setLikedPosts] = useState<Post[]>([]);
@@ -198,6 +199,7 @@ export default function SearchPage() {
         setLikedPosts([]);
         setLinkedAccounts([]);
         setFederationStep('');
+        setProfileHidden(false);
 
         try {
             const isFederated = query.includes('@');
@@ -226,6 +228,10 @@ export default function SearchPage() {
                         } else {
                             setSelectedUser(null);
                         }
+                    } else if (res.status === 403) {
+                        setSelectedUser(null);
+                        setProfileHidden(true);
+                        setFederationStep('');
                     } else {
                         setSelectedUser(null);
                     }
@@ -243,7 +249,7 @@ export default function SearchPage() {
                         const errText = await res.text();
                         console.error('Federated search error:', errText);
                         setSelectedUser(null);
-                        setFederationStep(`Search failed: ${res.status}`);
+                        setFederationStep('User not found. Check the username and server, then try again.');
                         return;
                     }
 
@@ -309,6 +315,9 @@ export default function SearchPage() {
                     } else {
                         setSelectedUser(null);
                     }
+                } else if (res.status === 403) {
+                    setSelectedUser(null);
+                    setProfileHidden(true);
                 } else {
                     setSelectedUser(null);
                 }
@@ -483,8 +492,17 @@ export default function SearchPage() {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                 </div>
-                                <p className="text-bat-gray/50 text-sm">No users found</p>
-                                <p className="text-bat-gray/30 text-xs">Try a different username or server</p>
+                                {profileHidden ? (
+                                    <>
+                                        <p className="text-bat-gray/50 text-sm">Profile not discoverable</p>
+                                        <p className="text-bat-gray/30 text-xs">This user has set their profile to hidden</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-bat-gray/50 text-sm">No users found</p>
+                                        <p className="text-bat-gray/30 text-xs">Try a different username or server</p>
+                                    </>
+                                )}
                             </div>
                         )}
                     </>

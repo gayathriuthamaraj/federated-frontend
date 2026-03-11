@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import OTPInput from '../components/OTPInput';
 import { KNOWN_SERVERS, findServerById, getPinnedServer } from '../utils/servers';
-import { recoverWithPasskey, isPasskeySupported } from '../utils/passkey';
 import { useAuth } from '../context/AuthContext';
 
 export default function RecoverPage() {
@@ -17,7 +15,6 @@ export default function RecoverPage() {
     // Form fields
     const [username, setUsername] = useState('');
     const [serverId, setServerId] = useState('');
-    const [totpCode, setTotpCode] = useState('');
     const [recoveryKey, setRecoveryKey] = useState('');
 
     // Result
@@ -37,29 +34,28 @@ export default function RecoverPage() {
         e.preventDefault();
         setError('');
 
-        if (!isPasskeySupported()) {
-            setError('Your browser does not support passkeys. Try a different browser or device.');
-            return;
-        }
-
         const server = findServerById(serverId);
         if (!server) {
             setError('Please select a server.');
             return;
         }
 
-        if (totpCode.length !== 6) {
-            setError('Enter the 6-digit code from your authenticator app.');
+        if (!recoveryKey.trim()) {
+            setError('Please enter your recovery key.');
             return;
         }
 
         setIsSubmitting(true);
         try {
-            const data = await recoverWithPasskey(server.url, username, totpCode, recoveryKey);
+            const res = await fetch(`${server.url}/recover`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: `${username}@${serverId}`, recovery_key: recoveryKey.trim() }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? 'Recovery failed. Check your details and try again.');
 
-            // Log in with the new tokens
             login(data.user_id, data.home_server, data.access_token, data.refresh_token);
-
             setNewRecoveryKey(data.new_recovery_key ?? '');
             setStep('recovered');
         } catch (err) {
@@ -86,7 +82,7 @@ export default function RecoverPage() {
                     <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50 mb-6"></div>
 
                     <p className="text-bat-gray text-sm mb-6">
-                        Your passkey has been re-enrolled and you are now signed in.
+                        You are now signed in.
                         <br /><br />
                         <strong className="text-red-400">Save your new recovery key below.</strong>{' '}
                         The old one is now invalid.
@@ -135,15 +131,9 @@ export default function RecoverPage() {
                     <h1 className="text-3xl font-bold text-bat-gray mb-2">Recover Account</h1>
                     <div className="h-0.5 w-16 bg-bat-yellow mx-auto rounded-full opacity-50"></div>
                     <p className="text-bat-gray/60 text-sm mt-2">
-                        Re-enroll your passkey using your authenticator app and recovery key
+                        Enter your username and recovery key to regain access
                     </p>
                 </div>
-
-                {!isPasskeySupported() && (
-                    <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-500/40 rounded text-yellow-400 text-xs">
-                        ⚠ Passkeys are not supported in this browser. Use Chrome, Safari, Edge, or Firefox on a supported platform.
-                    </div>
-                )}
 
                 <form className="space-y-4" onSubmit={handleSubmit}>
                     {error && (
@@ -178,19 +168,6 @@ export default function RecoverPage() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-bat-gray mb-1">
-                            Authenticator Code
-                        </label>
-                        <OTPInput
-                            length={6}
-                            onComplete={setTotpCode}
-                        />
-                        <p className="text-xs text-bat-gray/50 mt-1">
-                            6-digit code from your authenticator app
-                        </p>
-                    </div>
-
-                    <div>
                         <label className="block text-sm font-medium text-bat-gray mb-1">Recovery Key</label>
                         <input
                             type="text"
@@ -204,7 +181,7 @@ export default function RecoverPage() {
 
                     <button
                         type="submit"
-                        disabled={isSubmitting || !isPasskeySupported()}
+                        disabled={isSubmitting}
                         className="
                             w-full py-3 px-4 mt-2 rounded-md font-bold text-lg
                             bg-bat-yellow text-bat-black
@@ -213,7 +190,7 @@ export default function RecoverPage() {
                             transition-all duration-200
                         "
                     >
-                        {isSubmitting ? 'Verifying & re-enrolling passkey…' : 'Recover Account'}
+                        {isSubmitting ? 'Verifying…' : 'Recover Account'}
                     </button>
                 </form>
 

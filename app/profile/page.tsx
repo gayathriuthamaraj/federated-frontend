@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ProfileCard from '../components/ProfileCard';
 import type { LinkedAccountInfo, Vouch } from '../components/ProfileCard';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +22,7 @@ function ProfileContent() {
   const { identity, isLoading: authLoading } = useAuth();
   const { getProfile, setProfile } = useCache();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [profile, setProfileState] = useState<Profile | null>(null);
   const [did, setDid] = useState<string | null>(null);
@@ -46,6 +47,39 @@ function ProfileContent() {
   const targetServer = targetUserId?.split('@')[1] ?? '';
   const myServer = identity?.user_id?.split('@')[1] ?? '';
   const isCrossServer = !isOwnProfile && !!targetServer && !!myServer && targetServer !== myServer;
+
+  const fetchPostsData = useCallback(async () => {
+    if (!identity?.home_server || !targetUserId || authLoading) return;
+    setLoadingPosts(true);
+    try {
+      const base = identity.home_server;
+      const uid = encodeURIComponent(targetUserId);
+      const vid = encodeURIComponent(identity.user_id);
+
+      if (isCrossServer) {
+        const postsRes = await fetch(`${base}/api/posts/federated?user_id=${uid}&viewer_id=${vid}`);
+        if (postsRes.ok) {
+          const data = await postsRes.json();
+          setPosts(data.posts || []);
+        }
+      } else {
+        const [postsRes, repliesRes, likesRes, repostsRes] = await Promise.all([
+          fetch(`${base}/posts/user?user_id=${uid}&viewer_id=${vid}`),
+          fetch(`${base}/posts/user/replies?user_id=${uid}`),
+          fetch(`${base}/posts/user/likes?user_id=${uid}&viewer_id=${vid}`),
+          fetch(`${base}/posts/user/reposts?user_id=${uid}&viewer_id=${vid}`),
+        ]);
+        if (postsRes.ok) { setPosts((await postsRes.json()).posts || []); }
+        if (repliesRes.ok) { setReplies((await repliesRes.json()).replies || []); }
+        if (likesRes.ok) { setLikedPosts((await likesRes.json()).posts || []); }
+        if (repostsRes.ok) { setHighlights((await repostsRes.json()).posts || []); }
+      }
+    } catch (err) {
+      console.error('Error fetching posts/replies/likes:', err);
+    } finally {
+      setLoadingPosts(false);
+    }
+  }, [identity, targetUserId, authLoading, isCrossServer]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -157,52 +191,6 @@ function ProfileContent() {
       }
     };
 
-    const fetchPosts = async () => {
-      setLoadingPosts(true);
-      try {
-        const base = identity.home_server;
-        const uid = encodeURIComponent(targetUserId);
-        const vid = encodeURIComponent(identity.user_id);
-
-        if (isCrossServer) {
-          // Cross-server: only fetch federated posts (replies/likes not available remotely)
-          const postsRes = await fetch(`${base}/api/posts/federated?user_id=${uid}&viewer_id=${vid}`);
-          if (postsRes.ok) {
-            const data = await postsRes.json();
-            setPosts(data.posts || []);
-          }
-        } else {
-          const [postsRes, repliesRes, likesRes, repostsRes] = await Promise.all([
-            fetch(`${base}/posts/user?user_id=${uid}&viewer_id=${vid}`),
-            fetch(`${base}/posts/user/replies?user_id=${uid}`),
-            fetch(`${base}/posts/user/likes?user_id=${uid}&viewer_id=${vid}`),
-            fetch(`${base}/posts/user/reposts?user_id=${uid}&viewer_id=${vid}`),
-          ]);
-
-          if (postsRes.ok) {
-            const data = await postsRes.json();
-            setPosts(data.posts || []);
-          }
-          if (repliesRes.ok) {
-            const data = await repliesRes.json();
-            setReplies(data.replies || []);
-          }
-          if (likesRes.ok) {
-            const data = await likesRes.json();
-            setLikedPosts(data.posts || []);
-          }
-          if (repostsRes.ok) {
-            const data = await repostsRes.json();
-            setHighlights(data.posts || []);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching posts/replies/likes:', err);
-      } finally {
-        setLoadingPosts(false);
-      }
-    };
-
     const fetchLinkedAccounts = async () => {
       try {
         const res = await fetch(
@@ -253,11 +241,21 @@ function ProfileContent() {
     };
 
     fetchProfile();
-    fetchPosts();
+    fetchPostsData();
     fetchVouches();
     fetchZKPStatus();
     if (isOwnProfile && !isCrossServer) fetchLinkedAccounts();
-  }, [authLoading, identity, targetUserId]);
+  }, [authLoading, identity, targetUserId, fetchPostsData]);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchPostsData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchPostsData);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchPostsData);
+    };
+  }, [fetchPostsData]);
 
 
   if (error) {
