@@ -8,6 +8,8 @@ export default function LoginPage() {
     const router = useRouter();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [serverUrl, setServerUrl] = useState('http://localhost:8080');
+    const [moderationUrl, setModerationUrl] = useState('http://localhost:8090');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -16,6 +18,9 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
         try {
+            // Persist the backend URL so all API calls use it
+            localStorage.setItem('mod_backend', serverUrl.replace(/\/$/, ''));
+            localStorage.setItem('mod_moderation_backend', moderationUrl.replace(/\/$/, ''));
             const data = await moderatorLogin(username, password);
             localStorage.setItem('mod_token', data.token);
             localStorage.setItem('mod_username', username);
@@ -47,6 +52,32 @@ export default function LoginPage() {
 
                 <form className="login-form" onSubmit={handleLogin}>
                     {error && <div className="error-msg">ERR › {error}</div>}
+
+                    <div className="form-group">
+                        <label className="form-label">// SERVER URL</label>
+                        <input
+                            id="mod-server"
+                            className="input"
+                            type="url"
+                            value={serverUrl}
+                            onChange={e => setServerUrl(e.target.value)}
+                            placeholder="http://localhost:8080"
+                            required
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">// MODERATION SERVICE URL</label>
+                        <input
+                            id="mod-moderation-server"
+                            className="input"
+                            type="url"
+                            value={moderationUrl}
+                            onChange={e => setModerationUrl(e.target.value)}
+                            placeholder="http://localhost:8090"
+                            required
+                        />
+                    </div>
 
                     <div className="form-group">
                         <label className="form-label">// USERNAME</label>

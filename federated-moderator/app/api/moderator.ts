@@ -1,9 +1,11 @@
 function getApiBase(): string {
-    return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
+    return localStorage.getItem('mod_backend') || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 }
 
 function getModerationBase(): string {
-    return process.env.NEXT_PUBLIC_MODERATION_URL || 'http://localhost:8090';
+    if (typeof window === 'undefined') return process.env.NEXT_PUBLIC_MODERATION_URL || 'http://localhost:8090';
+    return localStorage.getItem('mod_moderation_backend') || process.env.NEXT_PUBLIC_MODERATION_URL || 'http://localhost:8090';
 }
 
 function getToken(): string | null {
