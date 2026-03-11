@@ -77,7 +77,7 @@ interface Reply {
 }
 
 export default function PostCard({ post, linkBase = '/search', initialShowComments = false }: PostCardProps) {
-    const { identity } = useAuth();
+    const { identity, getAuthHeaders } = useAuth();
     const { closeFriends } = useCloseFriends();
     const isCloseFriend = closeFriends.has(post.author);
 
@@ -258,10 +258,7 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
         try {
             const res = await fetch(`${identity.home_server}/post/edit`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${identity.access_token}`,
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ user_id: identity.user_id, post_id: post.id, content: editContent.trim() }),
             });
             if (res.ok) {
@@ -281,10 +278,7 @@ export default function PostCard({ post, linkBase = '/search', initialShowCommen
         try {
             const res = await fetch(`${identity.home_server}/post/delete`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${identity.access_token}`,
-                },
+                headers: getAuthHeaders(),
                 body: JSON.stringify({ user_id: identity.user_id, post_id: post.id }),
             });
             if (res.ok) {
