@@ -4,9 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { adminLogin, getServerConfig } from '../api/admin';
 
-const SERVER_A_URL = process.env.NEXT_PUBLIC_BACKEND_URL   || 'http://localhost:8080';
-const SERVER_B_URL = process.env.NEXT_PUBLIC_SERVER_B_URL  || 'http://localhost:9080';
-
 const BOOT_SEQ = [
     '> FEDINET OS v2.0 — STARTING...',
     '> loading kernel modules............  [OK]',
@@ -46,8 +43,8 @@ export default function LoginPage() {
             try {
                 const data = JSON.parse(trustedServer);
                 setServerName(data.server_name || 'Server A');
-                if (data.server_url === SERVER_A_URL) setSelectedServerKey('Server A');
-                else if (data.server_url === SERVER_B_URL) setSelectedServerKey('Server B');
+                if (data.server_url === 'http://localhost:8080') setSelectedServerKey('Server A');
+                else if (data.server_url === 'http://localhost:9080') setSelectedServerKey('Server B');
                 else setSelectedServerKey('Custom');
             } catch {}
         } else {
@@ -60,7 +57,7 @@ export default function LoginPage() {
     const handleServerChange = (newServer: string) => {
         setSelectedServerKey(newServer);
         if (newServer === 'Custom') { router.push('/setup'); return; }
-        const url = newServer === 'Server B' ? SERVER_B_URL : SERVER_A_URL;
+        const url = newServer === 'Server B' ? 'http://localhost:9080' : 'http://localhost:8080';
         localStorage.setItem('trusted_server', JSON.stringify({
             server_name: newServer, server_url: url,
             server_id: 'unknown', public_key: '', pinned_at: new Date().toISOString(),
@@ -79,7 +76,7 @@ export default function LoginPage() {
             if (config.server_name && config.server_name !== serverName) {
                 localStorage.setItem('trusted_server', JSON.stringify({
                     server_name: config.server_name,
-                    server_url: selectedServerKey === 'Server B' ? SERVER_B_URL : SERVER_A_URL,
+                    server_url: selectedServerKey === 'Server B' ? 'http://localhost:9080' : 'http://localhost:8080',
                     server_id: 'unknown', public_key: '', pinned_at: new Date().toISOString(),
                 }));
             }
@@ -182,8 +179,8 @@ export default function LoginPage() {
                                     className="term-input"
                                     style={{ cursor: 'pointer' }}
                                 >
-                                    <option value="Server A">server_a  ::  {SERVER_A_URL}</option>
-                                    <option value="Server B">server_b  ::  {SERVER_B_URL}</option>
+                                    <option value="Server A">server_a  ::  localhost:8080</option>
+                                    <option value="Server B">server_b  ::  localhost:9080</option>
                                     <option value="Custom">custom    ::  [configure...]</option>
                                 </select>
                             </div>
