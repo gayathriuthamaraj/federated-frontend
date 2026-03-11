@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getDefaultServer, pinServer } from '../utils/servers';
+import { KNOWN_SERVERS, findServerById, pinServer, getPinnedServer } from '../utils/servers';
 import OTPInput from '../components/OTPInput';
 import { loginWithPasskey, isPasskeySupported } from '../utils/passkey';
 
@@ -12,7 +12,7 @@ export default function LoginPage() {
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-
+    const [serverId, setServerId] = useState<string>('');
 
     // TOTP second-factor state
     const [totpRequired, setTotpRequired] = useState(false);
@@ -33,9 +33,11 @@ export default function LoginPage() {
     // Increment to force-reset OTPInput boxes after a failed attempt
     const [otpResetKey, setOtpResetKey] = useState(0);
 
-    // Auto-pin the server configured via NEXT_PUBLIC_BACKEND_URL on mount
+    // Populate from localStorage only after mount (avoids SSR/hydration mismatch)
     useEffect(() => {
-        pinServer(getDefaultServer());
+        const pinned = getPinnedServer();
+        if (pinned?.server_id) setServerId(pinned.server_id);
+        else if (KNOWN_SERVERS.length > 0) setServerId(KNOWN_SERVERS[0].id);
     }, []);
 
     const [error, setError] = useState('');
@@ -47,7 +49,12 @@ export default function LoginPage() {
         setError('');
         setIsSubmitting(true);
 
-        const chosenServer = getDefaultServer();
+        const chosenServer = findServerById(serverId);
+        if (!chosenServer) {
+            setError('Please select a server.');
+            setIsSubmitting(false);
+            return;
+        }
         pinServer(chosenServer);
 
         try {
@@ -136,7 +143,11 @@ export default function LoginPage() {
             setError('Enter your username first, then click Sign in with passkey.');
             return;
         }
-        const chosenServer = getDefaultServer();
+        const chosenServer = findServerById(serverId);
+        if (!chosenServer) {
+            setError('Please select a server.');
+            return;
+        }
         pinServer(chosenServer);
         setError('');
         setPasskeyLoading(true);
@@ -266,7 +277,40 @@ export default function LoginPage() {
                             />
                         </div>
 
-
+                        <div>
+                            <label
+                                htmlFor="server"
+                                className="block text-sm font-medium text-bat-gray mb-2"
+                            >
+                                Home Server
+                            </label>
+                            <select
+                                id="server"
+                                value={serverId}
+                                onChange={(e) => {
+                                    const id = e.target.value;
+                                    setServerId(id);
+                                    const srv = findServerById(id);
+                                    if (srv) pinServer(srv);
+                                }}
+                                className="
+                  w-full px-4 py-3 rounded-md
+                  bg-bat-black text-white
+                  border border-bat-gray/20
+                  focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow
+                  outline-none transition-all duration-200
+                "
+                                required
+                                disabled={isSubmitting}
+                            >
+                                <option value="">Select a server</option>
+                                {KNOWN_SERVERS.map((srv) => (
+                                    <option key={srv.id} value={srv.id}>
+                                        {srv.name} &mdash; {srv.id} (:{srv.port})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
                         <div className="relative">
                             <label

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
-import { getDefaultServer, pinServer } from '../utils/servers';
+import { KNOWN_SERVERS, findServerById, pinServer } from '../utils/servers';
 
 export default function AddAccountPage() {
     const router = useRouter();
@@ -12,10 +12,14 @@ export default function AddAccountPage() {
 
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-
+    const [serverId, setServerId] = useState<string>('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        if (KNOWN_SERVERS.length > 0) setServerId(KNOWN_SERVERS[0].id);
+    }, []);
 
     // Not logged in at all — redirect to regular login
     useEffect(() => {
@@ -28,7 +32,12 @@ export default function AddAccountPage() {
         setSuccess('');
         setIsSubmitting(true);
 
-        const chosenServer = getDefaultServer();
+        const chosenServer = findServerById(serverId);
+        if (!chosenServer) {
+            setError('Please select a server.');
+            setIsSubmitting(false);
+            return;
+        }
         pinServer(chosenServer);
 
         try {
@@ -140,7 +149,31 @@ export default function AddAccountPage() {
                         />
                     </div>
 
-
+                    <div>
+                        <label htmlFor="server" className="block text-sm font-medium text-bat-gray mb-2">
+                            Home Server
+                        </label>
+                        <select
+                            id="server"
+                            value={serverId}
+                            onChange={(e) => {
+                                const id = e.target.value;
+                                setServerId(id);
+                                const srv = findServerById(id);
+                                if (srv) pinServer(srv);
+                            }}
+                            className="w-full px-4 py-3 rounded-md bg-bat-black text-white border border-bat-gray/20 focus:border-bat-yellow focus:ring-1 focus:ring-bat-yellow outline-none transition-all duration-200"
+                            required
+                            disabled={isSubmitting}
+                        >
+                            <option value="">Select a server</option>
+                            {KNOWN_SERVERS.map((srv) => (
+                                <option key={srv.id} value={srv.id}>
+                                    {srv.name} — {srv.id} (:{srv.port})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
                     <div>
                         <label htmlFor="password" className="block text-sm font-medium text-bat-gray mb-2">
