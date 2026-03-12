@@ -19,6 +19,8 @@ export default function ShowcaseProfilePage() {
         portfolio_url: '',
         followers_count: user.followersCount,
         following_count: user.followingCount,
+        followers_visibility: 'public',
+        following_visibility: 'public',
         created_at: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString(), 
         updated_at: new Date().toISOString(),
     };

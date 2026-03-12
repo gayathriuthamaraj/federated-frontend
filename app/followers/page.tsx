@@ -43,7 +43,7 @@ function FollowersContent() {
         abortRef.current?.abort();
         const controller = new AbortController();
         abortRef.current = controller;
-        const url = `${identity.home_server}/followers?user_id=${encodeURIComponent(targetUserId)}`;
+        const url = `${identity.home_server}/followers?user_id=${encodeURIComponent(targetUserId)}&viewer_id=${encodeURIComponent(identity.user_id)}`;
         try {
             const res = await fetch(url, { signal: controller.signal });
             if (res.ok) {

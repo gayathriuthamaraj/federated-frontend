@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import UserCard from '../components/UserCard';
+import Link from 'next/link';
 
 interface UserDocument {
     identity: {
@@ -43,7 +44,7 @@ function FollowingContent() {
         abortRef.current?.abort();
         const controller = new AbortController();
         abortRef.current = controller;
-        const url = `${identity.home_server}/following?user_id=${encodeURIComponent(targetUserId)}`;
+        const url = `${identity.home_server}/following?user_id=${encodeURIComponent(targetUserId)}&viewer_id=${encodeURIComponent(identity.user_id)}`;
         try {
             const res = await fetch(url, { signal: controller.signal });
             if (res.ok) {
@@ -136,7 +137,10 @@ function FollowingContent() {
                 <div className="space-y-3">
                     {following.map(user => (
                         <div key={user.identity.user_id} className="flex items-center gap-3">
-                            <div className="flex-1">
+                            <Link
+                                href={`/search?user_id=${encodeURIComponent(user.identity.user_id)}`}
+                                className="flex-1 min-w-0"
+                            >
                                 <UserCard
                                     user={{
                                         userId: user.identity.user_id,
@@ -147,7 +151,7 @@ function FollowingContent() {
                                     }}
                                     showFollowButton={false}
                                 />
-                            </div>
+                            </Link>
                             {isOwnProfile && (
                                 <button
                                     onClick={() => handleUnfollow(user.identity.user_id)}

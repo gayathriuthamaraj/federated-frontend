@@ -6,9 +6,9 @@ import PostCard from '../../components/PostCard';
 
 export default function FeedPage() {
     const { identity } = useAuth();
-    const [posts, setPosts] = useState([]);
+    const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<string | null>(null);
     const [newPostContent, setNewPostContent] = useState('');
     const [posting, setPosting] = useState(false);
 
@@ -33,7 +33,7 @@ export default function FeedPage() {
                 setPosts(data.posts || []);
             } catch (err) {
                 console.error('Feed fetch error:', err);
-                setError(err.message);
+                setError(err instanceof Error ? err.message : String(err));
             } finally {
                 setLoading(false);
             }

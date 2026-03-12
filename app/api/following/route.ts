@@ -1,46 +1,21 @@
-import { NextResponse } from 'next/server';
-import { mockUsers } from '@/app/data/mockData';
+import { NextRequest, NextResponse } from 'next/server';
 
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
-const following = new Map<string, Set<string>>();
-
-
-following.set('batman', new Set(['robin', 'alfred', 'batgirl', 'gordon']));
-following.set('robin', new Set(['batman', 'batgirl']));
-following.set('harley', new Set(['joker']));
-
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-        return NextResponse.json({ error: 'User ID required' }, { status: 400 });
-    }
-
-    const userFollowing = following.get(userId) || new Set();
-    const followingUsers = mockUsers.filter(u => userFollowing.has(u.username));
-
-    return NextResponse.json(followingUsers);
+function fwd(req: Request): HeadersInit {
+    const auth = req.headers.get('authorization');
+    return auth ? { Authorization: auth } : {};
 }
 
-export async function POST(request: Request) {
-    const { userId, targetUserId } = await request.json();
-
-    if (!following.has(userId)) {
-        following.set(userId, new Set());
-    }
-
-    const userFollowing = following.get(userId)!;
-    const wasFollowing = userFollowing.has(targetUserId);
-
-    if (wasFollowing) {
-        userFollowing.delete(targetUserId);
-    } else {
-        userFollowing.add(targetUserId);
-    }
-
-    return NextResponse.json({
-        following: !wasFollowing,
-        followingCount: userFollowing.size
-    });
+/** GET /api/following?user_id=...&viewer_id=... */
+export async function GET(req: NextRequest) {
+    const user_id = req.nextUrl.searchParams.get('user_id');
+    if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 });
+    const viewer_id = req.nextUrl.searchParams.get('viewer_id') ?? '';
+    const res = await fetch(
+        `${BACKEND}/following?user_id=${encodeURIComponent(user_id)}&viewer_id=${encodeURIComponent(viewer_id)}`,
+        { headers: fwd(req) },
+    );
+    const data = await res.json().catch(() => ({}));
+    return NextResponse.json(data, { status: res.status });
 }

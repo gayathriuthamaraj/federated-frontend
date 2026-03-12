@@ -8,6 +8,8 @@ import PostCard from './PostCard'
 import { Profile } from '@/types/profile'
 import { Post } from '@/types/post'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '../context/AuthContext'
 
 interface UserReply {
     id: string;
@@ -18,6 +20,43 @@ interface UserReply {
     created_at: string;
 }
 
+export interface LinkedAccountInfo {
+    id: string;
+    peer_id: string;
+    peer_name?: string;
+    peer_avatar?: string;
+}
+
+export interface Vouch {
+    id: string;
+    vouching_server_id: string;
+    vouching_server_name: string;
+    issued_at: string;
+}
+
+function VouchBadge({ vouches }: { vouches: Vouch[] }) {
+    if (!vouches.length) return null;
+    return (
+        <div className="mt-3">
+            <p className="text-[11px] text-bat-gray/40 uppercase tracking-widest mb-1.5 font-semibold">Vouched by</p>
+            <div className="flex flex-wrap gap-1.5">
+                {vouches.map(v => (
+                    <span
+                        key={v.id}
+                        title={`Vouched by ${v.vouching_server_id} on ${new Date(v.issued_at).toLocaleDateString()}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25"
+                    >
+                        <svg viewBox="0 0 24 24" className="h-3 w-3 fill-current" aria-hidden="true">
+                            <path d="M12 1L3 5v6c0 5.25 3.75 10.15 9 11.35C17.25 21.15 21 16.25 21 11V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+                        </svg>
+                        {v.vouching_server_name || v.vouching_server_id}
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+}
+
 interface ProfileCardProps {
     profile: Profile;
     isOwnProfile?: boolean;
@@ -25,8 +64,12 @@ interface ProfileCardProps {
     posts?: Post[];
     replies?: UserReply[];
     likedPosts?: Post[];
+    highlights?: Post[];
     loadingPosts?: boolean;
     did?: string;
+    linkedAccounts?: LinkedAccountInfo[];
+    vouches?: Vouch[];
+    zkpEnabled?: boolean;
     /** Base path for user-profile links. Defaults to "/profile". Pass "/search" to keep navigation within search. */
     linkBase?: string;
     /** Called after a follow/unfollow with +1 or -1 so parent can update counts & cache */
@@ -40,8 +83,12 @@ export default function ProfileCard({
     posts = [],
     replies = [],
     likedPosts = [],
+    highlights = [],
     loadingPosts = false,
     did,
+    linkedAccounts = [],
+    vouches = [],
+    zkpEnabled = false,
     linkBase = '/search',
     onFollowChange,
 }: ProfileCardProps) {
@@ -49,10 +96,15 @@ export default function ProfileCard({
     const [followingState, setFollowingState] = useState(isFollowing)
     const [activeTab, setActiveTab] = useState(0)
     const [tabAnimKey, setTabAnimKey] = useState(0)
+    const router = useRouter()
+    const { identity, switchToLinked } = useAuth()
+
+    // Accent colour: bat-blue for moderators, bat-yellow for everyone else
+    const isMod = !!profile.is_moderator
 
     // Touch swipe support
     const touchStartX = useRef<number | null>(null)
-    const TABS = ['Posts', 'Replies', 'Highlights', 'Media', 'Likes'] as const
+    const TABS = ['Posts', 'Replies', 'Highlights', 'Likes'] as const
     const TAB_COUNT = TABS.length
 
     const handleTouchStart = (e: React.TouchEvent) => {
@@ -105,7 +157,7 @@ export default function ProfileCard({
                         className="h-full w-full object-cover"
                     />
                 ) : (
-                    <div className="h-full w-full bg-linear-to-br from-bat-dark via-bat-dark to-bat-yellow/10" />
+                    <div className={`h-full w-full bg-linear-to-br from-bat-dark via-bat-dark ${isMod ? 'to-bat-blue/10' : 'to-bat-yellow/10'}`} />
                 )}
                 {/* Gradient overlay for readability */}
                 <div className="absolute inset-0 bg-linear-to-t from-bat-black/60 to-transparent pointer-events-none" />
@@ -116,7 +168,7 @@ export default function ProfileCard({
                 <div className="relative flex justify-between items-start">
                     {}
                     <div className="-mt-[15%] sm:-mt-16 mb-3">
-                        <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-bat-black bg-bat-black overflow-hidden transition-transform duration-300 hover:scale-105 shadow-lg">
+                        <div className={`relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 ${isMod ? 'border-bat-blue/70 shadow-[0_0_14px_rgba(47,128,237,0.4)]' : 'border-bat-black'} bg-bat-black overflow-hidden transition-transform duration-300 hover:scale-105 shadow-lg`}>
                             {profile.avatar_url ? (
                                 <img
                                     src={profile.avatar_url}
@@ -124,7 +176,7 @@ export default function ProfileCard({
                                     className="h-full w-full object-cover"
                                 />
                             ) : (
-                                <div className="h-full w-full flex items-center justify-center bg-bat-dark text-4xl font-bold text-bat-yellow">
+                                <div className={`h-full w-full flex items-center justify-center bg-bat-dark text-4xl font-bold ${isMod ? 'text-bat-blue' : 'text-bat-yellow'}`}>
                                     {(profile.display_name || profile.user_id)[0]?.toUpperCase()}
                                 </div>
                             )}
@@ -132,20 +184,38 @@ export default function ProfileCard({
                     </div>
 
                     {}
-                    <div className="pt-3 flex gap-2">
+                    <div className="pt-3 flex gap-2 flex-wrap">
                         {isOwnProfile ? (
-                            <Link
-                                href="/profile/edit"
-                                className="
-                                    px-6 py-2 rounded-md font-bold
-                                    bg-bat-black text-bat-gray
-                                    border-2 border-bat-gray/30
-                                    hover:border-bat-yellow hover:text-bat-yellow
-                                    transition-all duration-200
-                                "
-                            >
-                                Edit Profile
-                            </Link>
+                            <>
+                                <Link
+                                    href="/profile/edit"
+                                    className="
+                                        px-6 py-2 rounded-md font-bold
+                                        bg-bat-black text-bat-gray
+                                        border-2 border-bat-gray/30
+                                        hover:border-bat-yellow hover:text-bat-yellow
+                                        transition-all duration-200
+                                    "
+                                >
+                                    Edit Profile
+                                </Link>
+                                <Link
+                                    href="/settings/privacy"
+                                    className="
+                                        px-4 py-2 rounded-md font-bold
+                                        bg-bat-black text-bat-gray/60
+                                        border-2 border-bat-gray/20
+                                        hover:border-bat-yellow/60 hover:text-bat-yellow/80
+                                        transition-all duration-200 flex items-center gap-1.5
+                                    "
+                                    title="Privacy settings"
+                                >
+                                    <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                                        <path d="M12 1L3 5v6c0 5.25 3.75 10.15 9 11.35C17.25 21.15 21 16.25 21 11V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
+                                    </svg>
+                                    Privacy
+                                </Link>
+                            </>
                         ) : (
                             <>
                                 <FollowButton
@@ -175,7 +245,7 @@ export default function ProfileCard({
 
                 {}
                 <div className="mt-2">
-                    <h1 className="text-xl sm:text-2xl font-bold text-bat-gray leading-tight">
+                    <h1 className={`text-xl sm:text-2xl font-bold leading-tight ${isMod ? 'text-bat-blue' : 'text-bat-gray'}`}>
                         {profile.display_name}
                     </h1>
                     <p className="text-bat-gray/60 text-sm sm:text-base">
@@ -186,6 +256,22 @@ export default function ProfileCard({
                             {did}
                         </p>
                     )}
+                    {profile.badge && profile.badge !== 'user' && (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold mt-2
+                            ${isMod
+                                ? 'bg-bat-blue/20 text-bat-blue border border-bat-blue/40'
+                                : 'bg-bat-yellow/20 text-bat-yellow border border-bat-yellow/40'}`}>
+                            {profile.badge}
+                        </span>
+                    )}
+                    {zkpEnabled && (
+                        <span
+                            title="Identity verified with zero-knowledge proof"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold mt-2 bg-green-500/10 text-green-400 border border-green-500/20"
+                        >
+                            ZK Verified
+                        </span>
+                    )}
                 </div>
 
                 {}
@@ -194,6 +280,8 @@ export default function ProfileCard({
                         {profile.bio}
                     </p>
                 )}
+
+                <VouchBadge vouches={vouches} />
 
                 {}
                 <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm text-bat-gray/60">
@@ -216,7 +304,7 @@ export default function ProfileCard({
                             <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-current">
                                 <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"></path>
                             </svg>
-                            <span className="truncate max-w-[200px]">{profile.portfolio_url.replace(/^https?:\/\//, '')}</span>
+                            <span className="truncate max-w-50">{profile.portfolio_url.replace(/^https?:\/\//, '')}</span>
                         </a>
                     )}
 
@@ -245,6 +333,40 @@ export default function ProfileCard({
                         <span className="text-bat-gray/60">Followers</span>
                     </Link>
                 </div>
+
+                {/* Linked accounts badges — only visible on the user's own profile */}
+                {isOwnProfile && linkedAccounts.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                        {linkedAccounts.map((la) => (
+                            <button
+                                key={la.id}
+                                onClick={async () => {
+                                    const ok = await switchToLinked(la.peer_id, identity?.home_server || '');
+                                    if (ok) {
+                                        router.push('/feed');
+                                    } else {
+                                        router.push('/linked-accounts');
+                                    }
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-bat-yellow/10 border border-bat-yellow/30 text-bat-yellow text-xs hover:bg-bat-yellow/20 transition-colors cursor-pointer"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                                    className="w-3 h-3">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                </svg>
+                                <span>Switch to&nbsp;</span>
+                                <span className="font-semibold">
+                                    {la.peer_name || la.peer_id.split('@')[0]}
+                                </span>
+                                <span className="text-bat-yellow/60">
+                                    @{la.peer_id.split('@')[1]}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {}
@@ -310,7 +432,11 @@ export default function ProfileCard({
                     ) : (
                         <div className="border-t border-bat-dark/50 divide-y divide-bat-dark/40">
                             {replies.map((rep) => (
-                                <div key={rep.id} className="px-4 pt-3 pb-1 hover:bg-bat-dark/10 transition-colors">
+                                <div
+                                    key={rep.id}
+                                    className="px-4 pt-3 pb-1 hover:bg-bat-dark/10 transition-colors cursor-pointer"
+                                    onClick={() => router.push(`/post/${rep.post_id}`)}
+                                >
                                     {rep.post_content && (
                                         <div className="mb-1.5 pl-3 border-l-2 border-bat-gray/20 text-xs text-bat-gray/40 line-clamp-2">
                                             <span className="font-semibold text-bat-gray/50">
@@ -320,7 +446,7 @@ export default function ProfileCard({
                                         </div>
                                     )}
                                     <div className="flex gap-2 items-start">
-                                        <div className="flex-shrink-0 h-7 w-7 rounded-full bg-bat-dark flex items-center justify-center text-bat-yellow font-bold text-xs select-none">
+                                        <div className="shrink-0 h-7 w-7 rounded-full bg-bat-dark flex items-center justify-center text-bat-yellow font-bold text-xs select-none">
                                             {(profile.display_name || profile.user_id)[0]?.toUpperCase()}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -336,16 +462,28 @@ export default function ProfileCard({
                     )
                 )}
 
-                {/* Highlights & Media — placeholder */}
-                {(activeTab === 2 || activeTab === 3) && (
-                    <div className="p-10 text-center border-t border-bat-dark/50">
-                        <div className="text-bat-gray/40 text-lg font-medium">{TABS[activeTab]}</div>
-                        <div className="text-bat-gray/20 text-sm mt-1">Nothing here yet.</div>
-                    </div>
+                {/* Highlights tab — posts this user has reposted */}
+                {activeTab === 2 && (
+                    loadingPosts ? (
+                        <div className="text-center text-bat-gray py-8">Loading highlights...</div>
+                    ) : highlights.length === 0 ? (
+                        <div className="p-8 text-center border-t border-bat-dark/50">
+                            <div className="text-bat-gray/40 text-lg font-medium">No highlights yet</div>
+                            <div className="text-bat-gray/20 text-sm mt-1">
+                                {isOwnProfile ? "Repost content to highlight it here." : "Nothing here yet."}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="border-t border-bat-dark/50">
+                            {highlights.map((post) => (
+                                <PostCard key={post.id} post={post} linkBase={linkBase} />
+                            ))}
+                        </div>
+                    )
                 )}
 
                 {/* Likes tab */}
-                {activeTab === 4 && (
+                {activeTab === 3 && (
                     loadingPosts ? (
                         <div className="text-center text-bat-gray py-8">Loading likes...</div>
                     ) : likedPosts.length === 0 ? (

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import ProfileCard from '../components/ProfileCard';
+import type { LinkedAccountInfo } from '../components/ProfileCard';
 import { Post } from '@/types/post';
 
 interface UserProfile {
@@ -20,6 +21,8 @@ interface UserProfile {
     isFollowing?: boolean;
     createdAt?: string;
     updatedAt?: string;
+    badge?: string;
+    is_moderator?: boolean;
     // Federation metadata
     isFederated?: boolean;
     remoteServer?: string;
@@ -45,10 +48,12 @@ export default function SearchPage() {
     const [federationStep, setFederationStep] = useState<string>('');
 
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+    const [profileHidden, setProfileHidden] = useState(false);
     const [userPosts, setUserPosts] = useState<Post[]>([]);
     const [userReplies, setUserReplies] = useState<UserReply[]>([]);
     const [likedPosts, setLikedPosts] = useState<Post[]>([]);
     const [loadingPosts, setLoadingPosts] = useState(false);
+    const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccountInfo[]>([]);
 
     // tracks the last local user_id queried so refreshProfile knows what to hit
     const lastQueryRef = useRef<string>('');
@@ -93,6 +98,31 @@ export default function SearchPage() {
     }, [identity]);
 
     // ------------------------------------------------------------------
+    // Fetch confirmed account links for a local user
+    // ------------------------------------------------------------------
+    const fetchLinkedAccounts = useCallback(async (userId: string) => {
+        if (!identity) return;
+        try {
+            const res = await fetch(
+                `${identity.home_server}/account/links?user_id=${encodeURIComponent(userId)}`
+            );
+            if (!res.ok) return;
+            const data = await res.json();
+            const confirmed = (data.links || [])
+                .filter((l: any) => l.status === 'confirmed')
+                .map((l: any) => ({
+                    id: l.id,
+                    peer_id: l.is_inbound ? l.requester_id : l.target_id,
+                    peer_name: l.is_inbound ? l.requester_name : l.target_name,
+                    peer_avatar: l.is_inbound ? l.requester_avatar : l.target_avatar,
+                }));
+            setLinkedAccounts(confirmed);
+        } catch {
+            /* non-critical — profile still shows without linked accounts */
+        }
+    }, [identity]);
+
+    // ------------------------------------------------------------------
     // Re-fetch profile from server to get accurate counts/state
     // Called after follow/unfollow/block actions
     // ------------------------------------------------------------------
@@ -133,7 +163,7 @@ export default function SearchPage() {
     // ------------------------------------------------------------------
     // Build a UserProfile from a local /user/search response
     // ------------------------------------------------------------------
-    const buildLocalUser = (data: any): UserProfile => ({
+    const buildLocalUser = useCallback((data: any): UserProfile => ({
         userId:         data.identity.user_id,
         username:       data.identity.user_id.split('@')[0],
         displayName:    data.profile.display_name  || 'Unknown',
@@ -147,8 +177,10 @@ export default function SearchPage() {
         isFollowing:    data.is_following,
         createdAt:      data.profile.created_at,
         updatedAt:      data.profile.updated_at,
+        badge:          data.badge,
+        is_moderator:   data.is_moderator,
         isFederated:    false,
-    });
+    }), []);
 
     // ------------------------------------------------------------------
     // Core search logic — extracted so it can be called from the URL param
@@ -165,7 +197,9 @@ export default function SearchPage() {
         setUserPosts([]);
         setUserReplies([]);
         setLikedPosts([]);
+        setLinkedAccounts([]);
         setFederationStep('');
+        setProfileHidden(false);
 
         try {
             const isFederated = query.includes('@');
@@ -190,9 +224,14 @@ export default function SearchPage() {
                             lastQueryRef.current = user.userId;
                             setSelectedUser(user);
                             fetchUserContent(user.userId, false);
+                            fetchLinkedAccounts(user.userId);
                         } else {
                             setSelectedUser(null);
                         }
+                    } else if (res.status === 403) {
+                        setSelectedUser(null);
+                        setProfileHidden(true);
+                        setFederationStep('');
                     } else {
                         setSelectedUser(null);
                     }
@@ -210,7 +249,7 @@ export default function SearchPage() {
                         const errText = await res.text();
                         console.error('Federated search error:', errText);
                         setSelectedUser(null);
-                        setFederationStep(`Search failed: ${res.status}`);
+                        setFederationStep('User not found. Check the username and server, then try again.');
                         return;
                     }
 
@@ -241,9 +280,9 @@ export default function SearchPage() {
                             displayName: data.user.display_name || 'Unknown',
                             avatarUrl: data.user.avatar_url || '',
                             bio: data.user.bio || '',
-                            bannerUrl: '',
-                            location: '',
-                            portfolioUrl: '',
+                            bannerUrl: data.user.banner_url || '',
+                            location: data.user.location || '',
+                            portfolioUrl: data.user.portfolio_url || '',
                             followersCount: 0,
                             followingCount: 0,
                             isFollowing: false,
@@ -272,9 +311,13 @@ export default function SearchPage() {
                         lastQueryRef.current = user.userId;
                         setSelectedUser(user);
                         fetchUserContent(user.userId, false);
+                        fetchLinkedAccounts(user.userId);
                     } else {
                         setSelectedUser(null);
                     }
+                } else if (res.status === 403) {
+                    setSelectedUser(null);
+                    setProfileHidden(true);
                 } else {
                     setSelectedUser(null);
                 }
@@ -287,7 +330,7 @@ export default function SearchPage() {
         } finally {
             setSearching(false);
         }
-    }, [identity, fetchUserContent, buildLocalUser]);
+    }, [identity, fetchUserContent, buildLocalUser, fetchLinkedAccounts]);
 
     const handleSearch = () => {
         if (!searchQuery.trim() || !identity) return;
@@ -302,8 +345,7 @@ export default function SearchPage() {
         if (authLoading || !identity) return;
         const uid = searchParams.get('user_id');
         if (uid) runSearch(uid);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchParams, identity, authLoading]);
+    }, [searchParams, identity, authLoading, runSearch]);
 
     useEffect(() => {
         if (!authLoading && !identity) {
@@ -419,8 +461,10 @@ export default function SearchPage() {
                                         following_visibility: 'public',
                                         followers_count: selectedUser.followersCount,
                                         following_count: selectedUser.followingCount,
-                                    created_at: selectedUser.createdAt || new Date().toISOString(),
+                                        created_at: selectedUser.createdAt || new Date().toISOString(),
                                         updated_at: new Date().toISOString(),
+                                        badge: selectedUser.badge,
+                                        is_moderator: selectedUser.is_moderator,
                                     }}
                                     isFollowing={selectedUser.isFollowing}
                                     posts={userPosts}
@@ -448,8 +492,17 @@ export default function SearchPage() {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                 </div>
-                                <p className="text-bat-gray/50 text-sm">No users found</p>
-                                <p className="text-bat-gray/30 text-xs">Try a different username or server</p>
+                                {profileHidden ? (
+                                    <>
+                                        <p className="text-bat-gray/50 text-sm">Profile not discoverable</p>
+                                        <p className="text-bat-gray/30 text-xs">This user has set their profile to hidden</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className="text-bat-gray/50 text-sm">No users found</p>
+                                        <p className="text-bat-gray/30 text-xs">Try a different username or server</p>
+                                    </>
+                                )}
                             </div>
                         )}
                     </>

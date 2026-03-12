@@ -3,7 +3,6 @@
 import { MockUser } from '../data/mockData';
 import FollowButton from './FollowButton';
 
-
 interface UserCardProps {
     user: MockUser | {
         userId: string;
@@ -25,69 +24,65 @@ export default function UserCard({ user, showFollowButton = true, onClick }: Use
     return (
         <article
             onClick={onClick}
-            className={`
-                flex gap-3 px-4 py-3 border-b border-bat-dark 
-                hover:bg-bat-dark/20 transition-colors
-                ${onClick ? 'cursor-pointer' : 'cursor-default'}
-            `}
+            className={`flex gap-3 px-4 py-3 transition-all duration-150 ${onClick ? 'cursor-pointer' : 'cursor-default'}`}
+            style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-panel)" }}
+            onMouseEnter={e => { if (onClick) (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)"; }}
+            onMouseLeave={e => { if (onClick) (e.currentTarget as HTMLElement).style.background = "var(--bg-panel)"; }}
         >
-            {}
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
                 {user.avatarUrl ? (
                     <img
                         src={user.avatarUrl}
                         alt={user.displayName}
-                        className="h-12 w-12 rounded-full"
+                        className="h-12 w-12 rounded-full object-cover"
                     />
                 ) : (
-                    <div className="h-12 w-12 rounded-full bg-bat-dark border border-bat-yellow/50 flex items-center justify-center text-bat-yellow font-bold text-lg">
-                        {user.displayName[0].toUpperCase()}
+                    <div
+                        className="h-12 w-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                        style={{ background: "linear-gradient(135deg, var(--amber-light), var(--amber))" }}
+                    >
+                        {(user.displayName?.[0] ?? user.username?.[0] ?? '?').toUpperCase()}
                     </div>
                 )}
             </div>
 
-            {}
             <div className="flex-1 min-w-0">
-                {}
                 <div className="flex items-baseline gap-1.5 text-[15px] leading-5">
-                    <span className="font-bold text-gray-200 truncate">
+                    <span className="font-bold truncate" style={{ color: "var(--text)" }}>
                         {user.displayName}
                     </span>
-                    <span className="text-bat-gray/60 truncate">
+                    <span className="truncate text-sm" style={{ color: "var(--text-muted)" }}>
                         @{user.username}
                     </span>
                 </div>
 
-                {}
                 {user.bio && (
-                    <div className="mt-1 text-[15px] text-bat-gray leading-normal line-clamp-2">
+                    <div className="mt-1 text-[14px] leading-normal line-clamp-2" style={{ color: "var(--text-dim)" }}>
                         {user.bio}
                     </div>
                 )}
 
-                {}
                 {((followersCount || 0) > 0 || (followingCount || 0) > 0) && (
                     <div className="mt-2 flex gap-4 text-sm">
                         <div>
-                            <span className="font-bold text-bat-gray mr-1">
+                            <span className="font-bold mr-1" style={{ color: "var(--text)" }}>
                                 {followersCount?.toLocaleString() || 0}
                             </span>
-                            <span className="text-bat-gray/60">Followers</span>
+                            <span style={{ color: "var(--text-muted)" }}>Followers</span>
                         </div>
                         <div>
-                            <span className="font-bold text-bat-gray mr-1">
+                            <span className="font-bold mr-1" style={{ color: "var(--text)" }}>
                                 {followingCount?.toLocaleString() || 0}
                             </span>
-                            <span className="text-bat-gray/60">Following</span>
+                            <span style={{ color: "var(--text-muted)" }}>Following</span>
                         </div>
                     </div>
                 )}
             </div>
 
-            {}
             {showFollowButton && (
                 <div
-                    className="flex-shrink-0 flex items-start pt-1"
+                    className="shrink-0 flex items-start pt-1"
                     onClick={(e) => e.stopPropagation()}
                 >
                     <FollowButton

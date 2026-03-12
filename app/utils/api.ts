@@ -78,6 +78,7 @@ export async function authenticatedFetch(
                     localStorage.removeItem('local_identity');
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('refresh_token');
+                    localStorage.removeItem('account_sessions');
                     window.location.href = '/login';
                 }
             } catch (error) {
@@ -86,6 +87,7 @@ export async function authenticatedFetch(
                 localStorage.removeItem('local_identity');
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('refresh_token');
+                localStorage.removeItem('account_sessions');
                 window.location.href = '/login';
             }
         } else {

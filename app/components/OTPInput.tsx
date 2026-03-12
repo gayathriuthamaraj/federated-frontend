@@ -6,20 +6,30 @@ interface OTPInputProps {
     length?: number;
     onComplete: (otp: string) => void;
     onResend?: () => void;
-    resendCooldown?: number; 
+    resendCooldown?: number;
+    resetKey?: number;  // increment this prop to clear all boxes
 }
 
 export default function OTPInput({
     length = 6,
     onComplete,
     onResend,
-    resendCooldown = 60
+    resendCooldown = 60,
+    resetKey = 0,
 }: OTPInputProps) {
     const [otp, setOtp] = useState<string[]>(new Array(length).fill(''));
     const [activeIndex, setActiveIndex] = useState(0);
     const [resendTimer, setResendTimer] = useState(resendCooldown);
     const [canResend, setCanResend] = useState(false);
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+    // Clear all boxes whenever resetKey changes (e.g. after a failed attempt)
+    useEffect(() => {
+        if (resetKey === 0) return;
+        setOtp(new Array(length).fill(''));
+        setActiveIndex(0);
+        setTimeout(() => inputRefs.current[0]?.focus(), 0);
+    }, [resetKey, length]);
 
     
     useEffect(() => {
@@ -78,9 +88,10 @@ export default function OTPInput({
 
     const handlePaste = (e: React.ClipboardEvent) => {
         e.preventDefault();
-        const pastedData = e.clipboardData.getData('text').slice(0, length);
+        // Strip spaces so codes copied as "123 456" still work
+        const pastedData = e.clipboardData.getData('text').replace(/\s/g, '').slice(0, length);
 
-        if (!/^\d+$/.test(pastedData)) return; 
+        if (!/^\d+$/.test(pastedData)) return;
 
         const newOtp = pastedData.split('');
         while (newOtp.length < length) newOtp.push('');

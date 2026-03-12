@@ -21,7 +21,7 @@ export default function ReplyCard({ reply }: ReplyCardProps) {
             <div className="absolute top-0 left-[2.3rem] bottom-0 w-0.5 bg-bat-dark/50 -z-10" />
 
             {}
-            <div className="flex-shrink-0 relative z-10">
+            <div className="shrink-0 relative z-10">
                 <div className="h-8 w-8 rounded-full bg-bat-dark border border-bat-dark flex items-center justify-center text-bat-gray font-bold text-sm select-none">
                     {displayName[0].toUpperCase()}
                 </div>

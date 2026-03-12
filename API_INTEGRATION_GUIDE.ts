@@ -93,7 +93,7 @@ export default function FeedPage() {
 
 
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
 class ApiService {
     private async request<T>(

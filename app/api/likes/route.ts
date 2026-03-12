@@ -1,42 +1,37 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080';
 
-const likes = new Map<string, Set<string>>();
-
-export async function POST(request: Request) {
-    const { postId, userId } = await request.json();
-
-    if (!likes.has(postId)) {
-        likes.set(postId, new Set());
-    }
-
-    const postLikes = likes.get(postId)!;
-    const wasLiked = postLikes.has(userId);
-
-    if (wasLiked) {
-        postLikes.delete(userId);
-    } else {
-        postLikes.add(userId);
-    }
-
-    return NextResponse.json({
-        liked: !wasLiked,
-        likeCount: postLikes.size
-    });
+function fwd(req: Request): HeadersInit {
+    const auth = req.headers.get('authorization');
+    return auth ? { Authorization: auth, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' };
 }
 
-export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const postId = searchParams.get('postId');
-
-    if (!postId) {
-        return NextResponse.json({ error: 'Post ID required' }, { status: 400 });
-    }
-
-    const postLikes = likes.get(postId) || new Set();
-
-    return NextResponse.json({
-        likeCount: postLikes.size,
-        likedBy: Array.from(postLikes)
+/**
+ * POST /api/likes
+ * Body: { user_id, post_id } — toggles like on the post.
+ */
+export async function POST(req: Request) {
+    const body = await req.json();
+    const res = await fetch(`${BACKEND}/post/like`, {
+        method: 'POST',
+        headers: fwd(req),
+        body: JSON.stringify(body),
     });
+    const data = await res.json().catch(() => ({}));
+    return NextResponse.json(data, { status: res.status });
+}
+
+/**
+ * GET /api/likes?user_id=... — posts liked by a user.
+ */
+export async function GET(req: NextRequest) {
+    const user_id = req.nextUrl.searchParams.get('user_id');
+    if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 });
+    const res = await fetch(
+        `${BACKEND}/posts/user/likes?user_id=${encodeURIComponent(user_id)}`,
+        { headers: fwd(req) },
+    );
+    const data = await res.json().catch(() => ({}));
+    return NextResponse.json(data, { status: res.status });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -15,7 +15,7 @@ interface AS2Activity {
 
 interface Notification {
     id: string;
-    type: 'FOLLOW' | 'LIKE' | 'REPLY' | 'REPOST' | 'SYSTEM' | 'SERVER_UPDATE' | 'MESSAGE' | 'UNLIKE';
+    type: 'FOLLOW' | 'LIKE' | 'REPLY' | 'REPOST' | 'SYSTEM' | 'SERVER_UPDATE' | 'MESSAGE' | 'UNLIKE' | 'LINK_REQUEST' | 'LINK_ACCEPTED' | 'POST_UNDER_REVIEW' | 'REPLY_UNDER_REVIEW' | 'POST_APPROVED' | 'POST_REJECTED' | 'BADGE_GRANTED';
     actor_id: string;
     actor_name?: string;
     actor_avatar?: string;
@@ -38,32 +38,37 @@ export default function NotificationsPage() {
         }
     }, [identity, authLoading, router]);
 
-    useEffect(() => {
-        async function fetchNotifications() {
-            if (!identity) return;
-
-            try {
-                const res = await fetch(`${identity.home_server}/notifications?user_id=${encodeURIComponent(identity.user_id)}`);
-                if (res.ok) {
-                    const data = await res.json();
-                    setNotifications(data.notifications || []);
-
-                    
-                    await fetch(`${identity.home_server}/notifications/read`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: identity.user_id })
-                    });
-                }
-            } catch (err) {
-                console.error('Failed to fetch notifications:', err);
-            } finally {
-                setLoading(false);
+    const fetchNotifications = useCallback(async () => {
+        if (!identity) return;
+        try {
+            const res = await fetch(`${identity.home_server}/notifications?user_id=${encodeURIComponent(identity.user_id)}`);
+            if (res.ok) {
+                const data = await res.json();
+                setNotifications(data.notifications || []);
+                // Mark all as read once opened
+                await fetch(`${identity.home_server}/notifications/read`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: identity.user_id }),
+                });
             }
+        } catch (err) {
+            console.error('Failed to fetch notifications:', err);
+        } finally {
+            setLoading(false);
         }
-
-        if (identity) fetchNotifications();
     }, [identity]);
+
+    useEffect(() => {
+        if (identity) fetchNotifications();
+    }, [identity, fetchNotifications]);
+
+    // Poll every 30 s so live notifications appear without a page reload
+    useEffect(() => {
+        if (!identity) return;
+        const id = setInterval(fetchNotifications, 30_000);
+        return () => clearInterval(id);
+    }, [identity, fetchNotifications]);
 
     const getNotificationText = (n: Notification) => {
         // Prefer the richer AS2 summary when available
@@ -75,8 +80,15 @@ export default function NotificationsPage() {
             case 'REPLY': return 'replied to your post';
             case 'REPOST': return 'reposted your post';
             case 'MESSAGE': return 'sent you a message';
-            case 'SERVER_UPDATE': return `server updated: ${n.entity_id || ''}`;
-            case 'SYSTEM': return n.entity_id || n.message || 'System notification';
+            case 'SERVER_UPDATE': return n.entity_id || 'Server configuration updated';
+            case 'SYSTEM': return n.message || n.entity_id || 'System notification';
+            case 'LINK_REQUEST': return 'sent you an account link request';
+            case 'LINK_ACCEPTED': return 'accepted your account link request';
+            case 'POST_UNDER_REVIEW': return 'Your post is being reviewed by the moderation team';
+            case 'REPLY_UNDER_REVIEW': return 'Your reply is being reviewed by the moderation team';
+            case 'POST_APPROVED': return 'Your post has been approved and is now visible';
+            case 'POST_REJECTED': return 'Your post was rejected by the moderation team';
+            case 'BADGE_GRANTED': return n.entity_id || 'Your account badge has been updated';
             default: return 'interacted with you';
         }
     };
@@ -93,7 +105,14 @@ export default function NotificationsPage() {
             case 'Announce':      case 'REPOST':        return <span className="text-purple-500">🔁</span>;
             case 'Update':        case 'SERVER_UPDATE': return <span className="text-yellow-500">⚙️</span>;
             case 'MESSAGE':       return <span className="text-sky-400">✉️</span>;
-            default:              return <span className="text-gray-500">🔔</span>;
+            case 'LINK_REQUEST':       return <span className="text-bat-yellow">🔗</span>;
+            case 'LINK_ACCEPTED':      return <span className="text-green-400">🔗</span>;
+            case 'POST_UNDER_REVIEW':
+            case 'REPLY_UNDER_REVIEW': return <span>🔍</span>;
+            case 'POST_APPROVED':      return <span className="text-green-400">✅</span>;
+            case 'POST_REJECTED':      return <span className="text-red-400">❌</span>;
+            case 'BADGE_GRANTED':      return <span className="text-bat-yellow">🏅</span>;
+            default:                   return <span className="text-gray-500">🔔</span>;
         }
     };
 
@@ -115,34 +134,60 @@ export default function NotificationsPage() {
                             key={n.id}
                             onClick={() => {
                                 if (n.type === 'FOLLOW') {
-                                    router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);
+                                    router.push(`/profile?user_id=${encodeURIComponent(n.actor_id)}`);
+                                } else if (n.type === 'MESSAGE') {
+                                    router.push(`/messages?user=${encodeURIComponent(n.actor_id)}`);
+                                } else if (n.type === 'LINK_REQUEST' || n.type === 'LINK_ACCEPTED') {
+                                    router.push('/linked-accounts');
+                                } else if (n.type === 'BADGE_GRANTED') {
+                                    router.push('/profile');
                                 } else if (n.entity_id) {
                                     router.push(`/post/${n.entity_id}`);
                                 }
                             }}
                             className={`
-                                flex items-center gap-4 p-4 rounded-lg border cursor-pointer
-                                ${n.is_read ? 'bg-bat-black border-bat-gray/10' : 'bg-bat-black border-bat-yellow/30'}
-                                hover:border-bat-yellow/50 transition-colors duration-200
+                                flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-150
+                                ${n.is_read ? '' : 'border-l-2'}
                             `}
+                            style={{
+                                background: n.is_read ? "var(--bg-panel)" : "var(--amber-faint)",
+                                borderColor: n.is_read ? "var(--border)" : "var(--amber)",
+                                borderLeftColor: !n.is_read ? "var(--amber)" : undefined,
+                                boxShadow: "var(--shadow-sm)",
+                            }}
+                            onMouseEnter={e => (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-md)"}
+                            onMouseLeave={e => (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-sm)"}
                         >
-                            <div className="flex-shrink-0">
+                            <div className="shrink-0">
                                 {n.actor_avatar && n.actor_avatar !== "" ? (
                                     <img src={n.actor_avatar} alt={n.actor_name} className="w-10 h-10 rounded-full object-cover" />
                                 ) : (
-                                    <div className="text-2xl w-10 h-10 flex items-center justify-center bg-bat-dark rounded-full">
+                                    <div className="text-2xl w-10 h-10 flex items-center justify-center rounded-full" style={{ background: "var(--amber-faint)" }}>
                                         {getIcon(n)}
                                     </div>
                                 )}
                             </div>
                             <div className="flex-1">
-                                {n.type === 'SYSTEM' ? (
-                                    <p className="text-bat-gray">{n.entity_id || n.message}</p>
+                                {(['SYSTEM', 'SERVER_UPDATE', 'POST_UNDER_REVIEW', 'REPLY_UNDER_REVIEW', 'POST_APPROVED', 'POST_REJECTED', 'BADGE_GRANTED'] as string[]).includes(n.type) ? (
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                                            <span className="font-bold text-bat-yellow/90 text-sm">
+                                                {n.actor_id && n.actor_id !== 'system' && n.actor_id !== ''
+                                                    ? (n.actor_name || n.actor_id.split('@')[0])
+                                                    : 'Moderation Team'}
+                                            </span>
+                                        </div>
+                                        <p className="text-bat-gray text-sm">{getNotificationText(n)}</p>
+                                        <span className="text-xs text-bat-gray/40 mt-1">
+                                            {new Date(n.created_at).toLocaleDateString()} at {new Date(n.created_at).toLocaleTimeString()}
+                                        </span>
+                                    </div>
                                 ) : (
                                     <div className="flex flex-col">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             <span
-                                                className="font-bold text-white hover:underline cursor-pointer"
+                                                className="font-bold hover:underline cursor-pointer"
+                                                style={{ color: "var(--text)" }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     router.push(`/search?user_id=${encodeURIComponent(n.actor_id)}`);

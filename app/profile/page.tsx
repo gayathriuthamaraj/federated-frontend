@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import ProfileCard from '../components/ProfileCard';
+import type { LinkedAccountInfo, Vouch } from '../components/ProfileCard';
 import { useAuth } from '../context/AuthContext';
 import { Profile } from '../types/profile';
 import { useCache } from '../context/CacheContext';
@@ -21,16 +22,21 @@ function ProfileContent() {
   const { identity, isLoading: authLoading } = useAuth();
   const { getProfile, setProfile } = useCache();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [profile, setProfileState] = useState<Profile | null>(null);
   const [did, setDid] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [replies, setReplies] = useState<UserReply[]>([]);
   const [likedPosts, setLikedPosts] = useState<Post[]>([]);
+  const [highlights, setHighlights] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isFollowingTarget, setIsFollowingTarget] = useState(false);
+  const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccountInfo[]>([]);
+  const [vouches, setVouches] = useState<Vouch[]>([]);
+  const [zkpEnabled, setZkpEnabled] = useState(false);
 
   // Support viewing other users via ?user_id= query param
   const queryUserId = searchParams.get('user_id');
@@ -41,6 +47,39 @@ function ProfileContent() {
   const targetServer = targetUserId?.split('@')[1] ?? '';
   const myServer = identity?.user_id?.split('@')[1] ?? '';
   const isCrossServer = !isOwnProfile && !!targetServer && !!myServer && targetServer !== myServer;
+
+  const fetchPostsData = useCallback(async () => {
+    if (!identity?.home_server || !targetUserId || authLoading) return;
+    setLoadingPosts(true);
+    try {
+      const base = identity.home_server;
+      const uid = encodeURIComponent(targetUserId);
+      const vid = encodeURIComponent(identity.user_id);
+
+      if (isCrossServer) {
+        const postsRes = await fetch(`${base}/api/posts/federated?user_id=${uid}&viewer_id=${vid}`);
+        if (postsRes.ok) {
+          const data = await postsRes.json();
+          setPosts(data.posts || []);
+        }
+      } else {
+        const [postsRes, repliesRes, likesRes, repostsRes] = await Promise.all([
+          fetch(`${base}/posts/user?user_id=${uid}&viewer_id=${vid}`),
+          fetch(`${base}/posts/user/replies?user_id=${uid}`),
+          fetch(`${base}/posts/user/likes?user_id=${uid}&viewer_id=${vid}`),
+          fetch(`${base}/posts/user/reposts?user_id=${uid}&viewer_id=${vid}`),
+        ]);
+        if (postsRes.ok) { setPosts((await postsRes.json()).posts || []); }
+        if (repliesRes.ok) { setReplies((await repliesRes.json()).replies || []); }
+        if (likesRes.ok) { setLikedPosts((await likesRes.json()).posts || []); }
+        if (repostsRes.ok) { setHighlights((await repostsRes.json()).posts || []); }
+      }
+    } catch (err) {
+      console.error('Error fetching posts/replies/likes:', err);
+    } finally {
+      setLoadingPosts(false);
+    }
+  }, [identity, targetUserId, authLoading, isCrossServer]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -115,6 +154,12 @@ function ProfileContent() {
         } else {
           profileData = data.profile ?? data.user ?? null;
           if (typeof data.is_following === 'boolean') setIsFollowingTarget(data.is_following);
+          if (profileData && data.badge) {
+            profileData = { ...profileData, badge: data.badge };
+          }
+          if (profileData && typeof data.is_moderator === 'boolean') {
+            profileData = { ...profileData, is_moderator: data.is_moderator };
+          }
         }
 
         setProfileState(profileData);
@@ -146,50 +191,71 @@ function ProfileContent() {
       }
     };
 
-    const fetchPosts = async () => {
-      setLoadingPosts(true);
+    const fetchLinkedAccounts = async () => {
       try {
-        const base = identity.home_server;
-        const uid = encodeURIComponent(targetUserId);
-        const vid = encodeURIComponent(identity.user_id);
+        const res = await fetch(
+          `${identity.home_server}/account/links?user_id=${encodeURIComponent(targetUserId)}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const confirmed = (data.links || [])
+          .filter((l: any) => l.status === 'confirmed')
+          .map((l: any) => ({
+            id: l.id,
+            peer_id: l.is_inbound ? l.requester_id : l.target_id,
+            peer_name: l.is_inbound ? l.requester_name : l.target_name,
+            peer_avatar: l.is_inbound ? l.requester_avatar : l.target_avatar,
+          }));
+        setLinkedAccounts(confirmed);
+      } catch {
+        /* non-critical — profile still loads without linked accounts */
+      }
+    };
 
-        if (isCrossServer) {
-          // Cross-server: only fetch federated posts (replies/likes not available remotely)
-          const postsRes = await fetch(`${base}/api/posts/federated?user_id=${uid}&viewer_id=${vid}`);
-          if (postsRes.ok) {
-            const data = await postsRes.json();
-            setPosts(data.posts || []);
-          }
-        } else {
-          const [postsRes, repliesRes, likesRes] = await Promise.all([
-            fetch(`${base}/posts/user?user_id=${uid}&viewer_id=${vid}`),
-            fetch(`${base}/posts/user/replies?user_id=${uid}`),
-            fetch(`${base}/posts/user/likes?user_id=${uid}&viewer_id=${vid}`),
-          ]);
-
-          if (postsRes.ok) {
-            const data = await postsRes.json();
-            setPosts(data.posts || []);
-          }
-          if (repliesRes.ok) {
-            const data = await repliesRes.json();
-            setReplies(data.replies || []);
-          }
-          if (likesRes.ok) {
-            const data = await likesRes.json();
-            setLikedPosts(data.posts || []);
-          }
+    const fetchVouches = async () => {
+      try {
+        const res = await fetch(
+          `${identity.home_server}/api/vouches?user_id=${encodeURIComponent(targetUserId)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setVouches(data.vouches || []);
         }
-      } catch (err) {
-        console.error('Error fetching posts/replies/likes:', err);
-      } finally {
-        setLoadingPosts(false);
+      } catch {
+        /* non-critical */
+      }
+    };
+
+    const fetchZKPStatus = async () => {
+      try {
+        const res = await fetch(
+          `${identity.home_server}/zkp/status?user_id=${encodeURIComponent(targetUserId)}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setZkpEnabled(!!data.zkp_enabled);
+        }
+      } catch {
+        /* non-critical */
       }
     };
 
     fetchProfile();
-    fetchPosts();
-  }, [authLoading, identity, targetUserId]);
+    fetchPostsData();
+    fetchVouches();
+    fetchZKPStatus();
+    if (isOwnProfile && !isCrossServer) fetchLinkedAccounts();
+  }, [authLoading, identity, targetUserId, fetchPostsData]);
+
+  useEffect(() => {
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchPostsData(); };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', fetchPostsData);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', fetchPostsData);
+    };
+  }, [fetchPostsData]);
 
 
   if (error) {
@@ -228,8 +294,12 @@ function ProfileContent() {
         posts={posts}
         replies={replies}
         likedPosts={likedPosts}
+        highlights={highlights}
         loadingPosts={loadingPosts}
         did={did || undefined}
+        linkedAccounts={linkedAccounts}
+        vouches={vouches}
+        zkpEnabled={zkpEnabled}
         onFollowChange={(delta) => {
           setProfileState(prev => {
             if (!prev) return prev;

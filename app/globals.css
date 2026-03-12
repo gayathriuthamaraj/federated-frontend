@@ -1,130 +1,285 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+
+/* ── Design Tokens ─────────────────────────────────────────────────────────── */
+:root {
+  /* Backgrounds — cool white with faint indigo tint */
+  --bg:          #F7F8FF;
+  --bg-panel:    #FFFFFF;
+  --bg-raised:   #EFF0FF;
+  --bg-hover:    #F3F4FF;
+  --bg-sidebar:  rgba(255,255,255,0.90);
+
+  /* Borders */
+  --border:      #E2E3F0;
+  --border-lit:  #C7C9E8;
+
+  /* Accent — electric indigo */
+  --amber:       #4F46E5;           /* primary accent */
+  --amber-light: #818CF8;           /* lighter indigo */
+  --amber-glow:  rgba(79,70,229,0.18);
+  --amber-faint: rgba(79,70,229,0.07);
+
+  /* Text */
+  --text:        #1A1B2E;           /* deep indigo-tinted black */
+  --text-dim:    #2D2F54;
+  --text-muted:  #6B7280;
+  --text-ghost:  #9CA3AF;
+
+  /* Semantic */
+  --rose:        #E11D48;
+  --teal:        #0891B2;
+  --violet:      #7C3AED;
+
+  /* Shadows */
+  --shadow-sm:   0 1px 3px rgba(79,70,229,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:   0 4px 12px rgba(79,70,229,0.10), 0 2px 6px rgba(0,0,0,0.04);
+  --shadow-lg:   0 10px 30px rgba(79,70,229,0.10), 0 4px 12px rgba(0,0,0,0.06);
+  --shadow-xl:   0 20px 60px rgba(79,70,229,0.12), 0 8px 24px rgba(0,0,0,0.07);
+  --shadow-amber: 0 0 0 3px rgba(79,70,229,0.22);
+
+  /* Fonts */
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* 3D params */
+  --perspective: 1200px;
+}
+
 @theme {
-  --color-bat-black: #0B0C10;
-  --color-bat-dark: #1F2833;
-  --color-bat-yellow: #F5C518;
-  --color-bat-gray: #C5C6C7;
-  --color-bat-blue: #2F80ED;
+  --color-bg:           #F7F8FF;
+  --color-panel:        #FFFFFF;
+  --color-amber:        #4F46E5;
+  --color-amber-light:  #818CF8;
+  --color-text:         #1A1B2E;
+  --color-text-dim:     #2D2F54;
+  --color-text-muted:   #6B7280;
+  --color-text-ghost:   #9CA3AF;
+  --color-border:       #E2E3F0;
+  --color-border-lit:   #C7C9E8;
+  --color-rose:         #E11D48;
+  --color-teal:         #0891B2;
+  --color-violet:       #7C3AED;
+  --color-sidebar:      #FFFFFF;
+  /* legacy bat- names updated */
+  --color-bat-black:    #F7F8FF;
+  --color-bat-dark:     #EFF0FF;
+  --color-bat-yellow:   #4F46E5;
+  --color-bat-gray:     #2D2F54;
+  --color-bat-blue:     #4F46E5;
 }
 
-@layer base {
-  body {
-    @apply bg-bat-black text-bat-gray;
-    -webkit-font-smoothing: antialiased;
-  }
+*, *::before, *::after { box-sizing: border-box; }
 
-  /* Global element transitions so every interactive element feels smooth */
-  a,
-  button,
-  input,
-  textarea,
-  select {
-    transition-property: color, background-color, border-color, box-shadow, transform, opacity, filter;
-    transition-duration: 150ms;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── Page-enter animation ─────────────────────────────────────────── */
+/* Smooth scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-lit); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--amber); }
+
+/* ── Global transitions ─────────────────────────────────────────────────────── */
+a, button, input, textarea, select {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity, filter;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  KEYFRAMES                                                                  */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Page entrance */
 @keyframes page-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ─── Fade-up (for cards, list items, etc.) ────────────────────────── */
+/* Fade up for cards / list items */
 @keyframes fade-up {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ─── Scale-in (buttons / avatars pop) ─────────────────────────────── */
+/* Scale in with spring overshoot */
 @keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.92);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  0%   { opacity: 0; transform: scale(0.88); }
+  70%  { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-/* ─── Shimmer skeleton ──────────────────────────────────────────────── */
-@keyframes shimmer {
-  0% {
-    background-position: -400px 0;
-  }
-  100% {
-    background-position: 400px 0;
-  }
-}
-
-/* ─── Like pop ──────────────────────────────────────────────────────── */
-@keyframes like-pop {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.4); }
-  70% { transform: scale(0.9); }
-  100% { transform: scale(1); }
-}
-
-/* ─── Slide-in from bottom (panels, comment boxes) ─────────────────── */
+/* Slide up for panels / drawers */
 @keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Spring pop for likes & badges */
+@keyframes like-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.5) rotate(-8deg); }
+  65%  { transform: scale(0.88) rotate(4deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* Shimmer skeleton (light mode) */
+@keyframes shimmer {
+  0%   { background-position: -600px 0; }
+  100% { background-position: 600px 0; }
+}
+
+/* Floating 3D bob */
+@keyframes float-3d {
+  0%, 100% { transform: translateY(0px) rotateX(0deg) rotateZ(0deg); }
+  25%       { transform: translateY(-10px) rotateX(6deg) rotateZ(2deg); }
+  50%       { transform: translateY(-16px) rotateX(0deg) rotateZ(-3deg); }
+  75%       { transform: translateY(-8px) rotateX(-5deg) rotateZ(1deg); }
+}
+
+/* Morphing blob */
+@keyframes morph-blob {
+  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  25%       { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+  50%       { border-radius: 50% 60% 30% 60% / 30% 60% 70% 60%; }
+  75%       { border-radius: 60% 40% 60% 30% / 70% 30% 50% 50%; }
+}
+
+/* Spinning gradient ring */
+@keyframes spin-ring {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Ripple */
+@keyframes ripple {
+  0%   { transform: scale(0); opacity: 0.6; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+/* Slide from left */
+@keyframes slide-from-left {
+  from { opacity: 0; transform: translateX(-20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* Pulse glow */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 var(--amber-glow); }
+  50%       { box-shadow: 0 0 0 8px transparent; }
+}
+
+/* Typewriter blink */
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ─── 3D Cube face rotation ─────────────────────────────────────────────────── */
+@keyframes cube-rotate {
+  0%   { transform: rotateX(0deg)  rotateY(0deg)  rotateZ(0deg); }
+  20%  { transform: rotateX(72deg) rotateY(36deg) rotateZ(18deg); }
+  40%  { transform: rotateX(144deg) rotateY(80deg) rotateZ(-12deg); }
+  60%  { transform: rotateX(216deg) rotateY(120deg) rotateZ(30deg); }
+  80%  { transform: rotateX(288deg) rotateY(200deg) rotateZ(-5deg); }
+  100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(0deg); }
+}
+
+/* ─── Orbital ring around cube ──────────────────────────────────────────────── */
+@keyframes orbit {
+  from { transform: rotateZ(0deg) rotateX(75deg); }
+  to   { transform: rotateZ(360deg) rotateX(75deg); }
+}
+@keyframes orbit-reverse {
+  from { transform: rotateZ(360deg) rotateX(55deg) rotateY(20deg); }
+  to   { transform: rotateZ(0deg) rotateX(55deg) rotateY(20deg); }
+}
+
+/* ─── Floating particle drift ───────────────────────────────────────────────── */
+@keyframes particle-float {
+  0%   { transform: translate(0, 0) scale(1); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translate(var(--px, 40px), var(--py, -80px)) scale(0.4); opacity: 0; }
+}
+
+/* ─── 3D card "project in" from screen ─────────────────────────────────────── */
+@keyframes project-in {
+  0%   { opacity: 0; transform: perspective(800px) rotateY(-25deg) translateX(-40px) scale(0.92); }
+  60%  { opacity: 1; transform: perspective(800px) rotateY(3deg) translateX(4px) scale(1.01); }
+  100% { opacity: 1; transform: perspective(800px) rotateY(0deg) translateX(0) scale(1); }
+}
+
+/* ─── Sweep light across a surface ─────────────────────────────────────────── */
+@keyframes light-sweep {
+  0%   { background-position: -200% center; }
+  100% { background-position: 300% center; }
+}
+
+/* ─── 3D depth float (combined translate + rotate) ──────────────────────────── */
+@keyframes depth-float {
+  0%, 100% { transform: perspective(600px) translateY(0)   rotateX(0deg)  rotateZ(0deg); }
+  25%       { transform: perspective(600px) translateY(-12px) rotateX(5deg)  rotateZ(2deg); }
+  50%       { transform: perspective(600px) translateY(-20px) rotateX(-3deg) rotateZ(-2deg); }
+  75%       { transform: perspective(600px) translateY(-8px)  rotateX(4deg)  rotateZ(1deg); }
+}
+
+/* ─── Counter-spin (inner elements go opposite direction) ───────────────────── */
+@keyframes counter-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+/* ─── Gradient hue shift ────────────────────────────────────────────────────── */
+@keyframes hue-dance {
+  0%, 100% { filter: hue-rotate(0deg) brightness(1); }
+  33%       { filter: hue-rotate(20deg) brightness(1.08); }
+  66%       { filter: hue-rotate(-15deg) brightness(0.95); }
+}
+
+/* ─── Connector line draw ───────────────────────────────────────────────────── */
+@keyframes line-draw {
+  from { stroke-dashoffset: 200; opacity: 0; }
+  to   { stroke-dashoffset: 0; opacity: 1; }
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/*  UTILITY CLASSES                                                            */
+/* ═══════════════════════════════════════════════════════════════════════════ */
 
 @layer utilities {
-  .animate-page-enter {
-    animation: page-enter 300ms cubic-bezier(0.4, 0, 0.2, 1) both;
-  }
 
-  .animate-fade-up {
-    animation: fade-up 240ms cubic-bezier(0.4, 0, 0.2, 1) both;
-  }
+  /* ── Animation utilities ─── */
+  .animate-page-enter      { animation: page-enter 320ms cubic-bezier(0.4, 0, 0.2, 1) both; }
+  .animate-fade-up         { animation: fade-up 260ms cubic-bezier(0.4, 0, 0.2, 1) both; }
+  .animate-scale-in        { animation: scale-in 280ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .animate-slide-up        { animation: slide-up 260ms cubic-bezier(0.4, 0, 0.2, 1) both; }
+  .animate-slide-from-left { animation: slide-from-left 300ms cubic-bezier(0.4, 0, 0.2, 1) both; }
+  .animate-like-pop        { animation: like-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+  .animate-float-3d        { animation: float-3d 6s ease-in-out infinite; }
+  .animate-morph-blob      { animation: morph-blob 8s ease-in-out infinite; }
+  .animate-spin-ring       { animation: spin-ring 4s linear infinite; }
+  .animate-pulse-glow      { animation: pulse-glow 2s ease-in-out infinite; }
+  .animate-cube-rotate     { animation: cube-rotate 14s cubic-bezier(0.4,0,0.6,1) infinite; }
+  .animate-orbit           { animation: orbit 8s linear infinite; }
+  .animate-orbit-reverse   { animation: orbit-reverse 12s linear infinite; }
+  .animate-project-in      { animation: project-in 700ms cubic-bezier(0.34,1.56,0.64,1) both; }
+  .animate-depth-float     { animation: depth-float 7s ease-in-out infinite; }
+  .animate-counter-spin    { animation: counter-spin 8s linear infinite; }
+  .animate-hue-dance       { animation: hue-dance 6s ease-in-out infinite; }
 
-  .animate-scale-in {
-    animation: scale-in 200ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  }
 
-  .animate-slide-up {
-    animation: slide-up 250ms cubic-bezier(0.4, 0, 0.2, 1) both;
-  }
-
-  .animate-like-pop {
-    animation: like-pop 350ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  }
-
-  .skeleton {
-    background: linear-gradient(
-      90deg,
-      var(--color-bat-dark) 25%,
-      #2a3444 50%,
-      var(--color-bat-dark) 75%
-    );
-    background-size: 800px 100%;
-    animation: shimmer 1.4s infinite linear;
-  }
-
-  /* Stagger helpers used with animation-delay */
+  /* ── Stagger delays ─── */
   .delay-50  { animation-delay: 50ms; }
   .delay-100 { animation-delay: 100ms; }
   .delay-150 { animation-delay: 150ms; }
@@ -132,4 +287,192 @@
   .delay-300 { animation-delay: 300ms; }
   .delay-400 { animation-delay: 400ms; }
   .delay-500 { animation-delay: 500ms; }
+  .delay-600 { animation-delay: 600ms; }
+  .delay-700 { animation-delay: 700ms; }
+
+  /* ── Glassmorphism ─── */
+  .glass-sidebar {
+    background: var(--bg-sidebar);
+    backdrop-filter: blur(20px) saturate(1.6);
+    -webkit-backdrop-filter: blur(20px) saturate(1.6);
+    border-right: 1px solid var(--border);
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.9);
+  }
+
+  .frosted-header {
+    background: rgba(248, 247, 244, 0.90);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── 3D card perspective ─── */
+  .card-3d-wrap {
+    perspective: var(--perspective);
+  }
+  .card-3d {
+    transform-style: preserve-3d;
+    transition: transform 400ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 400ms ease;
+  }
+  .card-3d:hover {
+    transform: translateY(-4px) rotateX(2deg) scale(1.02);
+    box-shadow: var(--shadow-xl);
+  }
+
+  /* ── Skeleton (light mode) ─── */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #F1EFE9 25%,
+      #E8E4DB 50%,
+      #F1EFE9 75%
+    );
+    background-size: 1200px 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+
+  /* ── Amber button ─── */
+  .btn-amber {
+    background: linear-gradient(135deg, var(--amber-light) 0%, var(--amber) 100%);
+    color: #fff;
+    font-weight: 700;
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 2px 8px var(--amber-glow), inset 0 1px 0 rgba(255,255,255,0.25);
+    transition: transform 150ms, box-shadow 150ms;
+  }
+  .btn-amber:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px var(--amber-glow), inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+  .btn-amber:active { transform: translateY(0); }
+
+  /* ── Surface card ─── */
+  .surface {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+  .surface-hover:hover {
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-lit);
+  }
+
+  /* ── Input ─── */
+  .input-light {
+    background: var(--bg-panel);
+    border: 1.5px solid var(--border-lit);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 0.65rem 1rem;
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    outline: none;
+    width: 100%;
+    transition: border-color 200ms, box-shadow 200ms;
+  }
+  .input-light:focus {
+    border-color: var(--amber);
+    box-shadow: var(--shadow-amber);
+  }
+  .input-light::placeholder { color: var(--text-ghost); }
+
+  .input-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin-bottom: 0.38rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
 }
+
+/* ──────────────────────────────────────────────────────────────────────────── */
+/*  LIGHT THEME COMPAT — remap dark-theme Tailwind utility classes             */
+/*  Components that weren't fully rewritten still use these dark-era classes.  */
+/*  These overrides ensure text stays readable on the white background.        */
+/* ──────────────────────────────────────────────────────────────────────────── */
+
+/* bat- classes */
+.bg-bat-black  { background-color: var(--bg) !important; }
+.bg-bat-dark   { background-color: var(--bg-raised) !important; }
+.text-bat-gray { color: var(--text-dim) !important; }
+.text-bat-yellow, .hover\:text-bat-yellow:hover { color: var(--amber) !important; }
+.border-bat-yellow { border-color: var(--amber) !important; }
+.border-bat-dark { border-color: var(--border) !important; }
+.bg-bat-yellow { background-color: var(--amber) !important; color: #fff !important; }
+.text-bat-black { color: var(--text) !important; }
+.bg-bat-blue   { background-color: #1D4ED8 !important; }
+.text-bat-blue  { color: #1D4ED8 !important; }
+
+/* White text → dark text ONLY on surfaces (not on colored buttons/avatars) */
+/* Context-scoped: only apply when parent is a light surface */
+.bg-bat-black .text-white,
+.bg-bat-dark .text-white,
+.bg-gray-900 .text-white,
+.bg-gray-800 .text-white { color: var(--text) !important; }
+
+/* Very light grays → readable dark text */
+.text-gray-100 { color: var(--text-dim) !important; }
+.text-gray-200 { color: var(--text-dim) !important; }
+.text-gray-300 { color: var(--text-muted) !important; }
+.text-gray-400 { color: var(--text-muted) !important; }
+.text-gray-500 { color: var(--text-muted) !important; }
+
+/* Slate light grays → readable */
+.text-slate-100 { color: var(--text-dim) !important; }
+.text-slate-200 { color: var(--text-dim) !important; }
+.text-slate-300 { color: var(--text-muted) !important; }
+
+/* Dark backgrounds that contain white text — flip to surface + dark text */
+.bg-gray-900   { background-color: var(--bg-panel) !important; }
+.bg-gray-800   { background-color: var(--bg-raised) !important; }
+.bg-gray-700   { background-color: var(--bg-raised) !important; }
+.bg-zinc-900   { background-color: var(--bg-panel) !important; }
+.bg-zinc-800   { background-color: var(--bg-raised) !important; }
+.bg-slate-900  { background-color: var(--bg-panel) !important; }
+.bg-slate-800  { background-color: var(--bg-raised) !important; }
+.bg-neutral-900 { background-color: var(--bg-panel) !important; }
+.bg-neutral-800 { background-color: var(--bg-raised) !important; }
+
+/* Dark borders → light borders */
+.border-gray-700 { border-color: var(--border) !important; }
+.border-gray-800 { border-color: var(--border) !important; }
+.border-zinc-800 { border-color: var(--border) !important; }
+.border-slate-700 { border-color: var(--border) !important; }
+.divide-gray-700 > * + * { border-color: var(--border) !important; }
+.divide-gray-800 > * + * { border-color: var(--border) !important; }
+
+/* Hover variants for dark backgrounds */
+.hover\:bg-gray-800:hover { background-color: var(--bg-hover) !important; }
+.hover\:bg-gray-700:hover { background-color: var(--bg-hover) !important; }
+.hover\:bg-white\/\[0\.018\]:hover { background-color: var(--bg-hover) !important; }
+
+/* Placeholder text */
+.placeholder-bat-gray\/30::placeholder { color: var(--text-ghost) !important; }
+.placeholder-gray-500::placeholder { color: var(--text-ghost) !important; }
+
+/* Input/textarea bg dark overrides */
+.bg-bat-dark\/60 { background-color: var(--bg-raised) !important; }
+.bg-bat-dark\/80 { background-color: var(--bg-raised) !important; }
+.border-bat-gray\/20 { border-color: var(--border) !important; }
+.border-bat-gray\/30 { border-color: var(--border-lit) !important; }
+.text-bat-gray\/90 { color: var(--text-dim) !important; }
+.text-bat-gray\/50 { color: var(--text-muted) !important; }
+.text-bat-gray\/40 { color: var(--text-ghost) !important; }
+.text-bat-gray\/30 { color: var(--text-ghost) !important; }
+
+/* opacity-on-dark compat: transparent panels → surface panels */
+.bg-white\/\[0\.018\] { background-color: var(--bg-hover) !important; }
+.bg-white\/5  { background-color: var(--bg-raised) !important; }
+.bg-white\/10 { background-color: var(--bg-raised) !important; }
+.bg-black\/40 { background-color: rgba(0,0,0,0.04) !important; }
+.bg-black\/60 { background-color: rgba(0,0,0,0.06) !important; }

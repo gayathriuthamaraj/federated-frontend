@@ -6,14 +6,12 @@ import { useRouter } from 'next/navigation';
 import BlockButton from '../components/BlockButton';
 import Link from 'next/link';
 
+// Matches the BlockEvent struct returned by GET /blocks
 interface UserBlock {
-    id: number;
-    blocker_user_id: string;
-    blocked_user_id: string;
+    blocker_id: string;
+    blocked_id: string;
     reason?: string;
     created_at: string;
-    expires_at?: string;
-    is_active: boolean;
 }
 
 export default function BlockedUsersPage() {
@@ -31,11 +29,13 @@ export default function BlockedUsersPage() {
         setLoading(true);
         try {
             const res = await fetch(
-                `${identity.home_server}/users/blocked?blocker_user_id=${encodeURIComponent(identity.user_id)}`
+                `${identity.home_server}/blocks?user_id=${encodeURIComponent(identity.user_id)}`,
+                { headers: { Authorization: `Bearer ${localStorage.getItem('access_token') ?? ''}` } }
             );
             if (res.ok) {
                 const data = await res.json();
-                setBlocks(data.blocked_users ?? []);
+                // Backend returns a plain array of BlockEvent
+                setBlocks(Array.isArray(data) ? data : []);
             }
         } catch (err) {
             console.error('Failed to fetch blocked users:', err);
@@ -49,7 +49,7 @@ export default function BlockedUsersPage() {
     }, [identity, fetchBlocked]);
 
     const handleUnblocked = (blockedUserID: string) => {
-        setBlocks(prev => prev.filter(b => b.blocked_user_id !== blockedUserID));
+        setBlocks(prev => prev.filter(b => b.blocked_id !== blockedUserID));
     };
 
     if (authLoading || !identity) {
@@ -101,26 +101,26 @@ export default function BlockedUsersPage() {
                     <ul className="divide-y divide-bat-dark/40">
                         {blocks.map(block => (
                             <li
-                                key={block.id}
+                                key={block.blocked_id}
                                 className="flex items-center gap-4 px-4 py-4 hover:bg-white/[0.018] transition-colors"
                             >
                                 {/* Avatar placeholder */}
                                 <Link
-                                    href={`/search?user_id=${encodeURIComponent(block.blocked_user_id)}`}
+                                    href={`/search?user_id=${encodeURIComponent(block.blocked_id)}`}
                                     className="flex h-11 w-11 shrink-0 rounded-full bg-bat-dark border border-bat-yellow/20 items-center justify-center text-bat-yellow font-bold text-lg select-none hover:scale-105 hover:border-bat-yellow/50 transition-all"
                                 >
-                                    {block.blocked_user_id.split('@')[0][0].toUpperCase()}
+                                    {block.blocked_id.split('@')[0][0].toUpperCase()}
                                 </Link>
 
                                 {/* User info */}
                                 <div className="flex-1 min-w-0">
                                     <Link
-                                        href={`/search?user_id=${encodeURIComponent(block.blocked_user_id)}`}
+                                        href={`/search?user_id=${encodeURIComponent(block.blocked_id)}`}
                                         className="font-semibold text-bat-gray text-sm hover:underline truncate block"
                                     >
-                                        {block.blocked_user_id.split('@')[0]}
+                                        {block.blocked_id.split('@')[0]}
                                     </Link>
-                                    <p className="text-bat-gray/50 text-xs truncate">{block.blocked_user_id}</p>
+                                    <p className="text-bat-gray/50 text-xs truncate">{block.blocked_id}</p>
                                     {block.reason && (
                                         <p className="text-bat-gray/40 text-xs mt-0.5 truncate">
                                             Reason: {block.reason}
@@ -135,10 +135,10 @@ export default function BlockedUsersPage() {
 
                                 {/* Unblock button */}
                                 <BlockButton
-                                    targetUser={block.blocked_user_id}
+                                    targetUser={block.blocked_id}
                                     isBlocked={true}
                                     onSuccess={blocked => {
-                                        if (!blocked) handleUnblocked(block.blocked_user_id);
+                                        if (!blocked) handleUnblocked(block.blocked_id);
                                     }}
                                 />
                             </li>

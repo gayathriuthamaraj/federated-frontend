@@ -1,27 +1,32 @@
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 
-const MODERATION_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080'
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8080'
+
+function getToken(req: Request): string {
+    return req.headers.get('authorization') || ''
+}
 
 /**
  * POST /api/block
- * Body: { blocker_user_id, blocked_user_id, reason? }
+ * Body: { blocker_id, blocked_id, reason? }
  */
 export async function POST(req: Request) {
     try {
         const body = await req.json()
-        const { blocker_user_id, blocked_user_id, reason = '' } = body
+        const { blocker_id, blocked_id, reason = '' } = body
 
-        if (!blocker_user_id || !blocked_user_id) {
+        if (!blocker_id || !blocked_id) {
             return NextResponse.json(
-                { error: 'blocker_user_id and blocked_user_id are required' },
+                { error: 'blocker_id and blocked_id are required' },
                 { status: 400 }
             )
         }
 
-        const res = await fetch(`${MODERATION_BASE}/users/block`, {
+        const res = await fetch(`${BACKEND}/block`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ blocker_user_id, blocked_user_id, reason }),
+            headers: { 'Content-Type': 'application/json', Authorization: getToken(req) },
+            body: JSON.stringify({ blocker_id, blocked_id, reason }),
         })
 
         if (!res.ok) {
@@ -37,24 +42,24 @@ export async function POST(req: Request) {
 
 /**
  * DELETE /api/block
- * Body: { blocker_user_id, blocked_user_id }
+ * Body: { blocker_id, blocked_id }
  */
 export async function DELETE(req: Request) {
     try {
         const body = await req.json()
-        const { blocker_user_id, blocked_user_id } = body
+        const { blocker_id, blocked_id } = body
 
-        if (!blocker_user_id || !blocked_user_id) {
+        if (!blocker_id || !blocked_id) {
             return NextResponse.json(
-                { error: 'blocker_user_id and blocked_user_id are required' },
+                { error: 'blocker_id and blocked_id are required' },
                 { status: 400 }
             )
         }
 
-        const res = await fetch(`${MODERATION_BASE}/users/unblock`, {
+        const res = await fetch(`${BACKEND}/unblock`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ blocker_user_id, blocked_user_id }),
+            headers: { 'Content-Type': 'application/json', Authorization: getToken(req) },
+            body: JSON.stringify({ blocker_id, blocked_id }),
         })
 
         if (!res.ok) {
@@ -69,24 +74,24 @@ export async function DELETE(req: Request) {
 }
 
 /**
- * GET /api/block?blocker_user_id=...&blocked_user_id=...
- * Returns { is_blocked: boolean }
+ * GET /api/block?user_id=...
+ * Returns the block list for the given user (array of BlockEvent)
  */
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url)
-        const blocker_user_id = searchParams.get('blocker_user_id')
-        const blocked_user_id = searchParams.get('blocked_user_id')
+        const user_id = searchParams.get('user_id')
 
-        if (!blocker_user_id || !blocked_user_id) {
+        if (!user_id) {
             return NextResponse.json(
-                { error: 'blocker_user_id and blocked_user_id query params are required' },
+                { error: 'user_id query param is required' },
                 { status: 400 }
             )
         }
 
         const res = await fetch(
-            `${MODERATION_BASE}/users/block/check?blocker_user_id=${encodeURIComponent(blocker_user_id)}&blocked_user_id=${encodeURIComponent(blocked_user_id)}`
+            `${BACKEND}/blocks?user_id=${encodeURIComponent(user_id)}`,
+            { headers: { Authorization: getToken(req) } }
         )
 
         if (!res.ok) {

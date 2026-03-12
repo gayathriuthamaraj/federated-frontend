@@ -13,7 +13,6 @@ export default function InvitesPage() {
     const [error, setError] = useState('');
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [selectedInvite, setSelectedInvite] = useState<Invite | null>(null);
-    const [inviteType, setInviteType] = useState<'user' | 'admin'>('user');
     const [maxUses, setMaxUses] = useState(0);
     const [expiresIn, setExpiresIn] = useState(24);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -38,10 +37,10 @@ export default function InvitesPage() {
         setIsGenerating(true);
         setError('');
         try {
-            await generateInvite({ invite_type: inviteType, max_uses: maxUses, expires_in: expiresIn });
+            await generateInvite({ invite_type: 'user', max_uses: maxUses, expires_in: expiresIn });
             await loadInvites();
             setShowForm(false);
-            setInviteType('user'); setMaxUses(0); setExpiresIn(24);
+            setMaxUses(0); setExpiresIn(24);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to generate invite');
         } finally {
@@ -92,13 +91,7 @@ export default function InvitesPage() {
                 {showForm && (
                     <div className="term-panel" style={{ padding: '18px 20px' }}>
                         <div style={{ color: 'var(--text-ghost)', fontSize: '0.65rem', letterSpacing: '0.12em', marginBottom: 14 }}>// NEW INVITE TOKEN</div>
-                        <form onSubmit={handleGenerate} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, alignItems: 'end' }}>
-                            <F label="ACCESS LEVEL">
-                                <select value={inviteType} onChange={e => setInviteType(e.target.value as 'user' | 'admin')} className="term-input">
-                                    <option value="user">user</option>
-                                    <option value="admin">admin</option>
-                                </select>
-                            </F>
+                        <form onSubmit={handleGenerate} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
                             <F label="MAX USES  (0 = unlimited)">
                                 <input type="number" min="0" value={maxUses} onChange={e => setMaxUses(parseInt(e.target.value) || 0)} className="term-input" />
                             </F>

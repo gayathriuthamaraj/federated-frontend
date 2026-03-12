@@ -16,6 +16,14 @@ export default function FollowButton({
 }: FollowButtonProps) {
     const { identity } = useAuth()
     const [status, setStatus] = useState<'idle' | 'followed' | 'loading'>('idle')
+    const [actionError, setActionError] = useState<string | null>(null)
+
+    // Auto-clear error after 4 seconds
+    useEffect(() => {
+        if (!actionError) return
+        const t = setTimeout(() => setActionError(null), 4000)
+        return () => clearTimeout(t)
+    }, [actionError])
 
     useEffect(() => {
         if (isFollowing) {
@@ -24,17 +32,11 @@ export default function FollowButton({
     }, [isFollowing])
 
     const handleAction = async () => {
-        if (!identity) {
-            alert('Please log in to follow users')
-            return
-        }
-
-        if (identity.user_id === targetUser) {
-            alert("You can't follow yourself!")
-            return
-        }
+        if (!identity) return
+        if (identity.user_id === targetUser) return
 
         setStatus('loading')
+        setActionError(null)
 
         try {
             const endpoint = status === 'followed' ? '/unfollow' : '/follow'
@@ -54,13 +56,11 @@ export default function FollowButton({
                 setStatus(newStatus)
                 if (onSuccess) onSuccess()
             } else {
-                const error = await res.text()
-                alert(`Action failed: ${error}`)
-                setStatus(status) 
+                setActionError('Action failed. Please try again.')
+                setStatus(status)
             }
-        } catch (err: any) {
-            console.error('Follow error:', err)
-            alert(`Failed: ${err.message || err}`)
+        } catch {
+            setActionError('Something went wrong. Please try again.')
             setStatus(status)
         }
     }
@@ -69,24 +69,27 @@ export default function FollowButton({
     if (identity.user_id === targetUser) return null
 
     return (
-        <button
-            onClick={handleAction}
-            disabled={status === 'loading'}
-            className={`
-                px-6 py-2 rounded-full font-bold text-sm transition-all duration-200
-                ${status === 'followed'
-                    ? 'bg-transparent border border-bat-dark text-bat-gray hover:text-red-500 hover:border-red-500' 
-                    : 'bg-bat-yellow text-bat-black hover:bg-[#E0B000] shadow-md' 
+        <>
+            <button
+                onClick={handleAction}
+                disabled={status === 'loading'}
+                className={`
+                    px-6 py-2 rounded-full font-bold text-sm transition-all duration-200
+                    ${status === 'followed'
+                        ? 'bg-transparent border border-bat-dark text-bat-gray hover:text-red-500 hover:border-red-500' 
+                        : 'bg-bat-yellow text-bat-black hover:bg-[#E0B000] shadow-md' 
+                    }
+                    ${status === 'loading' ? 'opacity-50 cursor-wait' : ''}
+                `}
+            >
+                {status === 'loading'
+                    ? 'Processing...'
+                    : status === 'followed'
+                        ? 'Unfollow'
+                        : 'Follow'
                 }
-                ${status === 'loading' ? 'opacity-50 cursor-wait' : ''}
-            `}
-        >
-            {status === 'loading'
-                ? 'Processing...'
-                : status === 'followed'
-                    ? 'Unfollow'
-                    : 'Follow'
-            }
-        </button>
+            </button>
+            {actionError && <p className="text-xs text-red-400 mt-1">{actionError}</p>}
+        </>
     )
 }

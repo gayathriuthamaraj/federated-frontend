@@ -4,36 +4,11 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminLayout from '../components/AdminLayout';
 import StatCard from '../components/StatCard';
-import { getServerStats, getTrustedServers, getInvites, ServerStats, TrustedServer, Invite } from '../api/admin';
+import { getServerStats, getTrustedServers, getInvites, testPeerConnection, getAdminSnapshots, saveAdminSnapshot, AdminSnapshot, ServerStats, TrustedServer, Invite } from '../api/admin';
 import { Users, FileText, Activity, Link as LinkIcon, Settings, Database, RefreshCw, Server, Ticket } from 'lucide-react';
 
-//  Snapshot (localStorage trend data) 
-interface Snapshot {
-    ts: number;
-    users: number;
-    posts: number;
-    activities: number;
-    follows: number;
-}
-
-const SNAP_KEY = 'admin_snapshots';
-const MAX_SNAPS = 60;
-
-function loadSnapshots(): Snapshot[] {
-    if (typeof window === 'undefined') return [];
-    try { return JSON.parse(localStorage.getItem(SNAP_KEY) || '[]'); } catch { return []; }
-}
-
-function saveSnapshot(s: Snapshot) {
-    const snaps = loadSnapshots();
-    const last = snaps[snaps.length - 1];
-    if (last && s.ts - last.ts < 5 * 60 * 1000) {
-        snaps[snaps.length - 1] = s;
-    } else {
-        snaps.push(s);
-    }
-    localStorage.setItem(SNAP_KEY, JSON.stringify(snaps.slice(-MAX_SNAPS)));
-}
+//  Snapshot type alias (matches AdminSnapshot from the API)
+type Snapshot = AdminSnapshot;
 
 function seedSnapshots(current: ServerStats): Snapshot[] {
     const snaps: Snapshot[] = [];
@@ -50,7 +25,6 @@ function seedSnapshots(current: ServerStats): Snapshot[] {
             follows:    Math.round(current.total_follows    * frac * jitter()),
         });
     }
-    localStorage.setItem(SNAP_KEY, JSON.stringify(snaps));
     return snaps;
 }
 
@@ -80,12 +54,12 @@ function TrendChart({ snapshots, activeSeries }: { snapshots: Snapshot[]; active
     const activeKeys = activeSeries
         ? [activeSeries as keyof Omit<Snapshot, 'ts'>]
         : (['users', 'posts', 'activities', 'follows'] as (keyof Omit<Snapshot, 'ts'>)[]);
-    const maxVal = Math.max(...snapshots.flatMap(s => activeKeys.map(k => s[k])), 1);
+    const maxVal = Math.max(...snapshots.flatMap(s => activeKeys.map(k => Number(s[k]) || 0)), 1);
 
     const px = (i: number) => PAD.l + (i / (n - 1)) * cW;
     const py = (v: number) => PAD.t + cH - (v / maxVal) * cH;
     const makeLine = (key: keyof Omit<Snapshot, 'ts'>) =>
-        snapshots.map((s, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(s[key]).toFixed(1)}`).join(' ');
+        snapshots.map((s, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(Number(s[key]) || 0).toFixed(1)}`).join(' ');
     const labelIdxs = [0, Math.floor((n - 1) / 2), n - 1];
 
     const isActive = (key: string) => activeSeries === null || activeSeries === key;
@@ -137,7 +111,7 @@ function TrendChart({ snapshots, activeSeries }: { snapshots: Snapshot[]; active
                 return (
                     <circle
                         key={s.key + '-dot'}
-                        cx={px(n - 1)} cy={py(last[s.key])}
+                        cx={px(n - 1)} cy={py(Number(last[s.key]) || 0)}
                         r={isActive(s.key) ? (activeSeries ? 4 : 3) : 2}
                         fill={s.color}
                         fillOpacity={isActive(s.key) ? 1 : 0.1}
@@ -224,15 +198,8 @@ export default function DashboardPage() {
         list.forEach(p => { init[p.id] = 'checking'; });
         setPeerStatus({ ...init });
         await Promise.all(list.map(async (peer) => {
-            try {
-                const ctrl = new AbortController();
-                const tid = setTimeout(() => ctrl.abort(), 5000);
-                const res = await fetch(`${peer.endpoint}/health`, { signal: ctrl.signal, mode: 'no-cors' });
-                clearTimeout(tid);
-                setPeerStatus(prev => ({ ...prev, [peer.id]: (res.type === 'opaque' || res.ok) ? 'online' : 'offline' }));
-            } catch {
-                setPeerStatus(prev => ({ ...prev, [peer.id]: 'offline' }));
-            }
+            const online = await testPeerConnection(peer.endpoint);
+            setPeerStatus(prev => ({ ...prev, [peer.id]: online ? 'online' : 'offline' }));
         }));
     }, []);
 
@@ -249,12 +216,15 @@ export default function DashboardPage() {
                 setStats(s);
                 setError('');
                 const snap: Snapshot = { ts: Date.now(), users: s.total_users, posts: s.total_posts, activities: s.total_activities, follows: s.total_follows };
-                const existing = loadSnapshots();
+                const existing = await getAdminSnapshots();
                 if (existing.length === 0) {
-                    setSnapshots(seedSnapshots(s));
+                    const seeded = seedSnapshots(s);
+                    setSnapshots(seeded);
+                    // Persist seeded snapshots to the backend so they live in the Docker volume
+                    await Promise.all(seeded.map(seed => saveAdminSnapshot(seed)));
                 } else {
-                    saveSnapshot(snap);
-                    setSnapshots(loadSnapshots());
+                    await saveAdminSnapshot(snap);
+                    setSnapshots(await getAdminSnapshots());
                 }
             } else {
                 const msg = (statsRes.reason as Error)?.message || 'Failed to load stats';
@@ -362,7 +332,7 @@ export default function DashboardPage() {
                                 </div>
                                 <TrendChart snapshots={snapshots} activeSeries={activeSeries} />
                                 <div style={{ marginTop: 8, fontSize: '0.62rem', color: 'var(--text-ghost)' }}>
-                                    Chart updates each time you open the dashboard. History persists in your browser.
+                                    Chart updates each time you open the dashboard. History stored in the server database.
                                 </div>
                             </div>
                             <div className="term-panel" style={{ borderRadius: 2, padding: '18px 20px' }}>
